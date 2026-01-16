@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Zap, Activity, ShieldCheck, Power, AlertOctagon, ArrowUpRight, ArrowLeft, Info } from 'lucide-react';
+import { Activity, ShieldCheck, Power, AlertOctagon, ArrowUpRight, ArrowLeft, Info } from 'lucide-react';
 import { TutorialOverlay } from '@/components/ui/TutorialOverlay';
 
 export const LiquidityEngine = () => {

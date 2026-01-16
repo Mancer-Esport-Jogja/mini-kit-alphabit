@@ -258,7 +258,7 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
                         Power-Up <span className="text-bit-coral">Acquired</span>
                     </h2>
                     <p className="text-slate-500 font-grotesk text-sm">
-                        Solving DeFi's User Experience Crisis
+                        Solving DeFi&apos;s User Experience Crisis
                     </p>
                 </motion.div>
 
@@ -347,7 +347,7 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
                             </ul>
 
                             <div className="bg-slate-900/50 p-3 border border-slate-700 rounded text-[10px] text-slate-300 italic">
-                                "Fast-paced action. Instant gratification. Powered by real on-chain options."
+                                &quot;Fast-paced action. Instant gratification. Powered by real on-chain options.&quot;
                             </div>
                         </div>
                     </motion.div>
@@ -371,7 +371,7 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
 
                             <ul className="text-xs font-mono text-slate-400 space-y-2 mb-4">
                                 <li className="flex items-center gap-2">
-                                    <span className="text-blue-400">➤</span> Deposit USDC into Vaults ("Shields").
+                                    <span className="text-blue-400">➤</span> Deposit USDC into Vaults (&quot;Shields&quot;).
                                 </li>
                                 <li className="flex items-center gap-2">
                                     <span className="text-blue-400">➤</span> Your capital backs the HUNT players.
@@ -382,7 +382,7 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
                             </ul>
 
                             <div className="bg-slate-900/50 p-3 border border-slate-700 rounded text-[10px] text-slate-300 italic">
-                                "Passive strategy. Become the liquidity backbone of the ecosystem."
+                                &quot;Passive strategy. Become the liquidity backbone of the ecosystem.&quot;
                             </div>
                         </div>
                     </motion.div>
