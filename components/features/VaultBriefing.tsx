@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Terminal, Info } from 'lucide-react';
+import { Terminal, Info, LucideIcon } from 'lucide-react';
 import { PixelCard } from '@/components/ui/PixelCard';
 import { Transaction, TransactionButton, TransactionStatus, TransactionStatusLabel, TransactionStatusAction } from '@coinbase/onchainkit/transaction';
 import { ALPHABIT_CONTRACT_ADDRESS, ALPHABIT_ABI, CHAIN_ID } from '@/config/contracts';
@@ -17,7 +17,7 @@ export interface VaultConfig {
     color: string;
     borderColor: string;
     barColor: string;
-    icon: React.ElementType;
+    icon: LucideIcon;
     tvl?: string;
     bg?: string;
     desc?: string;

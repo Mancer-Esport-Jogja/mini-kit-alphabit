@@ -3,12 +3,166 @@
 @tailwind utilities;
 
 :root {
-  --background: #0f172a;
+  --background: #0A0A0A;
   --foreground: #e2e8f0;
+  --bit-coral: #E85A5A;
+  --bit-green: #4ADE80;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-pixel), monospace;
+  font-family: var(--font-grotesk), sans-serif;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bit-coral);
+  border: 2px solid #0a0a0a;
+}
+
+/* Glitch Effect */
+.glitch-text {
+  position: relative;
+}
+
+.glitch-text::before,
+.glitch-text::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.glitch-text::before {
+  left: 2px;
+  text-shadow: -2px 0 var(--bit-coral);
+  clip: rect(24px, 550px, 90px, 0);
+  animation: glitch-anim-1 2s infinite linear alternate-reverse;
+}
+
+.glitch-text::after {
+  left: -2px;
+  text-shadow: 2px 0 var(--bit-green);
+  clip: rect(85px, 550px, 140px, 0);
+  animation: glitch-anim-2 2s infinite linear alternate-reverse;
+}
+
+@keyframes glitch-anim-1 {
+  0% {
+    clip: rect(30px, 9999px, 10px, 0);
+  }
+
+  25% {
+    clip: rect(15px, 9999px, 140px, 0);
+  }
+
+  50% {
+    clip: rect(50px, 9999px, 75px, 0);
+  }
+
+  75% {
+    clip: rect(80px, 9999px, 120px, 0);
+  }
+
+  100% {
+    clip: rect(10px, 9999px, 50px, 0);
+  }
+}
+
+@keyframes glitch-anim-2 {
+  0% {
+    clip: rect(65px, 9999px, 119px, 0);
+  }
+
+  25% {
+    clip: rect(20px, 9999px, 80px, 0);
+  }
+
+  50% {
+    clip: rect(90px, 9999px, 130px, 0);
+  }
+
+  75% {
+    clip: rect(40px, 9999px, 100px, 0);
+  }
+
+  100% {
+    clip: rect(75px, 9999px, 115px, 0);
+  }
+}
+
+/* Terminal Styling */
+.terminal {
+  background: linear-gradient(180deg, #0a0a0a 0%, #050505 100%);
+  border: 2px solid #1a1a1a;
+  font-family: 'Courier New', monospace;
+}
+
+.terminal-header {
+  background: #1a1a1a;
+  padding: 8px 12px;
+  display: flex;
+  gap: 6px;
+}
+
+.terminal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* Retro Grid Pattern - Coral themed */
+.retro-grid {
+  background-image:
+    linear-gradient(rgba(232, 90, 90, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(232, 90, 90, 0.15) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* CRT Effect Overlay */
+.crt-overlay {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg,
+      rgba(0, 0, 0, 0.15),
+      rgba(0, 0, 0, 0.15) 1px,
+      transparent 1px,
+      transparent 2px);
+  z-index: 9999;
+}
+
+/* Neon Glow Effects */
+.glow-green {
+  box-shadow: 0 0 5px var(--bit-green), 0 0 10px var(--bit-green), 0 0 20px var(--bit-green);
+}
+
+.glow-coral {
+  box-shadow: 0 0 5px var(--bit-coral), 0 0 10px var(--bit-coral), 0 0 20px var(--bit-coral);
+}
+
+.glow-coral {
+  box-shadow: 0 0 5px var(--bit-coral), 0 0 10px var(--bit-coral), 0 0 20px var(--bit-coral);
+}
+
+/* Marquee animation */
+@keyframes marquee {
+  0% {
+    transform: translateX(100%);
+  }
+
+  100% {
+    transform: translateX(-100%);
+  }
 }

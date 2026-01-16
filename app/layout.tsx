@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Press_Start_2P } from "next/font/google"; // Changed Source_Code_Pro to Press_Start_2P
+import { Inter, Press_Start_2P, Space_Grotesk } from "next/font/google";
 
 import { minikitConfig } from "@/minikit.config";
 import { RootProvider } from "./rootProvider";
@@ -36,6 +36,11 @@ const pressStart2P = Press_Start_2P({
   subsets: ["latin"],
 });
 
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-grotesk",
+  subsets: ["latin"],
+});
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -47,7 +52,7 @@ export default function RootLayout({
         <head>
           <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coinbase/onchainkit@latest/styles.css" />
         </head>
-        <body className={`${inter.variable} ${pressStart2P.variable}`}>
+        <body className={`${inter.variable} ${pressStart2P.variable} ${spaceGrotesk.variable}`}>
           {children}
         </body>
       </html>
