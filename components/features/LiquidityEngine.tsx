@@ -45,6 +45,7 @@ export const LiquidityEngine = () => {
                     </span>
                 </div>
                 <button
+                    type="button"
                     onClick={() => setShowTutorial(true)}
                     className="flex items-center gap-1 bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded transition-colors border border-slate-600"
                 >
@@ -92,6 +93,7 @@ export const LiquidityEngine = () => {
                     {/* Fuel/Liquidity Controls */}
                     <div className="space-y-3 mt-auto relative z-10">
                         <button
+                            type="button"
                             onClick={() => setView('INJECT')}
                             className="w-full group relative overflow-hidden bg-slate-900 border-2 border-blue-500/50 hover:border-blue-400 p-4 transition-all duration-300"
                         >
@@ -105,6 +107,7 @@ export const LiquidityEngine = () => {
                         </button>
 
                         <button
+                            type="button"
                             onClick={() => setView('EXTRACT')}
                             className="w-full group relative overflow-hidden bg-slate-900 border-2 border-orange-500/50 hover:border-orange-400 p-4 transition-all duration-300"
                         >
@@ -123,7 +126,7 @@ export const LiquidityEngine = () => {
             {/* INJECT VIEW */}
             {view === 'INJECT' && (
                 <div className="p-6 relative bg-black/80 flex-1 flex flex-col">
-                    <button onClick={() => setView('MAIN')} className="text-slate-500 hover:text-white flex items-center gap-2 mb-6 text-xs font-mono">
+                    <button type="button" onClick={() => setView('MAIN')} className="text-slate-500 hover:text-white flex items-center gap-2 mb-6 text-xs font-mono">
                         <ArrowLeft size={14} /> BACK TO ENGINE
                     </button>
 
@@ -135,7 +138,7 @@ export const LiquidityEngine = () => {
                             <input
                                 type="number"
                                 value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAmount(e.target.value)}
                                 placeholder="0.00"
                                 className="w-full bg-slate-900 border-2 border-blue-500/50 text-white p-4 font-mono text-lg focus:border-blue-400 outline-none placeholder:text-slate-700"
                             />
@@ -155,7 +158,7 @@ export const LiquidityEngine = () => {
                         </div>
                     </div>
 
-                    <button className="w-full bg-blue-600 hover:bg-blue-500 text-white font-pixel text-xs py-4 border-b-4 border-blue-800 active:border-b-0 active:translate-y-1 transition-all">
+                    <button type="button" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-pixel text-xs py-4 border-b-4 border-blue-800 active:border-b-0 active:translate-y-1 transition-all">
                         CONFIRM INJECTION
                     </button>
                 </div>
@@ -164,7 +167,7 @@ export const LiquidityEngine = () => {
             {/* EXTRACT VIEW */}
             {view === 'EXTRACT' && (
                 <div className="p-6 relative bg-black/80 flex-1 flex flex-col">
-                    <button onClick={() => setView('MAIN')} className="text-slate-500 hover:text-white flex items-center gap-2 mb-6 text-xs font-mono">
+                    <button type="button" onClick={() => setView('MAIN')} className="text-slate-500 hover:text-white flex items-center gap-2 mb-6 text-xs font-mono">
                         <ArrowLeft size={14} /> BACK TO ENGINE
                     </button>
 
@@ -188,7 +191,7 @@ export const LiquidityEngine = () => {
                         </div>
                     </div>
 
-                    <button className="w-full bg-orange-600 hover:bg-orange-500 text-white font-pixel text-xs py-4 border-b-4 border-orange-800 active:border-b-0 active:translate-y-1 transition-all">
+                    <button type="button" className="w-full bg-orange-600 hover:bg-orange-500 text-white font-pixel text-xs py-4 border-b-4 border-orange-800 active:border-b-0 active:translate-y-1 transition-all">
                         INITIATE WITHDRAWAL
                     </button>
                 </div>
