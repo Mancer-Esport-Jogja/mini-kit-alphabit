@@ -4,24 +4,35 @@ import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Info, AlertTriangle, Clock, Wifi, WifiOff } from 'lucide-react';
 import { TutorialOverlay } from '@/components/ui/TutorialOverlay';
-import { useChainlinkPrice, Asset } from '@/hooks/useChainlinkPrice';
+import { useBinancePrice, ChartInterval } from '@/hooks/useBinancePrice';
 
 export const HuntTerminal = () => {
     const [collateral, setCollateral] = useState(50);
     const [selectedTarget, setSelectedTarget] = useState<'MOON' | 'DOOM' | null>(null);
     const [selectedDuration, setSelectedDuration] = useState<'BLITZ' | 'RUSH' | 'CORE' | 'ORBIT'>('BLITZ');
-    const [selectedAsset, setSelectedAsset] = useState<Asset>('ETH');
+    const [selectedAsset, setSelectedAsset] = useState<'ETH' | 'BTC'>('ETH');
+    const [chartInterval, setChartInterval] = useState<ChartInterval>('5m');
     const [showTutorial, setShowTutorial] = useState(false);
 
     const handleTargetSelect = (target: 'MOON' | 'DOOM') => {
         setSelectedTarget(target);
     };
 
-    // Chainlink Realtime Price (polls every 5s)
-    const { currentPrice, priceHistory, priceChange, isConnected, isLoading } = useChainlinkPrice({
-        asset: selectedAsset,
-        pollingInterval: 5000,
-        maxDataPoints: 50
+    // Chart timeframe options
+    const timeframes = [
+        { id: '5m' as ChartInterval, label: '5M' },
+        { id: '15m' as ChartInterval, label: '15M' },
+        { id: '1h' as ChartInterval, label: '1H' },
+        { id: '6h' as ChartInterval, label: '6H' },
+        { id: '12h' as ChartInterval, label: '12H' },
+        { id: '1d' as ChartInterval, label: '1D' },
+    ];
+
+    // Binance Realtime Price
+    const { currentPrice, priceHistory, priceChange, isConnected, isLoading } = useBinancePrice({
+        symbol: `${selectedAsset}USDT`,
+        interval: chartInterval,
+        limit: 50
     });
 
     // Generate SVG path from price history
@@ -33,7 +44,7 @@ export const HuntTerminal = () => {
         const maxPrice = Math.max(...prices);
         const range = maxPrice - minPrice || 1;
 
-        const chartHeight = 140;
+        const chartHeight = 192; // h-48 = 192px
         const chartWidth = 380;
         const padding = 10;
 
@@ -49,7 +60,7 @@ export const HuntTerminal = () => {
     // Area fill path
     const areaPath = useMemo(() => {
         if (!chartPath) return '';
-        return `${chartPath} L380,140 L10,140 Z`;
+        return `${chartPath} L380,192 L10,192 Z`;
     }, [chartPath]);
 
     const durations = [
@@ -89,6 +100,23 @@ export const HuntTerminal = () => {
                     <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_6px_rgba(239,68,68,0.6)]"></div>
                     <span className="text-[10px] font-pixel text-slate-400">TACTICAL</span>
                 </div>
+
+                {/* Asset Selector */}
+                <div className="flex bg-slate-900 rounded p-0.5 border border-slate-600">
+                    {(['ETH', 'BTC'] as const).map(asset => (
+                        <button
+                            key={asset}
+                            onClick={() => setSelectedAsset(asset)}
+                            className={`px-2 py-0.5 text-[9px] font-bold rounded transition-colors ${selectedAsset === asset
+                                ? 'bg-slate-700 text-white shadow-sm'
+                                : 'text-slate-500 hover:text-slate-300'
+                                }`}
+                        >
+                            {asset}
+                        </button>
+                    ))}
+                </div>
+
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setShowTutorial(true)}
@@ -97,7 +125,7 @@ export const HuntTerminal = () => {
                         <Info size={10} className="text-yellow-500" />
                         <span className="text-[8px] font-mono text-yellow-500 hidden sm:inline">HELP</span>
                     </button>
-                    <div className="text-[8px] font-mono text-slate-600">v2.0</div>
+                    <div className="text-[8px] font-mono text-slate-600">v2.1</div>
                 </div>
             </div>
 
@@ -113,35 +141,18 @@ export const HuntTerminal = () => {
                     <div className="flex items-center justify-between bg-slate-800/80 px-2 py-1 border-b-2 border-slate-700">
                         <div className="flex items-center gap-2">
                             <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-                            {/* Asset Selector */}
-                            <div className="flex bg-slate-900 rounded overflow-hidden">
-                                <button
-                                    onClick={() => setSelectedAsset('ETH')}
-                                    className={`px-2 py-0.5 text-[9px] font-pixel ${selectedAsset === 'ETH' ? 'bg-bit-green text-black' : 'text-slate-400 hover:text-white'}`}
-                                >
-                                    ETH
-                                </button>
-                                <button
-                                    onClick={() => setSelectedAsset('BTC')}
-                                    className={`px-2 py-0.5 text-[9px] font-pixel ${selectedAsset === 'BTC' ? 'bg-yellow-500 text-black' : 'text-slate-400 hover:text-white'}`}
-                                >
-                                    BTC
-                                </button>
-                            </div>
+                            <span className="font-pixel text-[10px] text-slate-300">{selectedAsset}/USD</span>
                             <span className={`font-pixel text-sm ${priceChange < 0 ? 'text-bit-coral' : 'text-bit-green'}`}>
                                 ${currentPrice ? currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '---'}
                             </span>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[8px] font-mono text-slate-500">🦎 COINGECKO</span>
-                            <div className={`px-2 py-0.5 text-[10px] font-mono ${priceChange < 0 ? 'bg-bit-coral/20 text-bit-coral' : 'bg-bit-green/20 text-bit-green'}`}>
-                                {priceChange >= 0 ? '▲' : '▼'} {Math.abs(priceChange).toFixed(2)}%
-                            </div>
+                        <div className={`px-2 py-0.5 text-[10px] font-mono ${priceChange < 0 ? 'bg-bit-coral/20 text-bit-coral' : 'bg-bit-green/20 text-bit-green'}`}>
+                            {priceChange >= 0 ? '▲' : '▼'} {Math.abs(priceChange).toFixed(2)}%
                         </div>
                     </div>
 
-                    {/* Chart Area - Wider */}
-                    <div className="relative h-36 bg-black border-x-2 border-slate-700 overflow-hidden">
+                    {/* Chart Area - Extra Wide (h-48) */}
+                    <div className="relative h-48 bg-black border-x-2 border-slate-700 overflow-hidden">
                         {/* Pixel Grid */}
                         <div className="absolute inset-0 opacity-20" style={{
                             backgroundImage: 'linear-gradient(rgba(74,222,128,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(74,222,128,0.3) 1px, transparent 1px)',
@@ -157,7 +168,7 @@ export const HuntTerminal = () => {
                         )}
 
                         {/* Chart SVG */}
-                        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 112" preserveAspectRatio="none">
+                        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 192" preserveAspectRatio="none">
                             {chartPath ? (
                                 <>
                                     <path d={areaPath} fill={`url(#gradient-${priceChange < 0 ? 'red' : 'green'})`} opacity="0.4" />
@@ -172,14 +183,14 @@ export const HuntTerminal = () => {
                                     {/* End Point Indicator */}
                                     <circle
                                         cx="380"
-                                        cy={chartPath ? chartPath.split(' ').pop()?.split(',')[1] : 56}
+                                        cy={chartPath ? chartPath.split(' ').pop()?.split(',')[1] : 96}
                                         r="4"
                                         fill={priceChange < 0 ? '#ef4444' : '#4ade80'}
                                         className="animate-pulse"
                                     />
                                 </>
                             ) : (
-                                <text x="200" y="56" textAnchor="middle" fill="#64748b" fontSize="10" fontFamily="monospace">
+                                <text x="200" y="96" textAnchor="middle" fill="#64748b" fontSize="10" fontFamily="monospace">
                                     AWAITING SIGNAL...
                                 </text>
                             )}
@@ -200,9 +211,20 @@ export const HuntTerminal = () => {
                             style={{ boxShadow: '0 0 8px rgba(255,255,255,0.6)' }}></div>
                     </div>
 
-                    {/* Price Source Info Bar */}
-                    <div className="flex justify-center items-center gap-2 bg-slate-900/80 border-2 border-t-0 border-slate-700 py-1">
-                        <span className="text-[8px] font-mono text-slate-500">DATA: COINGECKO • POLL: 10s • LIVE</span>
+                    {/* Timeframe Selector - Compact Pills */}
+                    <div className="flex bg-slate-900 border-2 border-t-0 border-slate-700">
+                        {timeframes.map((tf) => (
+                            <button
+                                key={tf.id}
+                                onClick={() => setChartInterval(tf.id)}
+                                className={`flex-1 py-1 text-[9px] font-pixel uppercase transition-all border-r border-slate-700 last:border-r-0
+                                    ${chartInterval === tf.id
+                                        ? 'bg-bit-green/20 text-bit-green border-b-2 border-b-bit-green'
+                                        : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
+                            >
+                                {tf.label}
+                            </button>
+                        ))}
                     </div>
                 </div>
 
