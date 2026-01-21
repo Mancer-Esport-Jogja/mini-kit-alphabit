@@ -166,3 +166,47 @@ body {
     transform: translateX(-100%);
   }
 }
+
+/* OnchainKit Wallet Overrides */
+.wallet-wrapper button>span:not(:first-child),
+.wallet-wrapper button>div:not(:first-child) {
+  display: none !important;
+}
+
+.wallet-wrapper button {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  white-space: nowrap !important;
+}
+
+/* Hide duplicate wallet text */
+[data-testid="ockConnectWallet_Container"]>*:not(:first-child) {
+  display: none !important;
+}
+
+.ock-font-family {
+  font-family: var(--font-pixel), monospace !important;
+}
+
+/* Scan animation for chart */
+@keyframes scan {
+  0% {
+    left: 0;
+  }
+
+  100% {
+    left: 100%;
+  }
+}
+
+/* Scanline animation */
+@keyframes scanline {
+  0% {
+    top: 0%;
+  }
+
+  100% {
+    top: 100%;
+  }
+}
