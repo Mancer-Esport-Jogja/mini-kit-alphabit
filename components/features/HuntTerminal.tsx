@@ -1,18 +1,73 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, Info } from 'lucide-react';
+import { TrendingUp, TrendingDown, Info, AlertTriangle, Clock, Wifi, WifiOff } from 'lucide-react';
 import { TutorialOverlay } from '@/components/ui/TutorialOverlay';
+import { useBinancePrice, ChartInterval } from '@/hooks/useBinancePrice';
 
 export const HuntTerminal = () => {
     const [collateral, setCollateral] = useState(50);
     const [selectedTarget, setSelectedTarget] = useState<'MOON' | 'DOOM' | null>(null);
+    const [selectedDuration, setSelectedDuration] = useState<'BLITZ' | 'RUSH' | 'CORE' | 'ORBIT'>('BLITZ');
+    const [chartInterval, setChartInterval] = useState<ChartInterval>('5m');
     const [showTutorial, setShowTutorial] = useState(false);
 
     const handleTargetSelect = (target: 'MOON' | 'DOOM') => {
         setSelectedTarget(target);
     };
+
+    // Chart timeframe options
+    const timeframes = [
+        { id: '5m' as ChartInterval, label: '5M' },
+        { id: '15m' as ChartInterval, label: '15M' },
+        { id: '1h' as ChartInterval, label: '1H' },
+        { id: '6h' as ChartInterval, label: '6H' },
+        { id: '12h' as ChartInterval, label: '12H' },
+        { id: '1d' as ChartInterval, label: '1D' },
+    ];
+
+    // Binance Realtime Price
+    const { currentPrice, priceHistory, priceChange, isConnected, isLoading } = useBinancePrice({
+        symbol: 'ETHUSDT',
+        interval: chartInterval,
+        limit: 50
+    });
+
+    // Generate SVG path from price history
+    const chartPath = useMemo(() => {
+        if (priceHistory.length < 2) return '';
+
+        const prices = priceHistory.map(p => p.price);
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
+        const range = maxPrice - minPrice || 1;
+
+        const chartHeight = 140;
+        const chartWidth = 380;
+        const padding = 10;
+
+        const points = priceHistory.map((point, index) => {
+            const x = padding + (index / (priceHistory.length - 1)) * (chartWidth - 2 * padding);
+            const y = padding + ((maxPrice - point.price) / range) * (chartHeight - 2 * padding);
+            return `${x},${y}`;
+        });
+
+        return `M${points.join(' L')}`;
+    }, [priceHistory]);
+
+    // Area fill path
+    const areaPath = useMemo(() => {
+        if (!chartPath) return '';
+        return `${chartPath} L380,140 L10,140 Z`;
+    }, [chartPath]);
+
+    const durations = [
+        { id: 'BLITZ', label: 'BLITZ', time: '6H', color: 'text-yellow-400', border: 'border-yellow-400' },
+        { id: 'RUSH', label: 'RUSH', time: '12H', color: 'text-orange-400', border: 'border-orange-400' },
+        { id: 'CORE', label: 'CORE', time: '24H', color: 'text-blue-400', border: 'border-blue-400' },
+        { id: 'ORBIT', label: 'ORBIT', time: '7D', color: 'text-purple-400', border: 'border-purple-400' },
+    ] as const;
 
     const tutorialSteps = [
         {
@@ -64,30 +119,60 @@ export const HuntTerminal = () => {
 
                 {/* Tactical Chart Visualization */}
                 <div className="mb-6 relative h-40 bg-slate-900 border-2 border-slate-700 overflow-hidden">
+                    {/* Timeframe Selector */}
+                    <div className="absolute top-2 right-2 z-20 flex gap-1">
+                        {timeframes.map((tf) => (
+                            <button
+                                key={tf.id}
+                                onClick={() => setChartInterval(tf.id)}
+                                className={`px-1.5 py-0.5 text-[8px] font-mono transition-all
+                                    ${chartInterval === tf.id
+                                        ? 'bg-bit-green text-black'
+                                        : 'bg-slate-800/80 text-slate-400 hover:text-white'}`}
+                            >
+                                {tf.label}
+                            </button>
+                        ))}
+                    </div>
+
                     {/* Grid Background */}
                     <div className="absolute inset-0" style={{
                         backgroundImage: 'linear-gradient(rgba(30, 41, 59, 0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(30, 41, 59, 0.5) 1px, transparent 1px)',
                         backgroundSize: '20px 20px'
                     }}></div>
 
-                    {/* Simulated Chart Line (SVG) */}
-                    <svg className="absolute inset-0 w-full h-full p-2" preserveAspectRatio="none">
-                        {/* Mock Data Path - Looking like a volatile crypto chart */}
-                        <path
-                            d="M0,80 L20,75 L40,85 L60,60 L80,65 L100,50 L120,55 L140,40 L160,45 L180,30 L200,35 L220,15 L240,25 L260,10 L280,20 L300,5 L320,15 L340,0 L360,10 L380,5 L400,0"
-                            fill="none"
-                            stroke={selectedTarget === 'DOOM' ? '#ef4444' : '#4ade80'}
-                            strokeWidth="2"
-                            vectorEffect="non-scaling-stroke"
-                            className="drop-shadow-[0_0_4px_rgba(74,222,128,0.5)]"
-                        />
+                    {/* Loading Overlay */}
+                    {isLoading && (
+                        <div className="absolute inset-0 z-10 bg-slate-900/80 flex items-center justify-center">
+                            <span className="text-[10px] font-mono text-slate-400 animate-pulse">LOADING {chartInterval.toUpperCase()}...</span>
+                        </div>
+                    )}
 
-                        {/* Area fill under the line */}
-                        <path
-                            d="M0,80 L20,75 L40,85 L60,60 L80,65 L100,50 L120,55 L140,40 L160,45 L180,30 L200,35 L220,15 L240,25 L260,10 L280,20 L300,5 L320,15 L340,0 L360,10 L380,5 L400,0 V160 H0 Z"
-                            fill={`url(#gradient-${selectedTarget === 'DOOM' ? 'red' : 'green'})`}
-                            opacity="0.2"
-                        />
+                    {/* Realtime Chart Line (SVG) */}
+                    <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 160" preserveAspectRatio="none">
+                        {chartPath ? (
+                            <>
+                                {/* Area fill under the line */}
+                                <path
+                                    d={areaPath}
+                                    fill={`url(#gradient-${priceChange < 0 ? 'red' : 'green'})`}
+                                    opacity="0.3"
+                                />
+                                {/* Main line */}
+                                <path
+                                    d={chartPath}
+                                    fill="none"
+                                    stroke={priceChange < 0 ? '#ef4444' : '#4ade80'}
+                                    strokeWidth="2"
+                                    vectorEffect="non-scaling-stroke"
+                                    className="drop-shadow-[0_0_4px_rgba(74,222,128,0.5)]"
+                                />
+                            </>
+                        ) : (
+                            <text x="200" y="80" textAnchor="middle" fill="#64748b" fontSize="12" fontFamily="monospace">
+                                CONNECTING...
+                            </text>
+                        )}
 
                         <defs>
                             <linearGradient id="gradient-green" x1="0" y1="0" x2="0" y2="1">
@@ -102,18 +187,56 @@ export const HuntTerminal = () => {
                     </svg>
 
                     {/* Live Price Indicator */}
-                    <div className="absolute top-2 left-2 bg-black/50 backdrop-blur px-2 py-1 border border-slate-700 rounded">
+                    <div className="absolute top-2 left-2 bg-black/70 backdrop-blur px-2 py-1 border border-slate-700 rounded">
                         <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full animate-pulse ${selectedTarget === 'DOOM' ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                            {isConnected ? (
+                                <Wifi size={10} className="text-green-500" />
+                            ) : (
+                                <WifiOff size={10} className="text-red-500" />
+                            )}
                             <span className="font-mono text-[10px] text-slate-300">ETH/USD</span>
-                            <span className={`font-pixel text-xs ${selectedTarget === 'DOOM' ? 'text-red-400' : 'text-green-400'}`}>
-                                $2,450.50
+                            <span className={`font-pixel text-xs ${priceChange < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                                ${currentPrice ? currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '---'}
                             </span>
                         </div>
                     </div>
 
+                    {/* Price Change Badge */}
+                    {priceHistory.length > 1 && (
+                        <div className="absolute top-2 right-2 bg-black/70 backdrop-blur px-2 py-1 border border-slate-700 rounded">
+                            <span className={`font-mono text-[10px] ${priceChange < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                                {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(3)}%
+                            </span>
+                        </div>
+                    )}
+
                     {/* Scanning Bar Animation */}
                     <div className="absolute inset-y-0 w-px bg-white/20 animate-[scan_4s_linear_infinite]" style={{ boxShadow: '0 0 10px rgba(255,255,255,0.5)' }}></div>
+                </div>
+
+                {/* Duration Selector */}
+                <div className="flex gap-2 mb-6 bg-slate-900/50 p-1 rounded-lg border border-slate-700">
+                    {durations.map((mode) => (
+                        <button
+                            key={mode.id}
+                            onClick={() => setSelectedDuration(mode.id)}
+                            className={`flex-1 py-2 relative overflow-hidden transition-all duration-200 group
+                                ${selectedDuration === mode.id
+                                    ? `bg-slate-800 ${mode.border} border-2 shadow-[0_0_10px_rgba(0,0,0,0.5)]`
+                                    : 'hover:bg-slate-800/50 border-2 border-transparent'
+                                }`}
+                        >
+                            <div className="relative z-10 flex flex-col items-center">
+                                <span className={`font-pixel text-[10px] sm:text-xs mb-1 ${selectedDuration === mode.id ? mode.color : 'text-slate-500 group-hover:text-slate-300'}`}>
+                                    {mode.label}
+                                </span>
+                                <span className="font-mono text-[9px] text-slate-500">{mode.time}</span>
+                            </div>
+                            {selectedDuration === mode.id && (
+                                <div className={`absolute inset-0 opacity-10 ${mode.color.replace('text', 'bg')}`}></div>
+                            )}
+                        </button>
+                    ))}
                 </div>
 
                 {/* Target Selection Grid */}
@@ -191,7 +314,7 @@ export const HuntTerminal = () => {
                 </div>
 
                 {/* Mission Stats */}
-                <div className="bg-slate-900/80 border border-slate-700 p-3 mb-6 grid grid-cols-2 gap-4">
+                <div className="bg-slate-900/80 border border-slate-700 p-3 mb-4 grid grid-cols-2 gap-4">
                     <div>
                         <div className="text-[9px] text-slate-500 font-mono mb-1">ROI ESTIMATE</div>
                         <div className="text-lg font-pixel text-bit-green">+180%</div>
@@ -200,6 +323,27 @@ export const HuntTerminal = () => {
                         <div className="text-[9px] text-slate-500 font-mono mb-1">YIELD MULTIPLIER</div>
                         <div className="text-lg font-pixel text-yellow-500">1.8x</div>
                     </div>
+                </div>
+
+                {/* Risk Warning Banner */}
+                <div className="bg-bit-coral/10 border-2 border-bit-coral/50 p-3 mb-4 flex items-center gap-3">
+                    <AlertTriangle className="w-5 h-5 text-bit-coral flex-shrink-0" />
+                    <div>
+                        <div className="text-[9px] text-bit-coral font-mono mb-0.5">⚠ MAX RISK</div>
+                        <div className="text-sm font-pixel text-bit-coral">-100% PREMIUM</div>
+                    </div>
+                    <div className="ml-auto text-right">
+                        <div className="text-[9px] text-slate-500 font-mono mb-0.5">IF WRONG</div>
+                        <div className="text-sm font-mono text-slate-400">You lose collateral</div>
+                    </div>
+                </div>
+
+                {/* Expiry Info */}
+                <div className="flex items-center justify-center gap-2 mb-4 text-slate-400">
+                    <Clock className="w-4 h-4" />
+                    <span className="text-[10px] font-mono">
+                        {durations.find(d => d.id === selectedDuration)?.time}-HOUR ON-CHAIN EXPIRY
+                    </span>
                 </div>
 
                 {/* Launch Button */}

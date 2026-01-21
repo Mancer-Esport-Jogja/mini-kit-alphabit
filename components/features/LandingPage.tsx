@@ -334,7 +334,7 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
                             <div className="text-[10px] font-mono text-slate-500 mb-4">ROLE: TRADER / SNIPER</div>
 
                             <p className="text-slate-300 font-grotesk text-sm mb-4 leading-relaxed">
-                                <strong className="text-white">Objective:</strong> Predict price direction in <strong>BLITZ MODE</strong> (6-Hour Expiry).
+                                <strong className="text-white">Objective:</strong> Predict price direction. <span className="text-yellow-400 font-bold">⏱ 6-HOUR EXPIRY</span> (on-chain settlement).
                             </p>
 
                             <ul className="text-xs font-mono text-slate-400 space-y-2 mb-4">
@@ -344,10 +344,13 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
                                 <li className="flex items-center gap-2">
                                     <span className="text-bit-green">➤</span> Select <span className="text-bit-coral">TARGET: DOOM</span> (Put) if bearish.
                                 </li>
+                                <li className="flex items-center gap-2">
+                                    <span className="text-bit-coral">⚠</span> <span className="text-bit-coral">Max Risk: 100% of your collateral.</span>
+                                </li>
                             </ul>
 
                             <div className="bg-slate-900/50 p-3 border border-slate-700 rounded text-[10px] text-slate-300 italic">
-                                &quot;Fast-paced action. Instant gratification. Powered by real on-chain options.&quot;
+                                &quot;Fast-paced action. Real on-chain options with 6-hour expiry.&quot;
                             </div>
                         </div>
                     </motion.div>
