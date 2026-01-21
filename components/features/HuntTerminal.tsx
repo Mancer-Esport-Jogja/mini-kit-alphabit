@@ -4,34 +4,24 @@ import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Info, AlertTriangle, Clock, Wifi, WifiOff } from 'lucide-react';
 import { TutorialOverlay } from '@/components/ui/TutorialOverlay';
-import { useBinancePrice, ChartInterval } from '@/hooks/useBinancePrice';
+import { useChainlinkPrice, Asset } from '@/hooks/useChainlinkPrice';
 
 export const HuntTerminal = () => {
     const [collateral, setCollateral] = useState(50);
     const [selectedTarget, setSelectedTarget] = useState<'MOON' | 'DOOM' | null>(null);
     const [selectedDuration, setSelectedDuration] = useState<'BLITZ' | 'RUSH' | 'CORE' | 'ORBIT'>('BLITZ');
-    const [chartInterval, setChartInterval] = useState<ChartInterval>('5m');
+    const [selectedAsset, setSelectedAsset] = useState<Asset>('ETH');
     const [showTutorial, setShowTutorial] = useState(false);
 
     const handleTargetSelect = (target: 'MOON' | 'DOOM') => {
         setSelectedTarget(target);
     };
 
-    // Chart timeframe options
-    const timeframes = [
-        { id: '5m' as ChartInterval, label: '5M' },
-        { id: '15m' as ChartInterval, label: '15M' },
-        { id: '1h' as ChartInterval, label: '1H' },
-        { id: '6h' as ChartInterval, label: '6H' },
-        { id: '12h' as ChartInterval, label: '12H' },
-        { id: '1d' as ChartInterval, label: '1D' },
-    ];
-
-    // Binance Realtime Price
-    const { currentPrice, priceHistory, priceChange, isConnected, isLoading } = useBinancePrice({
-        symbol: 'ETHUSDT',
-        interval: chartInterval,
-        limit: 50
+    // Chainlink Realtime Price (polls every 5s)
+    const { currentPrice, priceHistory, priceChange, isConnected, isLoading } = useChainlinkPrice({
+        asset: selectedAsset,
+        pollingInterval: 5000,
+        maxDataPoints: 50
     });
 
     // Generate SVG path from price history
@@ -93,21 +83,21 @@ export const HuntTerminal = () => {
                 steps={tutorialSteps}
             />
 
-            {/* Tactical Header */}
-            <div className="bg-slate-800 p-3 flex items-center justify-between border-b-4 border-slate-700">
-                <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]"></div>
-                    <span className="text-xs font-pixel text-slate-300 tracking-wider">TACTICAL COMMAND</span>
+            {/* Tactical Header - Compact */}
+            <div className="bg-slate-800 px-3 py-1.5 flex items-center justify-between border-b-2 border-slate-700">
+                <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_6px_rgba(239,68,68,0.6)]"></div>
+                    <span className="text-[10px] font-pixel text-slate-400">TACTICAL</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setShowTutorial(true)}
-                        className="flex items-center gap-1 bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded transition-colors border border-slate-600"
+                        className="flex items-center gap-1 bg-slate-700/50 hover:bg-slate-600 px-1.5 py-0.5 rounded transition-colors"
                     >
-                        <Info size={12} className="text-yellow-500" />
-                        <span className="text-[9px] font-mono text-yellow-500">DECODED TRANSMISSION</span>
+                        <Info size={10} className="text-yellow-500" />
+                        <span className="text-[8px] font-mono text-yellow-500 hidden sm:inline">HELP</span>
                     </button>
-                    <div className="text-[10px] font-mono text-slate-500">SYS.VER.2.0</div>
+                    <div className="text-[8px] font-mono text-slate-600">v2.0</div>
                 </div>
             </div>
 
@@ -123,18 +113,35 @@ export const HuntTerminal = () => {
                     <div className="flex items-center justify-between bg-slate-800/80 px-2 py-1 border-b-2 border-slate-700">
                         <div className="flex items-center gap-2">
                             <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-                            <span className="font-pixel text-[10px] text-slate-300">ETH/USD</span>
+                            {/* Asset Selector */}
+                            <div className="flex bg-slate-900 rounded overflow-hidden">
+                                <button
+                                    onClick={() => setSelectedAsset('ETH')}
+                                    className={`px-2 py-0.5 text-[9px] font-pixel ${selectedAsset === 'ETH' ? 'bg-bit-green text-black' : 'text-slate-400 hover:text-white'}`}
+                                >
+                                    ETH
+                                </button>
+                                <button
+                                    onClick={() => setSelectedAsset('BTC')}
+                                    className={`px-2 py-0.5 text-[9px] font-pixel ${selectedAsset === 'BTC' ? 'bg-yellow-500 text-black' : 'text-slate-400 hover:text-white'}`}
+                                >
+                                    BTC
+                                </button>
+                            </div>
                             <span className={`font-pixel text-sm ${priceChange < 0 ? 'text-bit-coral' : 'text-bit-green'}`}>
                                 ${currentPrice ? currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '---'}
                             </span>
                         </div>
-                        <div className={`px-2 py-0.5 text-[10px] font-mono ${priceChange < 0 ? 'bg-bit-coral/20 text-bit-coral' : 'bg-bit-green/20 text-bit-green'}`}>
-                            {priceChange >= 0 ? '▲' : '▼'} {Math.abs(priceChange).toFixed(2)}%
+                        <div className="flex items-center gap-2">
+                            <span className="text-[8px] font-mono text-slate-500">⛓ CHAINLINK</span>
+                            <div className={`px-2 py-0.5 text-[10px] font-mono ${priceChange < 0 ? 'bg-bit-coral/20 text-bit-coral' : 'bg-bit-green/20 text-bit-green'}`}>
+                                {priceChange >= 0 ? '▲' : '▼'} {Math.abs(priceChange).toFixed(2)}%
+                            </div>
                         </div>
                     </div>
 
-                    {/* Chart Area - Compact */}
-                    <div className="relative h-28 bg-black border-x-2 border-slate-700 overflow-hidden">
+                    {/* Chart Area - Wider */}
+                    <div className="relative h-36 bg-black border-x-2 border-slate-700 overflow-hidden">
                         {/* Pixel Grid */}
                         <div className="absolute inset-0 opacity-20" style={{
                             backgroundImage: 'linear-gradient(rgba(74,222,128,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(74,222,128,0.3) 1px, transparent 1px)',
@@ -193,20 +200,9 @@ export const HuntTerminal = () => {
                             style={{ boxShadow: '0 0 8px rgba(255,255,255,0.6)' }}></div>
                     </div>
 
-                    {/* Timeframe Selector - Compact Pills */}
-                    <div className="flex bg-slate-900 border-2 border-t-0 border-slate-700">
-                        {timeframes.map((tf) => (
-                            <button
-                                key={tf.id}
-                                onClick={() => setChartInterval(tf.id)}
-                                className={`flex-1 py-1 text-[9px] font-pixel uppercase transition-all border-r border-slate-700 last:border-r-0
-                                    ${chartInterval === tf.id
-                                        ? 'bg-bit-green/20 text-bit-green border-b-2 border-b-bit-green'
-                                        : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
-                            >
-                                {tf.label}
-                            </button>
-                        ))}
+                    {/* Chainlink Info Bar */}
+                    <div className="flex justify-center items-center gap-2 bg-slate-900/80 border-2 border-t-0 border-slate-700 py-1">
+                        <span className="text-[8px] font-mono text-slate-500">ORACLE: CHAINLINK • POLL: 5s • ON-CHAIN</span>
                     </div>
                 </div>
 

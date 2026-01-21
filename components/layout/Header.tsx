@@ -30,13 +30,13 @@ export const Header = ({ streak }: { streak: number }) => {
                 </div>
 
                 {/* OnchainKit Connect Wallet */}
-                <div className="flex justify-end">
+                <div className="wallet-wrapper overflow-hidden max-w-[120px]">
                     <Wallet>
-                        <ConnectWallet className="bg-slate-800 border-2 border-slate-600 text-white font-pixel text-[10px] px-2 py-1 h-8 min-w-[100px]">
-                            <Avatar className="h-6 w-6" />
-                            <Name className="text-white" />
-                        </ConnectWallet>
-                        <WalletDropdown>
+                        <ConnectWallet
+                            disconnectedLabel="Connect"
+                            className="!bg-slate-800 !border-2 !border-slate-600 hover:!border-bit-green !font-pixel !text-[10px] !px-3 !py-1.5 !rounded-none [&>*:nth-child(n+2)]:!hidden"
+                        />
+                        <WalletDropdown className="!bg-slate-900 !border-2 !border-slate-700 !rounded-none">
                             <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
                                 <Avatar />
                                 <Name />
