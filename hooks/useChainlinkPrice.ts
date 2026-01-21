@@ -1,61 +1,31 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { createPublicClient, http, formatUnits } from 'viem';
-import { base } from 'viem/chains';
 
-// Chainlink Price Feed addresses on Base Mainnet
-const CHAINLINK_FEEDS = {
-    ETH: '0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70',
-    BTC: '0x64c911996D3c6aC71f9b455B1E8E7266BcbD848F',
+// CoinGecko API - free, neutral, no rate limits for basic use
+const COINGECKO_API = 'https://api.coingecko.com/api/v3';
+
+// Asset mapping for CoinGecko
+const ASSET_IDS = {
+    ETH: 'ethereum',
+    BTC: 'bitcoin',
 } as const;
-
-// Chainlink Aggregator V3 ABI (minimal)
-const AGGREGATOR_ABI = [
-    {
-        inputs: [],
-        name: 'latestRoundData',
-        outputs: [
-            { name: 'roundId', type: 'uint80' },
-            { name: 'answer', type: 'int256' },
-            { name: 'startedAt', type: 'uint256' },
-            { name: 'updatedAt', type: 'uint256' },
-            { name: 'answeredInRound', type: 'uint80' },
-        ],
-        stateMutability: 'view',
-        type: 'function',
-    },
-    {
-        inputs: [],
-        name: 'decimals',
-        outputs: [{ name: '', type: 'uint8' }],
-        stateMutability: 'view',
-        type: 'function',
-    },
-] as const;
 
 interface PriceData {
     price: number;
     timestamp: number;
 }
 
-export type ChartInterval = '5m' | '15m' | '1h' | '6h' | '12h' | '1d';
 export type Asset = 'ETH' | 'BTC';
 
-interface UseChainlinkPriceOptions {
+interface UsePriceOptions {
     asset?: Asset;
     pollingInterval?: number; // in ms
     maxDataPoints?: number;
 }
 
-// Create viem public client for Base
-const publicClient = createPublicClient({
-    chain: base,
-    transport: http(),
-});
-
-export function useChainlinkPrice(options: UseChainlinkPriceOptions = {}) {
-    const { asset = 'ETH', pollingInterval = 5000, maxDataPoints = 50 } = options;
+export function usePrice(options: UsePriceOptions = {}) {
+    const { asset = 'ETH', pollingInterval = 10000, maxDataPoints = 50 } = options;
 
     const [currentPrice, setCurrentPrice] = useState<number | null>(null);
     const [priceHistory, setPriceHistory] = useState<PriceData[]>([]);
@@ -65,39 +35,48 @@ export function useChainlinkPrice(options: UseChainlinkPriceOptions = {}) {
     const [lastUpdate, setLastUpdate] = useState<number>(0);
 
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
+    const lastFetchRef = useRef<number>(0);
 
     const fetchPrice = useCallback(async () => {
+        // Prevent too frequent fetches
+        const now = Date.now();
+        if (now - lastFetchRef.current < 5000) {
+            return;
+        }
+        lastFetchRef.current = now;
+
         try {
-            const feedAddress = CHAINLINK_FEEDS[asset];
+            const coinId = ASSET_IDS[asset];
 
-            // Get latest round data
-            const [, answer, , updatedAt] = await publicClient.readContract({
-                address: feedAddress as `0x${string}`,
-                abi: AGGREGATOR_ABI,
-                functionName: 'latestRoundData',
-            }) as [bigint, bigint, bigint, bigint, bigint];
+            // CoinGecko simple price endpoint
+            const response = await fetch(
+                `${COINGECKO_API}/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true`
+            );
 
-            // Get decimals
-            const decimals = await publicClient.readContract({
-                address: feedAddress as `0x${string}`,
-                abi: AGGREGATOR_ABI,
-                functionName: 'decimals',
-            }) as number;
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
 
-            const price = parseFloat(formatUnits(answer, decimals));
-            const timestamp = Number(updatedAt) * 1000;
+            const data = await response.json();
+            const price = data[coinId]?.usd;
+
+            if (typeof price !== 'number') {
+                throw new Error('Invalid price data');
+            }
+
+            const timestamp = Date.now();
 
             setCurrentPrice(price);
             setLastUpdate(timestamp);
             setIsConnected(true);
             setError(null);
 
-            // Add to history if it's a new data point
+            // Add to history
             setPriceHistory(prev => {
                 const lastPoint = prev[prev.length - 1];
 
-                // Only add if price or timestamp changed significantly
-                if (!lastPoint || Math.abs(lastPoint.price - price) > 0.01 || timestamp > lastPoint.timestamp) {
+                // Only add if price changed or enough time passed
+                if (!lastPoint || Math.abs(lastPoint.price - price) > 0.01 || timestamp > lastPoint.timestamp + 5000) {
                     const newHistory = [...prev, { price, timestamp }];
                     return newHistory.slice(-maxDataPoints);
                 }
@@ -108,8 +87,8 @@ export function useChainlinkPrice(options: UseChainlinkPriceOptions = {}) {
             if (isLoading) setIsLoading(false);
 
         } catch (e) {
-            console.error('[Chainlink] Error fetching price:', e);
-            setError('Failed to fetch price from Chainlink');
+            console.error('[Price] Error fetching:', e);
+            setError('Failed to fetch price');
             setIsConnected(false);
         }
     }, [asset, maxDataPoints, isLoading]);
@@ -118,6 +97,7 @@ export function useChainlinkPrice(options: UseChainlinkPriceOptions = {}) {
     useEffect(() => {
         setIsLoading(true);
         setPriceHistory([]);
+        lastFetchRef.current = 0;
 
         // Initial fetch
         fetchPrice();
@@ -130,7 +110,7 @@ export function useChainlinkPrice(options: UseChainlinkPriceOptions = {}) {
                 clearInterval(intervalRef.current);
             }
         };
-    }, [fetchPrice, pollingInterval]);
+    }, [asset, pollingInterval]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Calculate price change
     const priceChange = priceHistory.length >= 2
@@ -149,3 +129,6 @@ export function useChainlinkPrice(options: UseChainlinkPriceOptions = {}) {
         refetch: fetchPrice,
     };
 }
+
+// Keep backward compatible export
+export const useChainlinkPrice = usePrice;

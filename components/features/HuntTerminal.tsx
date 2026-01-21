@@ -133,7 +133,7 @@ export const HuntTerminal = () => {
                             </span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-[8px] font-mono text-slate-500">⛓ CHAINLINK</span>
+                            <span className="text-[8px] font-mono text-slate-500">🦎 COINGECKO</span>
                             <div className={`px-2 py-0.5 text-[10px] font-mono ${priceChange < 0 ? 'bg-bit-coral/20 text-bit-coral' : 'bg-bit-green/20 text-bit-green'}`}>
                                 {priceChange >= 0 ? '▲' : '▼'} {Math.abs(priceChange).toFixed(2)}%
                             </div>
@@ -200,9 +200,9 @@ export const HuntTerminal = () => {
                             style={{ boxShadow: '0 0 8px rgba(255,255,255,0.6)' }}></div>
                     </div>
 
-                    {/* Chainlink Info Bar */}
+                    {/* Price Source Info Bar */}
                     <div className="flex justify-center items-center gap-2 bg-slate-900/80 border-2 border-t-0 border-slate-700 py-1">
-                        <span className="text-[8px] font-mono text-slate-500">ORACLE: CHAINLINK • POLL: 5s • ON-CHAIN</span>
+                        <span className="text-[8px] font-mono text-slate-500">DATA: COINGECKO • POLL: 10s • LIVE</span>
                     </div>
                 </div>
 
