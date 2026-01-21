@@ -1,21 +1,35 @@
 import { THETANUTS_API, INDEXER_ENDPOINTS } from '@/config/api';
 import { OrdersApiResponse, SignedOrder } from '@/types/orders';
 import { Position } from '@/types/positions';
-import { THETANUTS_CONTRACTS, ALPHABIT_REFERRER } from '@/config/thetanuts';
+import { THETANUTS_CONTRACTS } from '@/config/thetanuts';
+
+interface BackendResponse<T> {
+  success: boolean;
+  data: T;
+  error?: {
+    code: string;
+    message: string;
+  };
+}
 
 /**
- * Fetch all available orders from Thetanuts RFQ
+ * Fetch all available orders from Thetanuts RFQ via Backend Proxy
  */
 export async function fetchOrders(): Promise<OrdersApiResponse> {
   const res = await fetch(THETANUTS_API.ORDERS, {
-    cache: 'no-store', // Always get fresh orders
+    cache: 'no-store',
   });
   
   if (!res.ok) {
     throw new Error(`Failed to fetch orders: ${res.status}`);
   }
   
-  return res.json();
+  const result: BackendResponse<OrdersApiResponse> = await res.json();
+  if (!result.success) {
+    throw new Error(result.error?.message || 'Failed to fetch orders');
+  }
+  
+  return result.data;
 }
 
 /**
@@ -62,31 +76,56 @@ export function getBestOrder(orders: SignedOrder[]): SignedOrder | null {
 }
 
 /**
- * Fetch user positions
+ * Fetch user positions via Backend Proxy
  * @param address User wallet address
+ * @param token Optional auth token
  */
-export async function fetchUserPositions(address: string): Promise<Position[]> {
-  const res = await fetch(INDEXER_ENDPOINTS.USER_POSITIONS(address));
+export async function fetchUserPositions(address: string, token?: string): Promise<Position[]> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(INDEXER_ENDPOINTS.USER_POSITIONS(address), {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      address,
+      type: 'open',
+      filterByReferrer: true,
+    }),
+  });
   
   if (!res.ok) {
     throw new Error(`Failed to fetch positions: ${res.status}`);
   }
   
-  const positions: Position[] = await res.json();
+  const result: BackendResponse<Position[]> = await res.json();
+  if (!result.success) {
+    throw new Error(result.error?.message || 'Failed to fetch positions');
+  }
   
-  // Filter by ALPHABIT referrer
-  return positions.filter(p => 
-    p.referrer.toLowerCase() === ALPHABIT_REFERRER.toLowerCase()
-  );
+  return result.data;
 }
 
 /**
- * Trigger indexer sync after trade
+ * Trigger indexer sync after trade via Backend Proxy
+ * @param token Optional auth token
  */
-export async function triggerSync(): Promise<{ status: string }> {
+export async function triggerSync(token?: string): Promise<{ status: string }> {
   try {
-    const res = await fetch(INDEXER_ENDPOINTS.UPDATE, { method: 'POST' });
-    return res.json();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(INDEXER_ENDPOINTS.UPDATE, { 
+      method: 'POST',
+      headers
+    });
+    const result: BackendResponse<any> = await res.json();
+    return result.success ? result.data : { status: "error" };
   } catch (e) {
     console.error("Failed to trigger sync", e);
     return { status: "error" };

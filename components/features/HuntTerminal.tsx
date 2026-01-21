@@ -7,7 +7,10 @@ import { TutorialOverlay } from "@/components/ui/TutorialOverlay";
 import { useThetanutsOrders } from "@/hooks/useThetanutsOrders";
 import { parseStrike, parsePrice } from "@/utils/decimals";
 
+import { useAuth } from "@/context/AuthContext";
+
 export const HuntTerminal = () => {
+  const { isAuthenticated, login, isLoading: isAuthLoading } = useAuth();
   const [collateral, setCollateral] = useState(50);
   const [selectedTarget, setSelectedTarget] = useState<"MOON" | "DOOM" | null>(
     null,
@@ -288,26 +291,37 @@ export const HuntTerminal = () => {
         </div>
 
         {/* Launch Button */}
-        <button
-          type="button"
-          disabled={!selectedTarget || !bestOrder || isLoading}
-          className={`w-full py-4 font-pixel text-sm uppercase tracking-widest transition-all duration-200 border-b-4 active:border-b-0 active:translate-y-1
-                        ${
-                          !selectedTarget || !bestOrder || isLoading
-                            ? "bg-slate-700 text-slate-500 border-slate-900 cursor-not-allowed"
-                            : selectedTarget === "MOON"
-                              ? "bg-bit-green text-black border-green-800 hover:bg-green-400 shadow-[0_0_15px_rgba(74,222,128,0.4)]"
-                              : "bg-bit-coral text-white border-red-900 hover:bg-red-400 shadow-[0_0_15px_rgba(232,90,90,0.4)]"
-                        }`}
-        >
-          {isLoading
-            ? "SYNCHRONIZING..."
-            : !selectedTarget
-              ? "SELECT TARGET"
-              : !bestOrder
-                ? "NO MISSION AVAILABLE"
-                : "INITIATE SEQUENCE"}
-        </button>
+        {!isAuthenticated ? (
+          <button
+            type="button"
+            onClick={login}
+            disabled={isAuthLoading}
+            className="w-full py-4 bg-bit-green text-black font-pixel text-sm uppercase tracking-widest border-b-4 border-green-800 hover:bg-green-400 active:border-b-0 active:translate-y-1 transition-all shadow-[0_0_15px_rgba(74,222,128,0.4)]"
+          >
+            {isAuthLoading ? "SYNCHRONIZING..." : "LOGIN TO INITIATE"}
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={!selectedTarget || !bestOrder || isLoading}
+            className={`w-full py-4 font-pixel text-sm uppercase tracking-widest transition-all duration-200 border-b-4 active:border-b-0 active:translate-y-1
+                          ${
+                            !selectedTarget || !bestOrder || isLoading
+                              ? "bg-slate-700 text-slate-500 border-slate-900 cursor-not-allowed"
+                              : selectedTarget === "MOON"
+                                ? "bg-bit-green text-black border-green-800 hover:bg-green-400 shadow-[0_0_15px_rgba(74,222,128,0.4)]"
+                                : "bg-bit-coral text-white border-red-900 hover:bg-red-400 shadow-[0_0_15px_rgba(232,90,90,0.4)]"
+                          }`}
+          >
+            {isLoading
+              ? "SYNCHRONIZING..."
+              : !selectedTarget
+                ? "SELECT TARGET"
+                : !bestOrder
+                  ? "NO MISSION AVAILABLE"
+                  : "INITIATE SEQUENCE"}
+          </button>
+        )}
 
         {isError && (
           <div className="mt-4 p-2 bg-red-900/30 border border-red-500 text-[10px] font-mono text-red-400 text-center animate-pulse">
