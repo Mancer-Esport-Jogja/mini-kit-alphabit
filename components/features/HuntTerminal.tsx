@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, Info, AlertTriangle, Clock, Wifi, WifiOff } from 'lucide-react';
+import { TrendingUp, TrendingDown, Info, AlertTriangle, Clock } from 'lucide-react';
 import { TutorialOverlay } from '@/components/ui/TutorialOverlay';
 import { useBinancePrice, ChartInterval } from '@/hooks/useBinancePrice';
 
