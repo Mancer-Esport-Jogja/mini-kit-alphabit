@@ -117,101 +117,97 @@ export const HuntTerminal = () => {
                 <div className="absolute inset-0 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] opacity-10"></div>
                 <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent via-white/5 to-transparent h-1 animate-scanline opacity-20"></div>
 
-                {/* Tactical Chart Visualization */}
-                <div className="mb-6 relative h-40 bg-slate-900 border-2 border-slate-700 overflow-hidden">
-                    {/* Timeframe Selector */}
-                    <div className="absolute top-2 right-2 z-20 flex gap-1">
+                {/* === TACTICAL RADAR === */}
+                <div className="mb-4 relative">
+                    {/* Chart Header Bar */}
+                    <div className="flex items-center justify-between bg-slate-800/80 px-2 py-1 border-b-2 border-slate-700">
+                        <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                            <span className="font-pixel text-[10px] text-slate-300">ETH/USD</span>
+                            <span className={`font-pixel text-sm ${priceChange < 0 ? 'text-bit-coral' : 'text-bit-green'}`}>
+                                ${currentPrice ? currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '---'}
+                            </span>
+                        </div>
+                        <div className={`px-2 py-0.5 text-[10px] font-mono ${priceChange < 0 ? 'bg-bit-coral/20 text-bit-coral' : 'bg-bit-green/20 text-bit-green'}`}>
+                            {priceChange >= 0 ? '▲' : '▼'} {Math.abs(priceChange).toFixed(2)}%
+                        </div>
+                    </div>
+
+                    {/* Chart Area - Compact */}
+                    <div className="relative h-28 bg-black border-x-2 border-slate-700 overflow-hidden">
+                        {/* Pixel Grid */}
+                        <div className="absolute inset-0 opacity-20" style={{
+                            backgroundImage: 'linear-gradient(rgba(74,222,128,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(74,222,128,0.3) 1px, transparent 1px)',
+                            backgroundSize: '16px 16px'
+                        }}></div>
+
+                        {/* Loading State */}
+                        {isLoading && (
+                            <div className="absolute inset-0 z-10 bg-black/90 flex items-center justify-center gap-2">
+                                <div className="w-3 h-3 bg-bit-green animate-ping"></div>
+                                <span className="text-[10px] font-pixel text-bit-green">SCANNING...</span>
+                            </div>
+                        )}
+
+                        {/* Chart SVG */}
+                        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 112" preserveAspectRatio="none">
+                            {chartPath ? (
+                                <>
+                                    <path d={areaPath} fill={`url(#gradient-${priceChange < 0 ? 'red' : 'green'})`} opacity="0.4" />
+                                    <path
+                                        d={chartPath}
+                                        fill="none"
+                                        stroke={priceChange < 0 ? '#ef4444' : '#4ade80'}
+                                        strokeWidth="2"
+                                        vectorEffect="non-scaling-stroke"
+                                        style={{ filter: `drop-shadow(0 0 6px ${priceChange < 0 ? '#ef4444' : '#4ade80'})` }}
+                                    />
+                                    {/* End Point Indicator */}
+                                    <circle
+                                        cx="380"
+                                        cy={chartPath ? chartPath.split(' ').pop()?.split(',')[1] : 56}
+                                        r="4"
+                                        fill={priceChange < 0 ? '#ef4444' : '#4ade80'}
+                                        className="animate-pulse"
+                                    />
+                                </>
+                            ) : (
+                                <text x="200" y="56" textAnchor="middle" fill="#64748b" fontSize="10" fontFamily="monospace">
+                                    AWAITING SIGNAL...
+                                </text>
+                            )}
+                            <defs>
+                                <linearGradient id="gradient-green" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#4ade80" />
+                                    <stop offset="100%" stopColor="transparent" />
+                                </linearGradient>
+                                <linearGradient id="gradient-red" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#ef4444" />
+                                    <stop offset="100%" stopColor="transparent" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+
+                        {/* Scan Line Effect */}
+                        <div className="absolute inset-y-0 w-0.5 bg-white/30 animate-[scan_3s_linear_infinite]"
+                            style={{ boxShadow: '0 0 8px rgba(255,255,255,0.6)' }}></div>
+                    </div>
+
+                    {/* Timeframe Selector - Compact Pills */}
+                    <div className="flex bg-slate-900 border-2 border-t-0 border-slate-700">
                         {timeframes.map((tf) => (
                             <button
                                 key={tf.id}
                                 onClick={() => setChartInterval(tf.id)}
-                                className={`px-1.5 py-0.5 text-[8px] font-mono transition-all
+                                className={`flex-1 py-1 text-[9px] font-pixel uppercase transition-all border-r border-slate-700 last:border-r-0
                                     ${chartInterval === tf.id
-                                        ? 'bg-bit-green text-black'
-                                        : 'bg-slate-800/80 text-slate-400 hover:text-white'}`}
+                                        ? 'bg-bit-green/20 text-bit-green border-b-2 border-b-bit-green'
+                                        : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
                             >
                                 {tf.label}
                             </button>
                         ))}
                     </div>
-
-                    {/* Grid Background */}
-                    <div className="absolute inset-0" style={{
-                        backgroundImage: 'linear-gradient(rgba(30, 41, 59, 0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(30, 41, 59, 0.5) 1px, transparent 1px)',
-                        backgroundSize: '20px 20px'
-                    }}></div>
-
-                    {/* Loading Overlay */}
-                    {isLoading && (
-                        <div className="absolute inset-0 z-10 bg-slate-900/80 flex items-center justify-center">
-                            <span className="text-[10px] font-mono text-slate-400 animate-pulse">LOADING {chartInterval.toUpperCase()}...</span>
-                        </div>
-                    )}
-
-                    {/* Realtime Chart Line (SVG) */}
-                    <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 160" preserveAspectRatio="none">
-                        {chartPath ? (
-                            <>
-                                {/* Area fill under the line */}
-                                <path
-                                    d={areaPath}
-                                    fill={`url(#gradient-${priceChange < 0 ? 'red' : 'green'})`}
-                                    opacity="0.3"
-                                />
-                                {/* Main line */}
-                                <path
-                                    d={chartPath}
-                                    fill="none"
-                                    stroke={priceChange < 0 ? '#ef4444' : '#4ade80'}
-                                    strokeWidth="2"
-                                    vectorEffect="non-scaling-stroke"
-                                    className="drop-shadow-[0_0_4px_rgba(74,222,128,0.5)]"
-                                />
-                            </>
-                        ) : (
-                            <text x="200" y="80" textAnchor="middle" fill="#64748b" fontSize="12" fontFamily="monospace">
-                                CONNECTING...
-                            </text>
-                        )}
-
-                        <defs>
-                            <linearGradient id="gradient-green" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#4ade80" />
-                                <stop offset="100%" stopColor="transparent" />
-                            </linearGradient>
-                            <linearGradient id="gradient-red" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#ef4444" />
-                                <stop offset="100%" stopColor="transparent" />
-                            </linearGradient>
-                        </defs>
-                    </svg>
-
-                    {/* Live Price Indicator */}
-                    <div className="absolute top-2 left-2 bg-black/70 backdrop-blur px-2 py-1 border border-slate-700 rounded">
-                        <div className="flex items-center gap-2">
-                            {isConnected ? (
-                                <Wifi size={10} className="text-green-500" />
-                            ) : (
-                                <WifiOff size={10} className="text-red-500" />
-                            )}
-                            <span className="font-mono text-[10px] text-slate-300">ETH/USD</span>
-                            <span className={`font-pixel text-xs ${priceChange < 0 ? 'text-red-400' : 'text-green-400'}`}>
-                                ${currentPrice ? currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '---'}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Price Change Badge */}
-                    {priceHistory.length > 1 && (
-                        <div className="absolute top-2 right-2 bg-black/70 backdrop-blur px-2 py-1 border border-slate-700 rounded">
-                            <span className={`font-mono text-[10px] ${priceChange < 0 ? 'text-red-400' : 'text-green-400'}`}>
-                                {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(3)}%
-                            </span>
-                        </div>
-                    )}
-
-                    {/* Scanning Bar Animation */}
-                    <div className="absolute inset-y-0 w-px bg-white/20 animate-[scan_4s_linear_infinite]" style={{ boxShadow: '0 0 10px rgba(255,255,255,0.5)' }}></div>
                 </div>
 
                 {/* Duration Selector */}
