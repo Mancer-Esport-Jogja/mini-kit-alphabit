@@ -10,6 +10,7 @@ import { LiquidityEngine } from "@/components/features/LiquidityEngine";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { TrendingUp, Hammer } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { Marquee } from "@/components/ui/Marquee";
 
 export default function App() {
   const { user } = useAuth();
@@ -34,7 +35,7 @@ export default function App() {
     <div className={`min-h-screen h-screen bg-void-black text-slate-200 max-w-md mx-auto border-x border-slate-800/50 relative overflow-y-auto overflow-x-hidden scroll-smooth ${glitch ? "opacity-95" : ""}`}>
       {/* SCANLINE EFFECT GLOBAL */}
       <div className="fixed inset-0 pointer-events-none z-[60] opacity-5">
-          <div className="w-full h-2 bg-white blur-sm animate-scanline"></div>
+          <div className="w-full h-2 bg-white blur-sm absolute animate-scanline"></div>
       </div>
       
       <AnimatePresence mode="wait">
@@ -67,9 +68,11 @@ export default function App() {
 
             <main className="p-4 relative z-10">
               <div className="bg-black border-x-4 border-slate-700 h-6 mb-6 flex items-center overflow-hidden">
-                <p className="text-[8px] text-green-400 whitespace-nowrap animate-[marquee_10s_linear_infinite] font-pixel">
-                  {`/// ALPHABIT SYSTEM READY /// CONNECTED TO BASE MAINNET /// THETANUTS PROTOCOL ACTIVE /// MODE: ${mode} ///`}
-                </p>
+                <Marquee 
+                  text={`/// ALPHABIT SYSTEM READY /// CONNECTED TO BASE MAINNET /// THETANUTS PROTOCOL ACTIVE /// MODE: ${mode} /// `}
+                  speed={20}
+                  className="text-[8px] text-green-400 font-pixel"
+                />
               </div>
 
               {/* MODE SWITCHER */}
@@ -77,7 +80,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setMode("HUNT")}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider relative z-10 font-pixel ${mode === "HUNT" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider relative z-10 font-pixel transition-colors duration-300 ${mode === "HUNT" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
                 >
                   <TrendingUp size={14} />
                   HUNT
@@ -85,14 +88,18 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setMode("FARM")}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider relative z-10 font-pixel ${mode === "FARM" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider relative z-10 font-pixel transition-colors duration-300 ${mode === "FARM" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
                 >
                   <Hammer size={14} />
                   FARM
                 </button>
-                <div
-                  className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white transition-all duration-300 ${mode === "HUNT" ? "left-1" : "left-[calc(50%+2px)]"}`}
-                ></div>
+                <motion.div
+                  layoutId="mode-bg"
+                  className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white"
+                  initial={false}
+                  animate={{ x: mode === "HUNT" ? 0 : "100%" }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                />
               </div>
 
               {mode === "HUNT" ? (

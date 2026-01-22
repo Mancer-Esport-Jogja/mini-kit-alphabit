@@ -89,7 +89,7 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
         <div className="flex flex-col gap-0 relative">
             {/* SCANLINE EFFECT */}
             <div className="fixed inset-0 pointer-events-none z-50 opacity-5">
-                <div className="w-full h-2 bg-white blur-sm animate-scanline"></div>
+                <div className="w-full h-2 bg-white blur-sm absolute animate-scanline"></div>
             </div>
 
             {/* CRT Overlay */}
@@ -102,9 +102,9 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
 
                 {/* 3D Coin */}
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 1.2, ease: "easeOut" }}
                     className="w-full max-w-sm mb-4"
                 >
                     <Suspense fallback={

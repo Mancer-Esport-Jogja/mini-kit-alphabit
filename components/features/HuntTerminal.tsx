@@ -51,8 +51,8 @@ export const HuntTerminal = () => {
     });
 
     // Generate SVG path from price history
-    const chartPath = useMemo(() => {
-        if (priceHistory.length < 2) return '';
+    const { chartPath, priceIndicators } = useMemo(() => {
+        if (priceHistory.length < 2) return { chartPath: '', priceIndicators: [] };
 
         const prices = priceHistory.map(p => p.price);
         const minPrice = Math.min(...prices);
@@ -69,8 +69,24 @@ export const HuntTerminal = () => {
             return `${x},${y}`;
         });
 
-        return `M${points.join(' L')}`;
-    }, [priceHistory]);
+        // Calculate Price Steps (Indicators)
+        const indicators = [];
+        // Dynamic step based on asset and range
+        const btcStep = range > 5000 ? 2000 : 500;
+        const ethStep = range > 200 ? 50 : 10;
+        const step = selectedAsset === 'BTC' ? btcStep : ethStep;
+
+        const startPrice = Math.ceil(minPrice / step) * step;
+        for (let p = startPrice; p <= maxPrice; p += step) {
+            const y = padding + ((maxPrice - p) / range) * (chartHeight - 2 * padding);
+            indicators.push({ label: `$${p.toLocaleString()}`, y });
+        }
+
+        return {
+            chartPath: `M${points.join(' L')}`,
+            priceIndicators: indicators
+        };
+    }, [priceHistory, selectedAsset]);
 
     // Area fill path
     const areaPath = useMemo(() => {
@@ -200,6 +216,32 @@ export const HuntTerminal = () => {
                         <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 192" preserveAspectRatio="none">
                             {chartPath ? (
                                 <>
+                                    {/* Grid Lines & Labels */}
+                                    {priceIndicators.map((indicator, i) => (
+                                        <g key={i}>
+                                            <line 
+                                                x1="10" 
+                                                y1={indicator.y} 
+                                                x2="390" 
+                                                y2={indicator.y} 
+                                                stroke="rgba(74,222,128,0.1)" 
+                                                strokeWidth="1"
+                                                strokeDasharray="4 4"
+                                            />
+                                            <text 
+                                                x="390" 
+                                                y={indicator.y + 3} 
+                                                textAnchor="end" 
+                                                fill="rgba(255,255,255,0.3)" 
+                                                fontSize="8" 
+                                                fontFamily="monospace"
+                                                className="font-pixel"
+                                            >
+                                                {indicator.label}
+                                            </text>
+                                        </g>
+                                    ))}
+
                                     <path d={areaPath} fill={`url(#gradient-${priceChange < 0 ? 'red' : 'green'})`} opacity="0.4" />
                                     <path
                                         d={chartPath}
