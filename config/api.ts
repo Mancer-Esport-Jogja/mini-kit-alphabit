@@ -24,3 +24,7 @@ export const INDEXER_ENDPOINTS = {
   USER_HISTORY: (address: string) => 
     `${THETANUTS_API.INDEXER_BASE}/positions`,
 } as const;
+
+export const MARKET_API = {
+  KLINES: `${ALPHABIT_BACKEND_URL}/api/market/klines`,
+} as const;
