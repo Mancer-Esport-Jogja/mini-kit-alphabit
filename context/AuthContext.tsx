@@ -24,11 +24,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setState(prev => ({ ...prev, isLoading: true }));
       
-      // Use Quick Auth for instant, headless token retrieval
-      const signInResult = await sdk.actions.signIn({ nonce: Math.random().toString(36).substring(2, 12) });
-      const token = (signInResult as any).token;
+      // In SDK v0.2.0, we try to get the session token headlessly
+      // Many frames/miniapps now use viewProfile to get the user + token
+      let token: string | null = null;
+      try {
+        const result = await (sdk.actions as any).viewProfile();
+        token = result?.token;
+      } catch (e) {
+        // If viewProfile fails or is unavailable, try a standard signIn
+        const signInResult = await sdk.actions.signIn({ nonce: Math.random().toString(36).substring(2, 12) });
+        token = (signInResult as any).token || (signInResult as any).signature; // Fallback for various versions
+      }
       
-      if (!token) throw new Error("No token received");
+      if (!token) {
+        console.warn("No auth token received from Farcaster. Continuing in Guest mode.");
+        setState(prev => ({ ...prev, isLoading: false }));
+        return;
+      }
 
       const response = await fetch(`${ALPHABIT_BACKEND_URL}/auth`, {
         method: "POST",
