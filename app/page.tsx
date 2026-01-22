@@ -9,13 +9,16 @@ import { PositionsList } from "@/components/features/PositionsList";
 import { LiquidityEngine } from "@/components/features/LiquidityEngine";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { TrendingUp, Hammer } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 export default function App() {
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState("landing");
   const [mode, setMode] = useState("HUNT");
-  const [streak] = useState(5);
   const [glitch, setGlitch] = useState(false);
+
+
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -60,7 +63,7 @@ export default function App() {
           >
             <div className="fixed inset-0 bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-[size:40px_40px] opacity-20 pointer-events-none"></div>
 
-            <Header streak={streak} />
+            <Header />
 
             <main className="p-4 relative z-10">
               <div className="bg-black border-x-4 border-slate-700 h-6 mb-6 flex items-center overflow-hidden">

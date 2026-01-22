@@ -8,6 +8,7 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   lastActiveAt: string;
+  streak: number;
 }
 
 export interface AuthState {

@@ -8,8 +8,9 @@ const formatAddress = (address: string | null) => {
     return `${address.slice(0, 4)}...${address.slice(-4)}`;
 };
 
-export const Header = ({ streak }: { streak: number }) => {
+export const Header = () => {
     const { user, isAuthenticated, isLoading } = useAuth();
+    const streak = user?.streak || 0;
     const { address, isConnected } = useAccount();
     const { connect, connectors } = useConnect();
     const { disconnect } = useDisconnect();
@@ -45,9 +46,9 @@ export const Header = ({ streak }: { streak: number }) => {
                         {isAuthenticated ? user?.username?.toUpperCase() : 'ALPHABIT'}
                     </h2>
                     <div className="bg-black px-2 py-1 border border-slate-700 flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full animate-pulse ${isAuthenticated ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+                        <div className="w-2 h-2 rounded-full animate-pulse bg-green-500"></div>
                         <span className="text-[8px] text-slate-400 font-mono uppercase">
-                            {isAuthenticated ? 'AUTH: SECURE' : 'AUTH: PENDING'}
+                            SYSTEM: ONLINE
                         </span>
                     </div>
                 </div>
@@ -56,24 +57,16 @@ export const Header = ({ streak }: { streak: number }) => {
             <div className="flex flex-col items-end gap-1.5 max-w-[50%]">
                 {/* Status & Streak Row */}
                 <div className="flex items-center gap-2">
-                    {isAuthenticated && (
+                    {isLoading ? (
+                        <div className="h-6 flex items-center">
+                            <div className="px-2 py-0.5 bg-slate-800 border border-slate-600">
+                                <span className="text-[8px] font-pixel text-slate-400 animate-pulse uppercase">SYNCING</span>
+                            </div>
+                        </div>
+                    ) : (
                         <div className="flex items-center gap-1.5 px-2 py-0.5 bg-black border border-orange-500/50">
                             <Flame className={`w-3 h-3 ${streak > 3 ? 'text-orange-500 fill-orange-500' : 'text-slate-500'}`} />
-                            <span className="font-pixel text-[9px] text-orange-500">x{streak}</span>
-                        </div>
-                    )}
-                    
-                    {!isAuthenticated && (
-                        <div className="h-6 flex items-center">
-                            {isLoading ? (
-                                <div className="px-2 py-0.5 bg-slate-800 border border-slate-600">
-                                    <span className="text-[8px] font-pixel text-slate-400 animate-pulse uppercase">SYNCING</span>
-                                </div>
-                            ) : (
-                                <div className="px-2 py-0.5 bg-slate-900 border border-slate-700 opacity-50">
-                                    <span className="text-[8px] font-mono text-slate-500">GUEST</span>
-                                </div>
-                            )}
+                            <span className={`font-bold ${streak > 3 ? 'text-orange-500' : 'text-slate-400'} text-xs font-pixel`}>x{streak}</span>
                         </div>
                     )}
                 </div>
