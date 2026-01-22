@@ -96,7 +96,7 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
             <div className="crt-overlay opacity-30"></div>
 
             {/* ==================== SECTION 1: HERO ==================== */}
-            <section className="min-h-screen relative flex flex-col items-center justify-center p-4 overflow-hidden">
+            <section className="min-h-screen relative flex flex-col items-center justify-center p-4">
                 {/* Background Grid */}
                 <div className="absolute inset-0 retro-grid opacity-30"></div>
 

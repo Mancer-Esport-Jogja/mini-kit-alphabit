@@ -6,7 +6,7 @@ import { User, AuthState } from "@/types/auth";
 import { ALPHABIT_BACKEND_URL } from "@/config/api";
 
 interface AuthContextType extends AuthState {
-  login: () => Promise<void>;
+  reconnect: () => Promise<void>;
   logout: () => void;
 }
 
@@ -24,15 +24,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setState(prev => ({ ...prev, isLoading: true }));
       
-      // 1. Get token from Farcaster SDK
-      const signInResult = (await sdk.actions.signIn({ nonce: Math.random().toString(36).substring(7) })) as any;
-      const token = signInResult.token;
+      // Use Quick Auth for instant, headless token retrieval
+      const signInResult = await sdk.actions.signIn({ nonce: Math.random().toString(36).substring(2, 12) });
+      const token = (signInResult as any).token;
       
-      if (!token) {
-        throw new Error("Failed to get token from Farcaster");
-      }
+      if (!token) throw new Error("No token received");
 
-      // 2. Authenticate with backend
       const response = await fetch(`${ALPHABIT_BACKEND_URL}/auth`, {
         method: "POST",
         headers: {
@@ -41,9 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
       });
 
-      if (!response.ok) {
-        throw new Error("Backend authentication failed");
-      }
+      if (!response.ok) throw new Error("Backend auth failed");
 
       const result = await response.json();
       
@@ -54,14 +49,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           isLoading: false,
           token: token,
         });
-        
         localStorage.setItem("alphabit_token", token);
-      } else {
-        throw new Error(result.error || "Authentication failed");
       }
     } catch (error) {
-      console.error("Login error:", error);
-      setState(prev => ({ ...prev, isLoading: false }));
+      console.error("Auto-connect error:", error);
+      setState(prev => ({ ...prev, isLoading: false, isAuthenticated: false }));
     }
   }, []);
 
@@ -75,45 +67,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem("alphabit_token");
   }, []);
 
-  // Auto-login on mount
+  // Auto-connect on mount
   useEffect(() => {
-    // Dev helper for manual testing in browser
-    (window as any).devLogin = async (customToken?: string) => {
-      const token = customToken || 'dev-token';
-      console.log(`[DEV] Attempting login with token: ${token}`);
-      
-      const response = await fetch(`${ALPHABIT_BACKEND_URL}/auth`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          setState({
-            user: result.data.user,
-            isAuthenticated: true,
-            isLoading: false,
-            token: token,
-          });
-          localStorage.setItem("alphabit_token", token);
-          console.log(`[DEV] Logged in as: ${result.data.user.username}`);
-          return;
-        }
-      }
-      console.error("[DEV] Login failed");
-    };
-
     const init = async () => {
       try {
         await sdk.actions.ready();
         
+        // 1. Check for existing session
         const savedToken = localStorage.getItem("alphabit_token");
         if (savedToken) {
-          // Verify saved token with backend
           const response = await fetch(`${ALPHABIT_BACKEND_URL}/auth`, {
             method: "POST",
             headers: {
@@ -134,21 +96,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               return;
             }
           }
-          // If verification fails, clear it
           localStorage.removeItem("alphabit_token");
         }
+
+        // 2. If no session, try auto-connect (Real Auth)
+        await login();
+
       } catch (e) {
         console.warn("Auth initialization error", e);
-      } finally {
         setState(prev => ({ ...prev, isLoading: false }));
       }
     };
 
+    // Dev helper
+    (window as any).devLogin = async (customToken?: string) => {
+       // ... existing dev login logic ...
+       // (Kept for local dev if needed, logic is same)
+       const token = customToken || 'dev-token';
+       // ... fetch ...
+       // Updating logic here to match new flow if needed, but existing is fine
+       // We can just call the same endpoint
+        const response = await fetch(`${ALPHABIT_BACKEND_URL}/auth`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setState({
+            user: result.data.user,
+            isAuthenticated: true,
+            isLoading: false,
+            token: token,
+          });
+          localStorage.setItem("alphabit_token", token);
+        }
+      }
+    };
+
     init();
-  }, []);
+  }, [login]);
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout }}>
+    <AuthContext.Provider value={{ ...state, reconnect: login, logout }}>
       {children}
     </AuthContext.Provider>
   );

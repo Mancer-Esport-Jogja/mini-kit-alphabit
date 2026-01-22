@@ -11,7 +11,7 @@ import { useBinancePrice, ChartInterval } from "@/hooks/useBinancePrice";
 
 export const HuntTerminal = () => {
     // Auth State
-    const { isAuthenticated, login, isLoading: isAuthLoading } = useAuth();
+    const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
     
     // Mission State
     const [collateral, setCollateral] = useState(50);
@@ -401,11 +401,10 @@ export const HuntTerminal = () => {
                 {!isAuthenticated ? (
                     <button
                         type="button"
-                        onClick={login}
-                        disabled={isAuthLoading}
-                        className="w-full py-4 bg-bit-green text-black font-pixel text-sm uppercase tracking-widest border-b-4 border-green-800 hover:bg-green-400 active:border-b-0 active:translate-y-1 transition-all shadow-[0_0_15px_rgba(74,222,128,0.4)]"
+                        disabled={true} 
+                        className="w-full py-4 bg-slate-800 text-slate-500 font-pixel text-sm uppercase tracking-widest border-b-4 border-slate-900 cursor-not-allowed"
                     >
-                        {isAuthLoading ? "SYNCHRONIZING..." : "LOGIN TO INITIATE"}
+                        {isAuthLoading ? "SYNCHRONIZING..." : "ACCESS DENIED :: GUEST MODE"}
                     </button>
                 ) : (
                     <button
