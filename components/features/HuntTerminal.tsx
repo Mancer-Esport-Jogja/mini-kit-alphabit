@@ -210,6 +210,22 @@ export const HuntTerminal = () => {
                     </div>
                 </div>
 
+                {/* Asset Selector */}
+                <div className="flex bg-slate-900 rounded p-0.5 border border-slate-600 mx-auto">
+                    {(['ETH', 'BTC'] as const).map(asset => (
+                        <button
+                            key={asset}
+                            onClick={() => setSelectedAsset(asset)}
+                            className={`px-2 py-0.5 text-[9px] font-bold rounded transition-colors ${selectedAsset === asset
+                                ? 'bg-slate-700 text-white shadow-sm'
+                                : 'text-slate-500 hover:text-slate-300'
+                                }`}
+                        >
+                            {asset}
+                        </button>
+                    ))}
+                </div>
+
                 {/* Right: Gamification Status Trigger */}
                 <div className="flex items-center gap-3">
                     {/* Rank & Streak Button */}
