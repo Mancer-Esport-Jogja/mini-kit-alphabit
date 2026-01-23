@@ -3,7 +3,7 @@
 import React from "react";
 import { useUserPositions } from "@/hooks/useUserPositions";
 import { Position } from "@/types/positions";
-import { parseStrike, parsePrice } from "@/utils/decimals";
+import { parseStrike } from "@/utils/decimals";
 import { Loader2, History, ExternalLink, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 

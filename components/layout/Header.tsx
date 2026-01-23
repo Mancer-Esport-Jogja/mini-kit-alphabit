@@ -53,7 +53,7 @@ export const Header = () => {
                     </div>
                 </div>
             </div>
-            
+
             <div className="flex flex-col items-end gap-1.5 max-w-[50%]">
                 {/* Status & Streak Row */}
                 <div className="flex items-center gap-2">
@@ -74,7 +74,7 @@ export const Header = () => {
                 {/* Custom Wallet Pill (High Performance) */}
                 <div className="flex flex-col items-end w-full">
                     {isConnected || (isAuthenticated && user?.primaryEthAddress) ? (
-                        <button 
+                        <button
                             onClick={() => disconnect()}
                             className="flex items-center gap-2 bg-slate-800 border-2 border-slate-700 px-2 py-1 w-full justify-between hover:border-bit-coral transition-colors group"
                         >

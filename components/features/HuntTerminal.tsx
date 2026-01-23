@@ -1,27 +1,61 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { TrendingUp, TrendingDown, Info, Loader2, AlertTriangle, Clock } from "lucide-react";
-import { TutorialOverlay } from "@/components/ui/TutorialOverlay";
+import React, { useState, useMemo, useEffect } from "react";
+import { motion } from "framer-motion";
+import { TrendingUp, TrendingDown, Info, AlertTriangle, Clock, Flame } from "lucide-react";
+// import { TutorialOverlay } from "@/components/ui/TutorialOverlay"; // REMOVED: Replaced by Droid Tour
 import { useThetanutsOrders } from "@/hooks/useThetanutsOrders";
 import { parseStrike, parsePrice } from "@/utils/decimals";
 import { useAuth } from "@/context/AuthContext";
-import { useBinancePrice, ChartInterval } from "@/hooks/useBinancePrice";
+import { useOraclePrice, type ChartInterval } from "@/hooks/useOraclePrice";
+import { TacticalDroid } from "./TacticalDroid";
+import { MissionControl } from "@/components/gamification/MissionControl";
+import { useGamification } from "@/context/GamificationContext";
+import { LevelBadge } from "@/components/gamification/LevelBadge"; // Import Badge
 
 export const HuntTerminal = () => {
     // Auth State
     const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
-    
+    const { completeMission, achievements, unlockAchievement, addXp, level, streak, rankTitle, checkStreak } = useGamification(); // Gamification Hook
+
     // Mission State
     const [collateral, setCollateral] = useState(50);
     const [selectedTarget, setSelectedTarget] = useState<"MOON" | "DOOM" | null>(null);
     const [selectedDuration, setSelectedDuration] = useState<'BLITZ' | 'RUSH' | 'CORE' | 'ORBIT'>('BLITZ');
     const [selectedAsset, setSelectedAsset] = useState<'ETH' | 'BTC'>('ETH');
     const [chartInterval, setChartInterval] = useState<ChartInterval>('5m');
-    const [showTutorial, setShowTutorial] = useState(false);
 
-    // Fetch live orders via Backend Proxy
+    // Tutorial State (AI Guided)
+    const [tutorialStep, setTutorialStep] = useState(0); // 0 = Off
+
+    // UI State
+    const [showMissions, setShowMissions] = useState(false);
+
+    // --- Gamification Logic ---
+    // 1. Complete "Daily Login" on mount & check streak
+    useEffect(() => {
+        checkStreak();
+    }, [checkStreak]);
+
+    // 2. Unlock "Bootcamp" when tutorial finishes
+    useEffect(() => {
+        if (tutorialStep === 4) {
+            const timer = setTimeout(() => {
+                addXp(200);
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [tutorialStep, addXp]);
+
+    // 3. Complete "First Strike" when target selected
+    useEffect(() => {
+        if (selectedTarget) {
+            completeMission('first_strike');
+        }
+    }, [selectedTarget, completeMission]);
+
+
+    // Fetch live orders via Backend Proxy (Filtered for Trading)
     const {
         data: orderData,
         isLoading: isOrdersLoading,
@@ -30,6 +64,37 @@ export const HuntTerminal = () => {
         target: selectedTarget || undefined,
         asset: selectedAsset,
     });
+
+    // Fetch Sentinel Data for AI (Unfiltered by target to see full picture)
+    const { data: sentimentData } = useThetanutsOrders({
+        asset: selectedAsset,
+        autoRefresh: false // Don't double poll too aggressively
+    });
+
+    // Calculate Market Stats for AI
+    const droidStats = useMemo(() => {
+        if (!sentimentData?.stats) return { callVolume: 0, putVolume: 0, spreadSize: 0 };
+
+        // Calculate max spread to detect volatility
+        let maxSpread = 0;
+        if (sentimentData.parsedOrders?.length > 0) {
+            const spreads = sentimentData.parsedOrders
+                .filter(o => o.strikes.length >= 2)
+                .map(o => Math.abs(o.strikes[1] - o.strikes[0]));
+            if (spreads.length > 0) maxSpread = Math.max(...spreads);
+        }
+
+        // Gamification: "Market Recon" mission - if viewing charts/data
+        if (sentimentData.stats.total > 0) {
+            // completeMission('market_watch'); // This would trigger too often. Real app needs a timer.
+        }
+
+        return {
+            callVolume: sentimentData.stats.calls,
+            putVolume: sentimentData.stats.puts,
+            spreadSize: maxSpread
+        };
+    }, [sentimentData]); // removed completeMission from deps to avoid loops
 
     const bestOrder = orderData?.bestOrder;
 
@@ -43,8 +108,8 @@ export const HuntTerminal = () => {
         { id: '1d' as ChartInterval, label: '1D' },
     ];
 
-    // Binance Realtime Price for Chart
-    const { currentPrice, priceHistory, priceChange, isConnected, isLoading: isChartLoading } = useBinancePrice({
+    // Oracle Realtime Price for Chart
+    const { currentPrice, priceHistory, priceChange, isConnected, isLoading: isChartLoading } = useOraclePrice({
         symbol: `${selectedAsset}USDT`,
         interval: chartInterval,
         limit: 50
@@ -54,7 +119,7 @@ export const HuntTerminal = () => {
     const { chartPath, priceIndicators } = useMemo(() => {
         if (priceHistory.length < 2) return { chartPath: '', priceIndicators: [] };
 
-        const prices = priceHistory.map(p => p.price);
+        const prices = priceHistory.map((p: { price: number }) => p.price);
         const minPrice = Math.min(...prices);
         const maxPrice = Math.max(...prices);
         const range = maxPrice - minPrice || 1;
@@ -63,7 +128,7 @@ export const HuntTerminal = () => {
         const chartWidth = 380;
         const padding = 10;
 
-        const points = priceHistory.map((point, index) => {
+        const points = priceHistory.map((point: { price: number }, index: number) => {
             const x = padding + (index / (priceHistory.length - 1)) * (chartWidth - 2 * padding);
             const y = padding + ((maxPrice - point.price) / range) * (chartHeight - 2 * padding);
             return `${x},${y}`;
@@ -97,7 +162,7 @@ export const HuntTerminal = () => {
     // Calculate Payout ROI Estimate
     const roiEstimate = useMemo(() => {
         if (!bestOrder) return 0;
-        const [lower, upper] = bestOrder.order.strikes.map((s: string) => parseStrike(s));
+        const [lower, upper] = bestOrder.order.strikes.map((s) => parseStrike(s));
         const strikeWidth = upper - lower;
         const premium = parsePrice(bestOrder.order.price);
         if (premium === 0) return 0;
@@ -108,6 +173,11 @@ export const HuntTerminal = () => {
         setSelectedTarget(target);
     };
 
+    // Tutorial Handler
+    const handleNextTutorial = () => {
+        setTutorialStep(prev => prev >= 4 ? 0 : prev + 1);
+    };
+
     const durations = [
         { id: 'BLITZ', label: 'BLITZ', time: '6H', color: 'text-yellow-400', border: 'border-yellow-400' },
         { id: 'RUSH', label: 'RUSH', time: '12H', color: 'text-orange-400', border: 'border-orange-400' },
@@ -115,62 +185,57 @@ export const HuntTerminal = () => {
         { id: 'ORBIT', label: 'ORBIT', time: '7D', color: 'text-purple-400', border: 'border-purple-400' },
     ] as const;
 
-    const tutorialSteps = [
-        {
-            title: "ANALYZE",
-            description: "Observe the Tactical Chart and market data. Identify potential price movements."
-        },
-        {
-            title: "SELECT TARGET",
-            description: "Choose 'MOON' if you predict the price will rise. Choose 'DOOM' if you predict a fall."
-        },
-        {
-            title: "COMMIT & LAUNCH",
-            description: "Set your collateral amount using the slider, then hit 'INITIATE SEQUENCE' to lock in your trade."
-        }
-    ];
-
     return (
         <div className="w-full max-w-md mx-auto relative bg-slate-900 border-4 border-slate-700 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.5)] overflow-hidden">
-            <TutorialOverlay
-                isOpen={showTutorial}
-                onClose={() => setShowTutorial(false)}
-                title="HUNT TERMINAL MANUAL"
-                steps={tutorialSteps}
+            {/* GAMIFICATION OVERLAY (Integrated) */}
+            <MissionControl isOpen={showMissions} onClose={() => setShowMissions(false)} />
+
+            {/* AI TACTICAL DROID - Now with Tutorial Props */}
+            <TacticalDroid
+                marketStats={droidStats}
+                tutorialStep={tutorialStep}
+                onNext={handleNextTutorial}
             />
 
-            {/* Tactical Header - Compact */}
-            <div className="bg-slate-800 px-3 py-1.5 flex items-center justify-between border-b-2 border-slate-700">
-                <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_6px_rgba(239,68,68,0.6)]"></div>
-                    <span className="text-[10px] font-pixel text-slate-400 uppercase">Tactical Command</span>
-                </div>
-
-                {/* Asset Selector */}
-                <div className="flex bg-slate-900 rounded p-0.5 border border-slate-600">
-                    {(['ETH', 'BTC'] as const).map(asset => (
-                        <button
-                            key={asset}
-                            onClick={() => setSelectedAsset(asset)}
-                            className={`px-2 py-0.5 text-[9px] font-bold rounded transition-colors ${selectedAsset === asset
-                                ? 'bg-slate-700 text-white shadow-sm'
-                                : 'text-slate-500 hover:text-slate-300'
-                                }`}
-                        >
-                            {asset}
-                        </button>
-                    ))}
-                </div>
-
+            {/* TACTICAL HEADER (Redesigned for Gamification) */}
+            <div className="bg-slate-800 px-3 py-2 flex items-center justify-between border-b-2 border-slate-700">
+                {/* Left: App Identity */}
                 <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_6px_rgba(239,68,68,0.6)]"></div>
+                    <div>
+                        <span className="text-[10px] font-pixel text-slate-400 uppercase leading-none block">Hunt Terminal</span>
+                        <div className="flex items-center gap-1">
+                            <span className="text-[8px] font-mono text-slate-600">v2.1</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right: Gamification Status Trigger */}
+                <div className="flex items-center gap-3">
+                    {/* Rank & Streak Button */}
                     <button
-                        onClick={() => setShowTutorial(true)}
-                        className="flex items-center gap-1 bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded transition-colors border border-slate-600"
+                        onClick={() => setShowMissions(true)}
+                        className="flex items-center gap-2 bg-slate-900 border border-slate-600 px-2 py-1 rounded hover:bg-slate-800 transition-colors group"
                     >
-                        <Info size={10} className="text-yellow-500" />
-                        <span className="text-[8px] font-mono text-yellow-500 hidden sm:inline">HELP</span>
+                        <LevelBadge level={level || 1} size="sm" showLevel={false} />
+                        <div className="flex flex-col items-start leading-none">
+                            <span className="text-[9px] font-pixel text-white group-hover:text-yellow-400 transition-colors">{rankTitle || "Pilot"}</span>
+                            {/* Streak Flame */}
+                            <div className="flex items-center gap-0.5">
+                                <Flame size={8} className={streak > 0 ? "text-orange-500 fill-orange-500" : "text-slate-600"} />
+                                <span className="text-[8px] font-mono text-slate-400">{streak || 0}</span>
+                            </div>
+                        </div>
                     </button>
-                    <div className="text-[8px] font-mono text-slate-600">v2.1</div>
+
+                    {/* Help Button */}
+                    <button
+                        onClick={() => setTutorialStep(1)} // Start Tour
+                        className="bg-slate-700 p-1.5 rounded hover:bg-slate-600 transition-colors border border-slate-600"
+                        title="Start Tutorial"
+                    >
+                        <Info size={14} className="text-yellow-500" />
+                    </button>
                 </div>
             </div>
 
@@ -188,7 +253,7 @@ export const HuntTerminal = () => {
                             <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
                             <span className="font-pixel text-[10px] text-slate-300">{selectedAsset}/USD</span>
                             <span className={`font-pixel text-sm ${priceChange < 0 ? 'text-bit-coral' : 'text-bit-green'}`}>
-                                ${currentPrice ? currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (orderData?.marketData?.[selectedAsset]?.toLocaleString() || '---')}
+                                ${currentPrice ? currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '---'}
                             </span>
                         </div>
                         <div className={`px-2 py-0.5 text-[10px] font-mono ${priceChange < 0 ? 'bg-bit-coral/20 text-bit-coral' : 'bg-bit-green/20 text-bit-green'}`}>
@@ -219,21 +284,21 @@ export const HuntTerminal = () => {
                                     {/* Grid Lines & Labels */}
                                     {priceIndicators.map((indicator, i) => (
                                         <g key={i}>
-                                            <line 
-                                                x1="10" 
-                                                y1={indicator.y} 
-                                                x2="390" 
-                                                y2={indicator.y} 
-                                                stroke="rgba(74,222,128,0.1)" 
+                                            <line
+                                                x1="10"
+                                                y1={indicator.y}
+                                                x2="390"
+                                                y2={indicator.y}
+                                                stroke="rgba(74,222,128,0.1)"
                                                 strokeWidth="1"
                                                 strokeDasharray="4 4"
                                             />
-                                            <text 
-                                                x="390" 
-                                                y={indicator.y + 3} 
-                                                textAnchor="end" 
-                                                fill="rgba(255,255,255,0.3)" 
-                                                fontSize="8" 
+                                            <text
+                                                x="390"
+                                                y={indicator.y + 3}
+                                                textAnchor="end"
+                                                fill="rgba(255,255,255,0.3)"
+                                                fontSize="8"
                                                 fontFamily="monospace"
                                                 className="font-pixel"
                                             >
@@ -345,7 +410,7 @@ export const HuntTerminal = () => {
                             TARGET: MOON
                         </span>
                         <div className="text-[10px] font-mono text-slate-500 mt-1 uppercase">
-                             {isOrdersLoading && selectedTarget === "MOON" ? "SCANNING..." : "LONG DEPLOYMENT"}
+                            {isOrdersLoading && selectedTarget === "MOON" ? "SCANNING..." : "LONG DEPLOYMENT"}
                         </div>
                     </motion.button>
 
@@ -413,7 +478,7 @@ export const HuntTerminal = () => {
                     <div className="text-right">
                         <div className="text-[9px] text-slate-500 font-mono mb-1 uppercase">TARGET STRIKE</div>
                         <div className="text-lg font-pixel text-yellow-500">
-                             {isOrdersLoading ? "..." : (bestOrder ? `$${parseStrike(bestOrder.order.strikes[selectedTarget === "MOON" ? 0 : 1]).toLocaleString()}` : "---")}
+                            {isOrdersLoading ? "..." : (bestOrder ? `$${parseStrike(bestOrder.order.strikes[selectedTarget === "MOON" ? 0 : 1]).toLocaleString()}` : "---")}
                         </div>
                     </div>
                 </div>
@@ -443,7 +508,7 @@ export const HuntTerminal = () => {
                 {!isAuthenticated ? (
                     <button
                         type="button"
-                        disabled={true} 
+                        disabled={true}
                         className="w-full py-4 bg-slate-800 text-slate-500 font-pixel text-sm uppercase tracking-widest border-b-4 border-slate-900 cursor-not-allowed"
                     >
                         {isAuthLoading ? "SYNCHRONIZING..." : "ACCESS DENIED :: GUEST MODE"}
@@ -487,7 +552,7 @@ export const HuntTerminal = () => {
                     <div className="w-8 h-2 bg-slate-600"></div>
                 </div>
                 <div className="text-[8px] font-mono text-slate-500 uppercase">
-                    {orderData?.marketData ? 'BASE_MAINNET::CONNECTED' : 'SEARCHING_NETWORK...'}
+                    {isConnected ? 'BASE_MAINNET::CONNECTED' : 'SEARCHING_NETWORK...'}
                 </div>
             </div>
         </div>

@@ -1,169 +1,64 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { sdk } from "@farcaster/miniapp-sdk";
-import { User, AuthState } from "@/types/auth";
-import { ALPHABIT_BACKEND_URL } from "@/config/api";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { useAccount } from "wagmi";
 
-interface AuthContextType extends AuthState {
-  reconnect: () => Promise<void>;
+interface AuthContextType {
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  token: string | null;
+  login: () => Promise<void>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, setState] = useState<AuthState>({
-    user: null,
-    isAuthenticated: false,
-    isLoading: true,
-    token: null,
-  });
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const { isConnected, address } = useAccount();
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const login = useCallback(async () => {
-    try {
-      setState(prev => ({ ...prev, isLoading: true }));
-      
-      // In SDK v0.2.0, we try to get the session token headlessly
-      // Many frames/miniapps now use viewProfile to get the user + token
-      let token: string | null = null;
-      try {
-        const result = await (sdk.actions as any).viewProfile();
-        token = result?.token;
-      } catch (e) {
-        // If viewProfile fails or is unavailable, try a standard signIn
-        const signInResult = await sdk.actions.signIn({ nonce: Math.random().toString(36).substring(2, 12) });
-        token = (signInResult as any).token || (signInResult as any).signature; // Fallback for various versions
-      }
-      
-      if (!token) {
-        console.warn("No auth token received from Farcaster. Continuing in Guest mode.");
-        setState(prev => ({ ...prev, isLoading: false }));
-        return;
-      }
-
-      const response = await fetch(`${ALPHABIT_BACKEND_URL}/auth`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) throw new Error("Backend auth failed");
-
-      const result = await response.json();
-      
-      if (result.success) {
-        setState({
-          user: result.data.user,
-          isAuthenticated: true,
-          isLoading: false,
-          token: token,
-        });
-        localStorage.setItem("alphabit_token", token);
-      }
-    } catch (error) {
-      console.error("Auto-connect error:", error);
-      setState(prev => ({ ...prev, isLoading: false, isAuthenticated: false }));
-    }
-  }, []);
-
-  const logout = useCallback(() => {
-    setState({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-      token: null,
-    });
-    localStorage.removeItem("alphabit_token");
-  }, []);
-
-  // Auto-connect on mount
+  // Mock authentication when wallet is connected
   useEffect(() => {
-    const init = async () => {
-      try {
-        await sdk.actions.ready();
-        
-        // 1. Check for existing session
-        const savedToken = localStorage.getItem("alphabit_token");
-        if (savedToken) {
-          const response = await fetch(`${ALPHABIT_BACKEND_URL}/auth`, {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${savedToken}`,
-              "Content-Type": "application/json",
-            },
-          });
+    if (isConnected && address) {
+      // In a real app, we would sign a message and exchange for JWT here
+      // For now, we simulate a token if connected
+      setToken("mock-token-" + address);
+    } else {
+      setToken(null);
+    }
+  }, [isConnected, address]);
 
-          if (response.ok) {
-            const result = await response.json();
-            if (result.success) {
-              setState({
-                user: result.data.user,
-                isAuthenticated: true,
-                isLoading: false,
-                token: savedToken,
-              });
-              return;
-            }
-          }
-          localStorage.removeItem("alphabit_token");
-        }
+  const login = async () => {
+    setIsLoading(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setIsLoading(false);
+  };
 
-        // 2. If no session, try auto-connect (Real Auth)
-        await login();
-
-      } catch (e) {
-        console.warn("Auth initialization error", e);
-        setState(prev => ({ ...prev, isLoading: false }));
-      }
-    };
-
-    // Dev helper
-    (window as any).devLogin = async (customToken?: string) => {
-       // ... existing dev login logic ...
-       // (Kept for local dev if needed, logic is same)
-       const token = customToken || 'dev-token';
-       // ... fetch ...
-       // Updating logic here to match new flow if needed, but existing is fine
-       // We can just call the same endpoint
-        const response = await fetch(`${ALPHABIT_BACKEND_URL}/auth`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          setState({
-            user: result.data.user,
-            isAuthenticated: true,
-            isLoading: false,
-            token: token,
-          });
-          localStorage.setItem("alphabit_token", token);
-        }
-      }
-    };
-
-    init();
-  }, [login]);
+  const logout = () => {
+    setToken(null);
+  };
 
   return (
-    <AuthContext.Provider value={{ ...state, reconnect: login, logout }}>
+    <AuthContext.Provider
+      value={{
+        isAuthenticated: !!token,
+        isLoading,
+        token,
+        login,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => {
+export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-};
+}

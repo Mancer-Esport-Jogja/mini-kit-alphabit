@@ -7,6 +7,7 @@ import { WagmiProvider } from "wagmi";
 import { config } from "@/config/wagmi";
 
 import { AuthProvider } from "@/context/AuthContext";
+import { GamificationProvider } from "@/context/GamificationContext";
 
 export function RootProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
@@ -15,22 +16,24 @@ export function RootProvider({ children }: { children: ReactNode }) {
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <OnchainKitProvider
-            apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
-            chain={base}
-            config={{
-              appearance: {
-                mode: "dark",
-                theme: "hacker",
-              },
-              wallet: {
-                display: "modal",
-                preference: "all",
-              },
-            }}
-          >
-            {children}
-          </OnchainKitProvider>
+          <GamificationProvider>
+            <OnchainKitProvider
+              apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
+              chain={base}
+              config={{
+                appearance: {
+                  mode: "dark",
+                  theme: "hacker",
+                },
+                wallet: {
+                  display: "modal",
+                  preference: "all",
+                },
+              }}
+            >
+              {children}
+            </OnchainKitProvider>
+          </GamificationProvider>
         </AuthProvider>
       </QueryClientProvider>
     </WagmiProvider>

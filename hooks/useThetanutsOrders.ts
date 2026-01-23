@@ -1,11 +1,36 @@
 import { useQuery } from '@tanstack/react-query';
-import { fetchOrders, filterHuntOrders, getBestOrder } from '@/services/thetanutsApi';
-import type { SignedOrder } from '@/types/orders';
+import {
+  fetchOrders,
+  filterHuntOrders,
+  getBestOrder,
+  parseOrder,
+  groupOrdersByAsset,
+  groupOrdersByExpiry
+} from '@/services/thetanutsApi';
+import type { SignedOrder, ParsedOrder } from '@/types/orders';
 
 interface UseOrdersOptions {
   target?: 'MOON' | 'DOOM';
-  asset?: 'ETH' | 'BTC';
+  asset?: 'ETH' | 'BTC' | 'SOL' | 'DOGE' | 'XRP' | 'BNB';
   enabled?: boolean;
+  autoRefresh?: boolean;
+}
+
+interface OrdersData {
+  orders: SignedOrder[];
+  parsedOrders: ParsedOrder[];
+  bestOrder: SignedOrder | null;
+  bestParsedOrder: ParsedOrder | null;
+  timestamp: string;
+  assetGroups: Map<string, SignedOrder[]>;
+  expiryGroups: Map<string, SignedOrder[]>;
+  stats: {
+    total: number;
+    calls: number;
+    puts: number;
+    spreads: number;
+    butterflies: number;
+  };
 }
 
 /**
@@ -13,32 +38,75 @@ interface UseOrdersOptions {
  * Automatically polls every 30 seconds.
  */
 export function useThetanutsOrders(options: UseOrdersOptions = {}) {
-  const { target, asset = 'ETH', enabled = true } = options;
-  
-  return useQuery({
+  const {
+    target,
+    asset,
+    enabled = true,
+    autoRefresh = true
+  } = options;
+
+  return useQuery<OrdersData>({
     queryKey: ['thetanuts-orders', target, asset],
     queryFn: async () => {
       const response = await fetchOrders();
-      
-      if (!target) {
-        return {
-          orders: response.data.orders,
-          marketData: response.data.market_data,
-          bestOrder: null,
-        };
+
+      let orders = response.data.orders;
+
+      // Apply filters if specified
+      if (target || asset) {
+        orders = filterHuntOrders(orders, target, asset);
       }
-      
-      const filtered = filterHuntOrders(response.data.orders, target, asset);
-      const bestOrder = getBestOrder(filtered);
-      
+
+      // Parse orders for UI
+      const parsedOrders = orders.map(parseOrder);
+
+      // Get best order (lowest premium)
+      const bestOrder = getBestOrder(orders);
+      const bestParsedOrder = bestOrder ? parseOrder(bestOrder) : null;
+
+      // Group orders
+      const assetGroups = groupOrdersByAsset(orders);
+      const expiryGroups = groupOrdersByExpiry(orders);
+
+      // Calculate stats
+      const stats = {
+        total: orders.length,
+        calls: orders.filter(o => o.order.isCall).length,
+        puts: orders.filter(o => !o.order.isCall).length,
+        spreads: orders.filter(o => o.order.strikes.length === 2).length,
+        butterflies: orders.filter(o => o.order.strikes.length === 3).length,
+      };
+
       return {
-        orders: filtered,
-        marketData: response.data.market_data,
+        orders,
+        parsedOrders,
         bestOrder,
+        bestParsedOrder,
+        timestamp: response.data.timestamp,
+        assetGroups,
+        expiryGroups,
+        stats,
       };
     },
-    refetchInterval: 30_000, // Poll every 30s
+    refetchInterval: autoRefresh ? 30_000 : false, // Poll every 30s
     enabled,
     staleTime: 25_000,
   });
+}
+
+/**
+ * Hook to get orders for a specific asset
+ */
+export function useAssetOrders(asset: 'ETH' | 'BTC' | 'SOL' | 'DOGE' | 'XRP' | 'BNB') {
+  return useThetanutsOrders({ asset, enabled: true });
+}
+
+/**
+ * Hook for HUNT mode - filtered for calls or puts
+ */
+export function useHuntOrders(
+  target: 'MOON' | 'DOOM',
+  asset: 'ETH' | 'BTC' = 'ETH'
+) {
+  return useThetanutsOrders({ target, asset, enabled: true });
 }

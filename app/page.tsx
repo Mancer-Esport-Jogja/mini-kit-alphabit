@@ -9,11 +9,11 @@ import { PositionsList } from "@/components/features/PositionsList";
 import { LiquidityEngine } from "@/components/features/LiquidityEngine";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { TrendingUp, Hammer } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+
 import { Marquee } from "@/components/ui/Marquee";
 
 export default function App() {
-  const { user } = useAuth();
+
   const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState("landing");
   const [mode, setMode] = useState("HUNT");
@@ -35,9 +35,9 @@ export default function App() {
     <div className={`min-h-screen h-screen bg-void-black text-slate-200 max-w-md mx-auto border-x border-slate-800/50 relative overflow-y-auto overflow-x-hidden scroll-smooth ${glitch ? "opacity-95" : ""}`}>
       {/* SCANLINE EFFECT GLOBAL */}
       <div className="fixed inset-0 pointer-events-none z-[60] opacity-5">
-          <div className="w-full h-2 bg-white blur-sm absolute animate-scanline"></div>
+        <div className="w-full h-2 bg-white blur-sm absolute animate-scanline"></div>
       </div>
-      
+
       <AnimatePresence mode="wait">
         {isLoading ? (
           <LoadingScreen
@@ -46,7 +46,7 @@ export default function App() {
             minDuration={2500}
           />
         ) : view === "landing" ? (
-          <motion.div 
+          <motion.div
             key="landing"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -55,7 +55,7 @@ export default function App() {
             <LandingPage onStart={() => setView("home")} />
           </motion.div>
         ) : (
-          <motion.div 
+          <motion.div
             key="home"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -68,7 +68,7 @@ export default function App() {
 
             <main className="p-4 relative z-10">
               <div className="bg-black border-x-4 border-slate-700 h-6 mb-6 flex items-center overflow-hidden">
-                <Marquee 
+                <Marquee
                   text={`/// ALPHABIT SYSTEM READY /// CONNECTED TO BASE MAINNET /// THETANUTS PROTOCOL ACTIVE /// MODE: ${mode} /// `}
                   speed={20}
                   className="text-[8px] text-green-400 font-pixel"
