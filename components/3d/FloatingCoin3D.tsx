@@ -6,50 +6,51 @@ import { Float, MeshDistortMaterial } from '@react-three/drei';
 import * as THREE from 'three';
 
 function Coin() {
-    const meshRef = useRef<THREE.Mesh>(null);
+    const meshRef = useRef<THREE.Group>(null);
 
-    useFrame((state) => {
+    useFrame(() => {
         if (meshRef.current) {
             meshRef.current.rotation.y += 0.01;
-            meshRef.current.position.y = Math.sin(state.clock.elapsedTime) * 0.1;
         }
     });
 
     return (
         <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
-            <mesh ref={meshRef} position={[0, 0.5, 0]}>
-                <cylinderGeometry args={[1, 1, 0.15, 32]} />
-                <MeshDistortMaterial
-                    color="#E85A5A"
-                    emissive="#E85A5A"
-                    emissiveIntensity={0.5}
-                    metalness={0.9}
-                    roughness={0.1}
-                    distort={0.1}
-                    speed={2}
-                />
-            </mesh>
-            {/* Inner ring */}
-            <mesh position={[0, 0.5, 0.08]}>
-                <ringGeometry args={[0.3, 0.6, 32]} />
-                <meshStandardMaterial
-                    color="#4ADE80"
-                    emissive="#4ADE80"
-                    emissiveIntensity={0.8}
-                    side={THREE.DoubleSide}
-                />
-            </mesh>
-            {/* "A" symbol on coin */}
-            <mesh position={[0, 0.5, 0.09]}>
-                <planeGeometry args={[0.4, 0.4]} />
-                <meshStandardMaterial
-                    color="#4ADE80"
-                    emissive="#4ADE80"
-                    emissiveIntensity={1}
-                    transparent
-                    opacity={0.9}
-                />
-            </mesh>
+            <group ref={meshRef} position={[0, 0.5, 0]}>
+                <mesh>
+                    <cylinderGeometry args={[1, 1, 0.15, 32]} />
+                    <MeshDistortMaterial
+                        color="#E85A5A"
+                        emissive="#E85A5A"
+                        emissiveIntensity={0.5}
+                        metalness={0.9}
+                        roughness={0.1}
+                        distort={0.1}
+                        speed={2}
+                    />
+                </mesh>
+                {/* Inner ring */}
+                <mesh position={[0, 0, 0.08]}>
+                    <ringGeometry args={[0.3, 0.6, 32]} />
+                    <meshStandardMaterial
+                        color="#4ADE80"
+                        emissive="#4ADE80"
+                        emissiveIntensity={0.8}
+                        side={THREE.DoubleSide}
+                    />
+                </mesh>
+                {/* "A" symbol on coin */}
+                <mesh position={[0, 0, 0.09]}>
+                    <planeGeometry args={[0.4, 0.4]} />
+                    <meshStandardMaterial
+                        color="#4ADE80"
+                        emissive="#4ADE80"
+                        emissiveIntensity={1}
+                        transparent
+                        opacity={0.9}
+                    />
+                </mesh>
+            </group>
         </Float>
     );
 }

@@ -20,7 +20,12 @@ export const PixelButton = ({
     icon: Icon,
     disabled = false
 }: PixelButtonProps) => (
-    <button onClick={onClick} disabled={disabled} className={`relative w-full group active:translate-y-1 active:translate-x-1 transition-none ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+    <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        className={`relative w-full group active:translate-y-1 active:translate-x-1 transition-none ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+    >
         <div className="absolute top-2 left-2 w-full h-full bg-black -z-10"></div>
         <div className={`${color} ${disabled ? '' : hoverColor} border-4 border-black p-4 flex flex-col items-center justify-center text-white transition-colors`}>
             {Icon && <Icon className="w-8 h-8 mb-2 stroke-[3px]" />}

@@ -1,22 +1,37 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, Info, AlertTriangle, Clock } from 'lucide-react';
-import { TutorialOverlay } from '@/components/ui/TutorialOverlay';
-import { useBinancePrice, ChartInterval } from '@/hooks/useBinancePrice';
+import React, { useState, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { TrendingUp, TrendingDown, Info, Loader2, AlertTriangle, Clock } from "lucide-react";
+import { TutorialOverlay } from "@/components/ui/TutorialOverlay";
+import { useThetanutsOrders } from "@/hooks/useThetanutsOrders";
+import { parseStrike, parsePrice } from "@/utils/decimals";
+import { useAuth } from "@/context/AuthContext";
+import { useBinancePrice, ChartInterval } from "@/hooks/useBinancePrice";
 
 export const HuntTerminal = () => {
+    // Auth State
+    const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+    
+    // Mission State
     const [collateral, setCollateral] = useState(50);
-    const [selectedTarget, setSelectedTarget] = useState<'MOON' | 'DOOM' | null>(null);
+    const [selectedTarget, setSelectedTarget] = useState<"MOON" | "DOOM" | null>(null);
     const [selectedDuration, setSelectedDuration] = useState<'BLITZ' | 'RUSH' | 'CORE' | 'ORBIT'>('BLITZ');
     const [selectedAsset, setSelectedAsset] = useState<'ETH' | 'BTC'>('ETH');
     const [chartInterval, setChartInterval] = useState<ChartInterval>('5m');
     const [showTutorial, setShowTutorial] = useState(false);
 
-    const handleTargetSelect = (target: 'MOON' | 'DOOM') => {
-        setSelectedTarget(target);
-    };
+    // Fetch live orders via Backend Proxy
+    const {
+        data: orderData,
+        isLoading: isOrdersLoading,
+        isError,
+    } = useThetanutsOrders({
+        target: selectedTarget || undefined,
+        asset: selectedAsset,
+    });
+
+    const bestOrder = orderData?.bestOrder;
 
     // Chart timeframe options
     const timeframes = [
@@ -28,16 +43,16 @@ export const HuntTerminal = () => {
         { id: '1d' as ChartInterval, label: '1D' },
     ];
 
-    // Binance Realtime Price
-    const { currentPrice, priceHistory, priceChange, isConnected, isLoading } = useBinancePrice({
+    // Binance Realtime Price for Chart
+    const { currentPrice, priceHistory, priceChange, isConnected, isLoading: isChartLoading } = useBinancePrice({
         symbol: `${selectedAsset}USDT`,
         interval: chartInterval,
         limit: 50
     });
 
     // Generate SVG path from price history
-    const chartPath = useMemo(() => {
-        if (priceHistory.length < 2) return '';
+    const { chartPath, priceIndicators } = useMemo(() => {
+        if (priceHistory.length < 2) return { chartPath: '', priceIndicators: [] };
 
         const prices = priceHistory.map(p => p.price);
         const minPrice = Math.min(...prices);
@@ -54,14 +69,44 @@ export const HuntTerminal = () => {
             return `${x},${y}`;
         });
 
-        return `M${points.join(' L')}`;
-    }, [priceHistory]);
+        // Calculate Price Steps (Indicators)
+        const indicators = [];
+        // Dynamic step based on asset and range
+        const btcStep = range > 5000 ? 2000 : 500;
+        const ethStep = range > 200 ? 50 : 10;
+        const step = selectedAsset === 'BTC' ? btcStep : ethStep;
+
+        const startPrice = Math.ceil(minPrice / step) * step;
+        for (let p = startPrice; p <= maxPrice; p += step) {
+            const y = padding + ((maxPrice - p) / range) * (chartHeight - 2 * padding);
+            indicators.push({ label: `$${p.toLocaleString()}`, y });
+        }
+
+        return {
+            chartPath: `M${points.join(' L')}`,
+            priceIndicators: indicators
+        };
+    }, [priceHistory, selectedAsset]);
 
     // Area fill path
     const areaPath = useMemo(() => {
         if (!chartPath) return '';
         return `${chartPath} L380,192 L10,192 Z`;
     }, [chartPath]);
+
+    // Calculate Payout ROI Estimate
+    const roiEstimate = useMemo(() => {
+        if (!bestOrder) return 0;
+        const [lower, upper] = bestOrder.order.strikes.map((s: string) => parseStrike(s));
+        const strikeWidth = upper - lower;
+        const premium = parsePrice(bestOrder.order.price);
+        if (premium === 0) return 0;
+        return Math.round((strikeWidth / premium - 1) * 100);
+    }, [bestOrder]);
+
+    const handleTargetSelect = (target: "MOON" | "DOOM") => {
+        setSelectedTarget(target);
+    };
 
     const durations = [
         { id: 'BLITZ', label: 'BLITZ', time: '6H', color: 'text-yellow-400', border: 'border-yellow-400' },
@@ -98,7 +143,7 @@ export const HuntTerminal = () => {
             <div className="bg-slate-800 px-3 py-1.5 flex items-center justify-between border-b-2 border-slate-700">
                 <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_6px_rgba(239,68,68,0.6)]"></div>
-                    <span className="text-[10px] font-pixel text-slate-400">TACTICAL</span>
+                    <span className="text-[10px] font-pixel text-slate-400 uppercase">Tactical Command</span>
                 </div>
 
                 {/* Asset Selector */}
@@ -120,7 +165,7 @@ export const HuntTerminal = () => {
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setShowTutorial(true)}
-                        className="flex items-center gap-1 bg-slate-700/50 hover:bg-slate-600 px-1.5 py-0.5 rounded transition-colors"
+                        className="flex items-center gap-1 bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded transition-colors border border-slate-600"
                     >
                         <Info size={10} className="text-yellow-500" />
                         <span className="text-[8px] font-mono text-yellow-500 hidden sm:inline">HELP</span>
@@ -143,7 +188,7 @@ export const HuntTerminal = () => {
                             <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
                             <span className="font-pixel text-[10px] text-slate-300">{selectedAsset}/USD</span>
                             <span className={`font-pixel text-sm ${priceChange < 0 ? 'text-bit-coral' : 'text-bit-green'}`}>
-                                ${currentPrice ? currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '---'}
+                                ${currentPrice ? currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (orderData?.marketData?.[selectedAsset]?.toLocaleString() || '---')}
                             </span>
                         </div>
                         <div className={`px-2 py-0.5 text-[10px] font-mono ${priceChange < 0 ? 'bg-bit-coral/20 text-bit-coral' : 'bg-bit-green/20 text-bit-green'}`}>
@@ -160,7 +205,7 @@ export const HuntTerminal = () => {
                         }}></div>
 
                         {/* Loading State */}
-                        {isLoading && (
+                        {(isChartLoading || isOrdersLoading) && priceHistory.length === 0 && (
                             <div className="absolute inset-0 z-10 bg-black/90 flex items-center justify-center gap-2">
                                 <div className="w-3 h-3 bg-bit-green animate-ping"></div>
                                 <span className="text-[10px] font-pixel text-bit-green">SCANNING...</span>
@@ -171,6 +216,32 @@ export const HuntTerminal = () => {
                         <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 192" preserveAspectRatio="none">
                             {chartPath ? (
                                 <>
+                                    {/* Grid Lines & Labels */}
+                                    {priceIndicators.map((indicator, i) => (
+                                        <g key={i}>
+                                            <line 
+                                                x1="10" 
+                                                y1={indicator.y} 
+                                                x2="390" 
+                                                y2={indicator.y} 
+                                                stroke="rgba(74,222,128,0.1)" 
+                                                strokeWidth="1"
+                                                strokeDasharray="4 4"
+                                            />
+                                            <text 
+                                                x="390" 
+                                                y={indicator.y + 3} 
+                                                textAnchor="end" 
+                                                fill="rgba(255,255,255,0.3)" 
+                                                fontSize="8" 
+                                                fontFamily="monospace"
+                                                className="font-pixel"
+                                            >
+                                                {indicator.label}
+                                            </text>
+                                        </g>
+                                    ))}
+
                                     <path d={areaPath} fill={`url(#gradient-${priceChange < 0 ? 'red' : 'green'})`} opacity="0.4" />
                                     <path
                                         d={chartPath}
@@ -273,7 +344,9 @@ export const HuntTerminal = () => {
                         <span className={`font-pixel text-sm mt-2 ${selectedTarget === 'MOON' ? 'text-bit-green' : 'text-slate-400 group-hover:text-bit-green'}`}>
                             TARGET: MOON
                         </span>
-                        <div className="text-[10px] font-mono text-slate-500 mt-1">LONG DEPLOYMENT</div>
+                        <div className="text-[10px] font-mono text-slate-500 mt-1 uppercase">
+                             {isOrdersLoading && selectedTarget === "MOON" ? "SCANNING..." : "LONG DEPLOYMENT"}
+                        </div>
                     </motion.button>
 
                     {/* SHORT / DOOM Target */}
@@ -294,7 +367,9 @@ export const HuntTerminal = () => {
                         <span className={`font-pixel text-sm mt-2 ${selectedTarget === 'DOOM' ? 'text-bit-coral' : 'text-slate-400 group-hover:text-bit-coral'}`}>
                             TARGET: DOOM
                         </span>
-                        <div className="text-[10px] font-mono text-slate-500 mt-1">SHORT DEPLOYMENT</div>
+                        <div className="text-[10px] font-mono text-slate-500 mt-1 uppercase">
+                            {isOrdersLoading && selectedTarget === "DOOM" ? "SCANNING..." : "SHORT DEPLOYMENT"}
+                        </div>
                     </motion.button>
                 </div>
 
@@ -330,12 +405,16 @@ export const HuntTerminal = () => {
                 {/* Mission Stats */}
                 <div className="bg-slate-900/80 border border-slate-700 p-3 mb-4 grid grid-cols-2 gap-4">
                     <div>
-                        <div className="text-[9px] text-slate-500 font-mono mb-1">ROI ESTIMATE</div>
-                        <div className="text-lg font-pixel text-bit-green">+180%</div>
+                        <div className="text-[9px] text-slate-500 font-mono mb-1 uppercase">ROI ESTIMATE</div>
+                        <div className={`text-lg font-pixel transition-colors ${roiEstimate > 0 ? "text-bit-green" : "text-slate-500"}`}>
+                            {isOrdersLoading ? "..." : (roiEstimate > 0 ? `+${roiEstimate}%` : "N/A")}
+                        </div>
                     </div>
                     <div className="text-right">
-                        <div className="text-[9px] text-slate-500 font-mono mb-1">YIELD MULTIPLIER</div>
-                        <div className="text-lg font-pixel text-yellow-500">1.8x</div>
+                        <div className="text-[9px] text-slate-500 font-mono mb-1 uppercase">TARGET STRIKE</div>
+                        <div className="text-lg font-pixel text-yellow-500">
+                             {isOrdersLoading ? "..." : (bestOrder ? `$${parseStrike(bestOrder.order.strikes[selectedTarget === "MOON" ? 0 : 1]).toLocaleString()}` : "---")}
+                        </div>
                     </div>
                 </div>
 
@@ -343,12 +422,12 @@ export const HuntTerminal = () => {
                 <div className="bg-bit-coral/10 border-2 border-bit-coral/50 p-3 mb-4 flex items-center gap-3">
                     <AlertTriangle className="w-5 h-5 text-bit-coral flex-shrink-0" />
                     <div>
-                        <div className="text-[9px] text-bit-coral font-mono mb-0.5">⚠ MAX RISK</div>
-                        <div className="text-sm font-pixel text-bit-coral">-100% PREMIUM</div>
+                        <div className="text-[9px] text-bit-coral font-mono mb-0.5 uppercase">⚠ Max Risk</div>
+                        <div className="text-sm font-pixel text-bit-coral">-100% Premium</div>
                     </div>
                     <div className="ml-auto text-right">
-                        <div className="text-[9px] text-slate-500 font-mono mb-0.5">IF WRONG</div>
-                        <div className="text-sm font-mono text-slate-400">You lose collateral</div>
+                        <div className="text-[9px] text-slate-500 font-mono mb-0.5 uppercase">If Wrong</div>
+                        <div className="text-sm font-mono text-slate-400">Lose collateral</div>
                     </div>
                 </div>
 
@@ -360,20 +439,46 @@ export const HuntTerminal = () => {
                     </span>
                 </div>
 
-                {/* Launch Button */}
-                <button
-                    disabled={!selectedTarget}
-                    className={`w-full py-4 font-pixel text-sm uppercase tracking-widest transition-all duration-200 border-b-4 active:border-b-0 active:translate-y-1
-                        ${!selectedTarget
-                            ? 'bg-slate-700 text-slate-500 border-slate-900 cursor-not-allowed'
-                            : selectedTarget === 'MOON'
-                                ? 'bg-bit-green text-black border-green-800 hover:bg-green-400 shadow-[0_0_15px_rgba(74,222,128,0.4)]'
-                                : 'bg-bit-coral text-white border-red-900 hover:bg-red-400 shadow-[0_0_15px_rgba(232,90,90,0.4)]'
-                        }`}
-                >
-                    {selectedTarget ? 'INITIATE SEQUENCE' : 'SELECT TARGET'}
-                </button>
+                {/* Launch Button with Authentication Logic */}
+                {!isAuthenticated ? (
+                    <button
+                        type="button"
+                        disabled={true} 
+                        className="w-full py-4 bg-slate-800 text-slate-500 font-pixel text-sm uppercase tracking-widest border-b-4 border-slate-900 cursor-not-allowed"
+                    >
+                        {isAuthLoading ? "SYNCHRONIZING..." : "ACCESS DENIED :: GUEST MODE"}
+                    </button>
+                ) : (
+                    <button
+                        type="button"
+                        disabled={!selectedTarget || !bestOrder || isOrdersLoading}
+                        className={`w-full py-4 font-pixel text-sm uppercase tracking-widest transition-all duration-200 border-b-4 active:border-b-0 active:translate-y-1
+                            ${!selectedTarget || !bestOrder || isOrdersLoading
+                                ? 'bg-slate-700 text-slate-500 border-slate-900 cursor-not-allowed'
+                                : selectedTarget === 'MOON'
+                                    ? 'bg-bit-green text-black border-green-800 hover:bg-green-400 shadow-[0_0_15px_rgba(74,222,128,0.4)]'
+                                    : 'bg-bit-coral text-white border-red-900 hover:bg-red-400 shadow-[0_0_15px_rgba(232,90,90,0.4)]'
+                            }`}
+                    >
+                        {isOrdersLoading
+                            ? 'SYNCHRONIZING...'
+                            : !selectedTarget
+                                ? 'SELECT TARGET'
+                                : !bestOrder
+                                    ? 'NO MISSION AVAILABLE'
+                                    : 'INITIATE SEQUENCE'}
+                    </button>
+                )}
             </div>
+
+            {/* Error Message */}
+            {isError && (
+                <div className="px-6 pb-4">
+                    <div className="p-2 bg-red-900/30 border border-red-500 text-[10px] font-mono text-red-400 text-center animate-pulse uppercase">
+                        Communication Error: Failed to fetch tactical data
+                    </div>
+                </div>
+            )}
 
             {/* Decorative Footer */}
             <div className="bg-slate-800 p-2 flex justify-between border-t-4 border-slate-700">
@@ -381,7 +486,9 @@ export const HuntTerminal = () => {
                     <div className="w-16 h-2 bg-slate-700 animate-pulse"></div>
                     <div className="w-8 h-2 bg-slate-600"></div>
                 </div>
-                <div className="text-[8px] font-mono text-slate-500">SECURE CONNECTION</div>
+                <div className="text-[8px] font-mono text-slate-500 uppercase">
+                    {orderData?.marketData ? 'BASE_MAINNET::CONNECTED' : 'SEARCHING_NETWORK...'}
+                </div>
             </div>
         </div>
     );

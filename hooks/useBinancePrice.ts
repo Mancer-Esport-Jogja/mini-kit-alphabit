@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { MARKET_API } from '@/config/api';
 
 interface PriceData {
     price: number;
@@ -35,12 +36,15 @@ export function useBinancePrice(options: UseBinancePriceOptions = {}) {
     const fetchKlines = useCallback(async () => {
         setIsLoading(true);
         try {
-            const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
+            const url = `${MARKET_API.KLINES}?symbol=${symbol}&interval=${interval}&limit=${limit}`;
             const response = await fetch(url);
 
-            if (!response.ok) throw new Error('Failed to fetch klines');
+            if (!response.ok) throw new Error('Failed to fetch klines via proxy');
 
-            const data = await response.json();
+            const result = await response.json();
+            if (!result.success) throw new Error(result.error?.message || 'Failed to fetch klines');
+
+            const data = result.data;
 
             // Binance kline format: [openTime, open, high, low, close, volume, closeTime, ...]
             const history: PriceData[] = data.map((kline: (string | number)[]) => ({

@@ -31,6 +31,7 @@ export const TutorialOverlay = ({ isOpen, onClose, title, steps }: TutorialOverl
                             <h3 className="font-pixel text-yellow-400 text-sm">{title}</h3>
                         </div>
                         <button
+                            type="button"
                             onClick={onClose}
                             className="text-slate-500 hover:text-white transition-colors"
                         >
@@ -63,6 +64,7 @@ export const TutorialOverlay = ({ isOpen, onClose, title, steps }: TutorialOverl
                     </div>
 
                     <button
+                        type="button"
                         onClick={onClose}
                         className="mt-6 w-full bg-yellow-500 text-black font-pixel text-xs py-3 hover:bg-yellow-400 transition-colors flex items-center justify-center gap-2"
                     >
