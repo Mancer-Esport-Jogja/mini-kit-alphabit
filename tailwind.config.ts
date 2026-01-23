@@ -9,9 +9,12 @@ const config: Config = {
         extend: {
             colors: {
                 'void-black': '#0A0A0A',
-                'bit-coral': '#E85A5A',      // Primary brand color - dominant
-                'bit-green': '#4ADE80',       // Success/CALL/profit
-                'bit-dark': '#1a1a2e',        // Dark accent
+                'neon-black': '#050505',      // Deepest black
+                'neon-red': '#FF3333',        // High-vis red
+                'neon-yellow': '#FAFF00',     // Cyber yellow
+                'bit-coral': '#E85A5A',       // Keep for legacy
+                'bit-green': '#4ADE80',       // Keep for legacy
+                'bit-dark': '#1a1a2e',
             },
             fontFamily: {
                 pixel: ['var(--font-pixel)', 'monospace'],
