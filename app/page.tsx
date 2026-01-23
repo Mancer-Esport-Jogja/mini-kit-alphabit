@@ -8,7 +8,8 @@ import { HuntTerminal } from "@/components/features/HuntTerminal";
 import { PositionsList } from "@/components/features/PositionsList";
 import { LiquidityEngine } from "@/components/features/LiquidityEngine";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
-import { TrendingUp, Hammer } from "lucide-react";
+import { DuelArena } from "@/components/features/DuelArena";
+import { TrendingUp, Hammer, Swords } from "lucide-react";
 
 import { Marquee } from "@/components/ui/Marquee";
 
@@ -16,7 +17,7 @@ export default function App() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState("landing");
-  const [mode, setMode] = useState("HUNT");
+  const [mode, setMode] = useState("ARENA");
   const [glitch, setGlitch] = useState(false);
 
 
@@ -79,6 +80,14 @@ export default function App() {
               <div className="flex bg-black p-1 border-2 border-slate-700 mb-6 relative">
                 <button
                   type="button"
+                  onClick={() => setMode("ARENA")}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider relative z-10 font-pixel transition-colors duration-300 ${mode === "ARENA" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
+                >
+                  <Swords size={14} />
+                  ARENA
+                </button>
+                <button
+                  type="button"
                   onClick={() => setMode("HUNT")}
                   className={`flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider relative z-10 font-pixel transition-colors duration-300 ${mode === "HUNT" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
                 >
@@ -95,14 +104,16 @@ export default function App() {
                 </button>
                 <motion.div
                   layoutId="mode-bg"
-                  className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white"
+                  className="absolute top-1 bottom-1 w-[calc(33.33%-4px)] bg-white"
                   initial={false}
-                  animate={{ x: mode === "HUNT" ? 0 : "100%" }}
+                  animate={{ x: mode === "ARENA" ? 0 : mode === "HUNT" ? "100%" : "200%" }}
                   transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 />
               </div>
 
-              {mode === "HUNT" ? (
+              {mode === "ARENA" ? (
+                <DuelArena />
+              ) : mode === "HUNT" ? (
                 <>
                   <HuntTerminal />
                   <PositionsList />
@@ -113,7 +124,7 @@ export default function App() {
             </main>
 
             <div className="text-center pb-4 font-mono text-[8px] text-slate-600">
-              [ SYSTEM_ID: BASE_MAINNET ] [ v2.1.0 ]
+              [ SYSTEM_ID: BASE_MAINNET ] [ v2.2.0-ARENA ]
             </div>
           </motion.div>
         )}
