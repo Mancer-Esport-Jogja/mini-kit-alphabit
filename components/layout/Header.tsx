@@ -2,6 +2,7 @@ import React from 'react';
 import { Cpu, Flame } from 'lucide-react';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { useAuth } from '@/context/AuthContext';
+import Image from 'next/image';
 
 const formatAddress = (address: string | null) => {
     if (!address) return '';
@@ -29,8 +30,13 @@ export const Header = () => {
                 {/* Brand Icon or User PFP */}
                 <div className="relative">
                     {isAuthenticated && user?.pfpUrl ? (
-                        <div className="w-12 h-12 bg-black border-4 border-bit-green overflow-hidden">
-                            <img src={user.pfpUrl} alt={user.username || 'user'} className="w-full h-full object-cover" />
+                        <div className="w-12 h-12 bg-black border-4 border-bit-green overflow-hidden relative">
+                            <Image
+                                src={user.pfpUrl}
+                                alt={user.username || 'user'}
+                                fill
+                                className="object-cover"
+                            />
                         </div>
                     ) : (
                         <div className="w-12 h-12 bg-black border-4 border-slate-700 flex items-center justify-center">

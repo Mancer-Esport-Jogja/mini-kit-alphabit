@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+// import { useState } from "react"; // Unused removal
 import { Header } from "@/components/layout/Header";
 import { OrderBuilder } from "@/components/Gamified/OrderBuilder";
 import { Visualizer } from "@/components/Gamified/Visualizer";
@@ -79,7 +79,7 @@ export default function BentengPage() {
                         <h4 className="font-bold text-slate-300 mb-2">HOW IT WORKS</h4>
                         <p className="leading-relaxed">
                             You profit if BTC stays <span className="text-green-400 font-bold">BETWEEN ${mockOrder.strikes[0].toLocaleString()} and ${mockOrder.strikes[1].toLocaleString()}</span>.
-                            If it breaks out of this "fortress", your losses are capped but you may lose collateral.
+                            If it breaks out of this &quot;fortress&quot;, your losses are capped but you may lose collateral.
                         </p>
                     </div>
                 </div>

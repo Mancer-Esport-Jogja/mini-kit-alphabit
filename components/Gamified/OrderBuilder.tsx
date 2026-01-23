@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+// import { motion } from "framer-motion"; // Unused removal
 import { DollarSign, ArrowRight, Loader } from "lucide-react";
 
 interface OrderBuilderProps {

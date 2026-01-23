@@ -16,7 +16,7 @@ import { LevelBadge } from "@/components/gamification/LevelBadge"; // Import Bad
 export const HuntTerminal = () => {
     // Auth State
     const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
-    const { completeMission, achievements, unlockAchievement, addXp, level, streak, rankTitle, checkStreak } = useGamification(); // Gamification Hook
+    const { completeMission, addXp, level, streak, rankTitle, checkStreak } = useGamification(); // Gamification Hook
 
     // Mission State
     const [collateral, setCollateral] = useState(50);

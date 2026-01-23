@@ -1,16 +1,16 @@
 "use client";
 
-import { useState } from "react";
+// import { useState } from "react";
 import { Header } from "@/components/layout/Header";
 import { OrderBuilder } from "@/components/Gamified/OrderBuilder";
 import { Visualizer } from "@/components/Gamified/Visualizer";
-import { motion } from "framer-motion";
+// import { motion } from "framer-motion";
 import { ArrowLeft, Sprout } from "lucide-react";
 import Link from "next/link";
 import { Marquee } from "@/components/ui/Marquee";
 
 export default function TanamPage() {
-    const [selectedOrder, setSelectedOrder] = useState<any>(null);
+    // const [selectedOrder, setSelectedOrder] = useState<any>(null); // Unused removal
 
     // Mock Order Data (Replace with useThetanutsOrders hook later)
     const mockOrder = {
@@ -90,7 +90,7 @@ export default function TanamPage() {
                     <div className="bg-slate-900/50 p-4 rounded text-xs text-slate-400 border border-slate-800">
                         <h4 className="font-bold text-slate-300 mb-2">HOW IT WORKS</h4>
                         <p className="leading-relaxed">
-                            You are selling a "Put Option". As long as BTC price stays
+                            You are selling a &quot;Put Option&quot;. As long as BTC price stays
                             <span className="text-green-400 font-bold"> ABOVE ${mockOrder.strike.toLocaleString()}</span>,
                             you keep your full deposit + the yield.
                             If it drops below, you may buy BTC at strike price.

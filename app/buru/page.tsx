@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+// import { useState } from "react"; // Unused removal
 import { Header } from "@/components/layout/Header";
 import { OrderBuilder } from "@/components/Gamified/OrderBuilder";
 import { Visualizer } from "@/components/Gamified/Visualizer";
@@ -79,7 +79,7 @@ export default function BuruPage() {
                     <div className="bg-slate-900/50 p-4 rounded text-xs text-slate-400 border border-slate-800">
                         <h4 className="font-bold text-slate-300 mb-2">HOW IT WORKS</h4>
                         <p className="leading-relaxed">
-                            You are buying a "Call Option". you pay a premium up front. If BTC price goes
+                            You are buying a &quot;Call Option&quot;. you pay a premium up front. If BTC price goes
                             <span className="text-green-400 font-bold"> ABOVE ${mockOrder.strike.toLocaleString()}</span>,
                             your profits can be massive. If not, you only lose your premium.
                         </p>
