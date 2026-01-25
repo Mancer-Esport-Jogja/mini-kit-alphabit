@@ -23,7 +23,7 @@ export const minikitConfig = {
     subtitle: "",
     description: "",
     screenshotUrls: [],
-    iconUrl: `${ROOT_URL}/icon.png`,
+    iconUrl: `${ROOT_URL}/logo-alphabit.png`,
     splashImageUrl: `${ROOT_URL}/logo-alphabit.png`,
     splashBackgroundColor: "#000000",
     homeUrl: ROOT_URL,
@@ -34,6 +34,6 @@ export const minikitConfig = {
     tagline: "",
     ogTitle: "",
     ogDescription: "",
-    ogImageUrl: `${ROOT_URL}/hero.png`,
+    ogImageUrl: `${ROOT_URL}/logo-alphabit.png`,
   },
 } as const;
