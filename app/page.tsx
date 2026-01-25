@@ -12,6 +12,7 @@ import { DuelArena } from "@/components/features/DuelArena";
 import { TrendingUp, Hammer, Swords } from "lucide-react";
 
 import { Marquee } from "@/components/ui/Marquee";
+import { PortfolioView } from "@/components/features/PortfolioView";
 
 export default function App() {
 
@@ -68,58 +69,72 @@ export default function App() {
             <Header />
 
             <main className="p-4 relative z-10">
-              <div className="bg-black border-x-4 border-slate-700 h-6 mb-6 flex items-center overflow-hidden">
-                <Marquee
-                  text={`/// ALPHABIT SYSTEM READY /// CONNECTED TO BASE MAINNET /// THETANUTS PROTOCOL ACTIVE /// MODE: ${mode} /// `}
-                  speed={20}
-                  className="text-[8px] text-green-400 font-pixel"
-                />
-              </div>
-
-              {/* MODE SWITCHER */}
-              <div className="flex bg-black p-1 border-2 border-slate-700 mb-6 relative">
-                <button
-                  type="button"
-                  onClick={() => setMode("ARENA")}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider relative z-10 font-pixel transition-colors duration-300 ${mode === "ARENA" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
-                >
-                  <Swords size={14} />
-                  ARENA
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMode("HUNT")}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider relative z-10 font-pixel transition-colors duration-300 ${mode === "HUNT" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
-                >
-                  <TrendingUp size={14} />
-                  HUNT
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMode("FARM")}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider relative z-10 font-pixel transition-colors duration-300 ${mode === "FARM" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
-                >
-                  <Hammer size={14} />
-                  FARM
-                </button>
-                <motion.div
-                  layoutId="mode-bg"
-                  className="absolute top-1 bottom-1 w-[calc(33.33%-4px)] bg-white"
-                  initial={false}
-                  animate={{ x: mode === "ARENA" ? 0 : mode === "HUNT" ? "100%" : "200%" }}
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                />
-              </div>
-
-              {mode === "ARENA" ? (
-                <DuelArena />
-              ) : mode === "HUNT" ? (
-                <>
-                  <HuntTerminal />
-                  <PositionsList />
-                </>
+              {view === "portfolio" ? (
+                <PortfolioView onBack={() => setView("home")} />
               ) : (
-                <LiquidityEngine />
+                <>
+                  <div className="bg-black border-x-4 border-slate-700 h-6 mb-6 flex items-center overflow-hidden">
+                    <Marquee
+                      text={`/// ALPHABIT SYSTEM READY /// CONNECTED TO BASE MAINNET /// THETANUTS PROTOCOL ACTIVE /// MODE: ${mode} /// `}
+                      speed={20}
+                      className="text-[8px] text-green-400 font-pixel"
+                    />
+                  </div>
+
+                  {/* MODE SWITCHER */}
+                  <div className="flex bg-black p-1 border-2 border-slate-700 mb-6 relative">
+                    <button
+                      type="button"
+                      onClick={() => setMode("ARENA")}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider relative z-10 font-pixel transition-colors duration-300 ${mode === "ARENA" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
+                    >
+                      <Swords size={12} />
+                      ARENA
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMode("HUNT")}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider relative z-10 font-pixel transition-colors duration-300 ${mode === "HUNT" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
+                    >
+                      <TrendingUp size={12} />
+                      HUNT
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMode("FARM")}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider relative z-10 font-pixel transition-colors duration-300 ${mode === "FARM" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
+                    >
+                      <Hammer size={12} />
+                      FARM
+                    </button>
+                    <motion.div
+                      layoutId="mode-bg"
+                      className="absolute top-1 bottom-1 w-[calc(33.3%-4px)] bg-white"
+                      initial={false}
+                      animate={{ x: mode === "ARENA" ? 0 : mode === "HUNT" ? "100%" : "200%" }}
+                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    />
+                  </div>
+
+                  {mode === "ARENA" ? (
+                    <DuelArena />
+                  ) : mode === "HUNT" ? (
+                    <>
+                      <HuntTerminal />
+                      <div className="mt-2 text-center">
+                        <button 
+                          onClick={() => setView("portfolio")}
+                          className="text-[8px] font-pixel text-slate-500 hover:text-white transition-colors uppercase border border-slate-800 px-3 py-1 bg-black/20"
+                        >
+                          Access Full Mission Records / History
+                        </button>
+                      </div>
+                      <PositionsList onOpenHistory={() => setView("portfolio")} />
+                    </>
+                  ) : (
+                    <LiquidityEngine />
+                  )}
+                </>
               )}
             </main>
 
