@@ -1,7 +1,7 @@
 const ROOT_URL =
-  process.env.NEXT_PUBLIC_URL ||
-  (process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`) ||
-  "http://localhost:3000";
+  process.env.NODE_ENV === 'development'
+    ? "http://localhost:3000"
+    : "https://mini-kit-alphabit.vercel.app";
 
 /**
  * MiniApp configuration object. Must follow the mini app manifest specification.
@@ -24,7 +24,7 @@ export const minikitConfig = {
     description: "",
     screenshotUrls: [],
     iconUrl: `${ROOT_URL}/icon.png`,
-    splashImageUrl: `${ROOT_URL}/splash.png`,
+    splashImageUrl: `${ROOT_URL}/logo-alphabit.png`,
     splashBackgroundColor: "#000000",
     homeUrl: ROOT_URL,
     webhookUrl: `${ROOT_URL}/api/webhook`,
