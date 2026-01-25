@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import type { Position } from '@/types/positions';
 
 // Mock mode flag - set to true when backend is not running
-const MOCK_MODE = true;
+const MOCK_MODE = false;
 
 // Mock empty positions for development
 const MOCK_POSITIONS: Position[] = [];
