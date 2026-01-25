@@ -4,6 +4,7 @@ import { Inter, Press_Start_2P, Space_Grotesk } from "next/font/google";
 import { minikitConfig } from "@/minikit.config";
 import { RootProvider } from "./rootProvider";
 import "./globals.css";
+import DevConsoleViewer from "@/components/DevConsoleViewer";
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -76,6 +77,7 @@ export default function RootLayout({
       <body className={`${inter.variable} ${pressStart2P.variable} ${spaceGrotesk.variable}`}>
         <RootProvider>
           {children}
+          <DevConsoleViewer />
         </RootProvider>
       </body>
     </html>
