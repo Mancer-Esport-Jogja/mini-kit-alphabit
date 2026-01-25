@@ -84,7 +84,7 @@ export function devWalletConnector({ privateKey, rpcUrl, chainId = 8453 }: DevWa
                                 const [txParams] = (params as [{ to?: string; data?: `0x${string}`; value?: string }]) || [{}];
                                 // Use walletClient to sign and send
                                 return await walletClient.sendTransaction({
-                                    to: txParams.to,
+                                    to: txParams.to as `0x${string}` | undefined,
                                     data: txParams.data,
                                     value: txParams.value ? BigInt(txParams.value) : undefined,
                                     account,
@@ -97,7 +97,7 @@ export function devWalletConnector({ privateKey, rpcUrl, chainId = 8453 }: DevWa
                             case 'personal_sign':
                                 const [message, _address] = (params as [string, string]) || [];
                                 return await walletClient.signMessage({
-                                    message: { raw: message },
+                                    message: message,
                                     account
                                 });
 

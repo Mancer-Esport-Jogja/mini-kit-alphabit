@@ -6,10 +6,9 @@ import { Header } from "@/components/layout/Header";
 import { LandingPage } from "@/components/features/LandingPage";
 import { HuntTerminal } from "@/components/features/HuntTerminal";
 import { PositionsList } from "@/components/features/PositionsList";
-import { LiquidityEngine } from "@/components/features/LiquidityEngine";
+import { ArcadeMode } from "@/components/features/ArcadeMode";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
-import { DuelArena } from "@/components/features/DuelArena";
-import { TrendingUp, Hammer, Swords } from "lucide-react";
+import { TrendingUp, Gamepad2 } from "lucide-react";
 
 import { Marquee } from "@/components/ui/Marquee";
 import { PortfolioView } from "@/components/features/PortfolioView";
@@ -18,7 +17,7 @@ export default function App() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState("landing");
-  const [mode, setMode] = useState("ARENA");
+  const [mode, setMode] = useState<'PRO' | 'ARCADE'>("PRO");
   const [glitch, setGlitch] = useState(false);
 
 
@@ -85,40 +84,32 @@ export default function App() {
                   <div className="flex bg-black p-1 border-2 border-slate-700 mb-6 relative">
                     <button
                       type="button"
-                      onClick={() => setMode("ARENA")}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider relative z-10 font-pixel transition-colors duration-300 ${mode === "ARENA" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
+                      onClick={() => setMode("ARCADE")}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider relative z-10 font-pixel transition-colors duration-300 ${mode === "ARCADE" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
                     >
-                      <Swords size={12} />
-                      ARENA
+                      <Gamepad2 size={14} />
+                      ARCADE
                     </button>
                     <button
                       type="button"
-                      onClick={() => setMode("HUNT")}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider relative z-10 font-pixel transition-colors duration-300 ${mode === "HUNT" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
+                      onClick={() => setMode("PRO")}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider relative z-10 font-pixel transition-colors duration-300 ${mode === "PRO" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
                     >
-                      <TrendingUp size={12} />
-                      HUNT
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setMode("FARM")}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider relative z-10 font-pixel transition-colors duration-300 ${mode === "FARM" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
-                    >
-                      <Hammer size={12} />
-                      FARM
+                      <TrendingUp size={14} />
+                      PRO
                     </button>
                     <motion.div
                       layoutId="mode-bg"
-                      className="absolute top-1 bottom-1 w-[calc(33.3%-4px)] bg-white"
+                      className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white"
                       initial={false}
-                      animate={{ x: mode === "ARENA" ? 0 : mode === "HUNT" ? "100%" : "200%" }}
+                      animate={{ x: mode === "ARCADE" ? 0 : "100%" }}
                       transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     />
                   </div>
 
-                  {mode === "ARENA" ? (
-                    <DuelArena />
-                  ) : mode === "HUNT" ? (
+                  {mode === "ARCADE" ? (
+                    <ArcadeMode />
+                  ) : (
                     <>
                       <HuntTerminal />
                       <div className="mt-2 text-center">
@@ -131,15 +122,13 @@ export default function App() {
                       </div>
                       <PositionsList onOpenHistory={() => setView("portfolio")} />
                     </>
-                  ) : (
-                    <LiquidityEngine />
                   )}
                 </>
               )}
             </main>
 
             <div className="text-center pb-4 font-mono text-[8px] text-slate-600">
-              [ SYSTEM_ID: BASE_MAINNET ] [ v2.2.0-ARENA ]
+              [ SYSTEM_ID: BASE_MAINNET ] [ v2.2.0-{mode} ]
             </div>
           </motion.div>
         )}
