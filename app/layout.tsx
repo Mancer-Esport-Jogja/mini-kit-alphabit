@@ -22,6 +22,28 @@ export async function generateMetadata(): Promise<Metadata> {
         },
       }),
     },
+    openGraph: {
+      title: minikitConfig.miniapp.name,
+      description: minikitConfig.miniapp.description,
+      url: minikitConfig.miniapp.homeUrl,
+      siteName: minikitConfig.miniapp.name,
+      images: [
+        {
+          url: minikitConfig.miniapp.ogImageUrl || minikitConfig.miniapp.iconUrl,
+          width: 1200,
+          height: 630,
+          alt: minikitConfig.miniapp.name,
+        },
+      ],
+      locale: "en_US",
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: minikitConfig.miniapp.name,
+      description: minikitConfig.miniapp.description,
+      images: [minikitConfig.miniapp.ogImageUrl || minikitConfig.miniapp.iconUrl],
+    },
   };
 }
 
