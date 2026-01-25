@@ -117,11 +117,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isDevMode: IS_TESTNET,
         isNewUser: data.data.isNewUser,
       });
+
+      // Signal Farcaster that the app is ready
+      sdk.actions.ready();
     } catch (error) {
       console.error("Auth: Authentication failed", error);
       setToken(null);
       setUser(null);
       setIsDevMode(false);
+      
+      // Even if auth fails, we should let the app render in guest mode
+      sdk.actions.ready();
     } finally {
       setIsLoading(false);
     }

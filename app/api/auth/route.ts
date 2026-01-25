@@ -41,9 +41,12 @@ export async function GET(request: NextRequest) {
 
   try {
     // Verify Farcaster JWT
+    // CRITICAL: We must verify against the domain specified in our manifest signature
+    // which is "mini-kit-alphabit.vercel.app". Dynamic host detection often fails
+    // in containerized environments or internal routing.
     const payload = await client.verifyJwt({
       token,
-      domain: getUrlHost(request),
+      domain: "mini-kit-alphabit.vercel.app",
     });
 
     // Forward verified token to backend to get full user profile
