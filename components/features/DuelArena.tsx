@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, ChevronRight } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 // --- POKEMON-STYLE CONFIG ---
@@ -16,7 +16,7 @@ export function DuelArena() {
     const { user } = useAuth();
 
     // Game State
-    const [gameState, setGameState] = useState<'INTRO' | 'BATTLE' | 'MENU' | 'ATTACK' | 'VICTORY'>('INTRO');
+    const [gameState, setGameState] = useState<'INTRO' | 'BATTLE' | 'MENU' | 'ATTACK' | 'VICTORY' | 'BATTLE_SELECT'>('INTRO');
     const [playerMon, setPlayerMon] = useState<'BULL' | 'BEAR'>('BULL');
     const [marketHP, setMarketHP] = useState(100);
     const [message, setMessage] = useState("");
