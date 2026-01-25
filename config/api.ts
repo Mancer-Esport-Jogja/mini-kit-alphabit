@@ -1,8 +1,18 @@
-export const ALPHABIT_BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
+// Backend URL from env (already includes /api prefix)
+export const ALPHABIT_BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://backend-alphabit.onrender.com/api';
 
-// Direct Thetanuts V4 API endpoint (no backend proxy needed for public data)
-export const THETANUTS_DIRECT_API = 'https://round-snowflake-9c31.devops-118.workers.dev';
+/**
+ * Auth API endpoint
+ */
+export const AUTH_API = {
+  /** Authenticate user - POST with Bearer token */
+  AUTH: `${ALPHABIT_BACKEND_URL}/auth`,
+} as const;
 
+/**
+ * Thetanuts V4 API Endpoints (proxied through backend)
+ * All endpoints use ALPHABIT_BACKEND_URL for authentication and rate limiting
+ */
 export const THETANUTS_API = {
   /**
    * Orders API - Fetch available RFQ orders via Backend Proxy
@@ -20,14 +30,11 @@ export const INDEXER_ENDPOINTS = {
   UPDATE: `${THETANUTS_API.INDEXER_BASE}/update`,
 
   /** Get user's open positions via backend */
-  USER_POSITIONS: (address: string) =>
-    `${THETANUTS_API.INDEXER_BASE}/positions`, // Backend handles address in body or we can add it
-
-  /** Get user's settled history via backend */
-  USER_HISTORY: (address: string) =>
+  USER_POSITIONS: (_address: string) =>
     `${THETANUTS_API.INDEXER_BASE}/positions`,
 } as const;
 
 export const MARKET_API = {
-  KLINES: `${ALPHABIT_BACKEND_URL}/api/market/klines`,
+  /** Market klines data */
+  KLINES: `${ALPHABIT_BACKEND_URL}/market/klines`,
 } as const;

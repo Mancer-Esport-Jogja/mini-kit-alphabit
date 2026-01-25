@@ -1,13 +1,14 @@
-import { THETANUTS_DIRECT_API, THETANUTS_API, INDEXER_ENDPOINTS } from '@/config/api';
+import { THETANUTS_API, INDEXER_ENDPOINTS } from '@/config/api';
 import { OrdersApiResponse, SignedOrder, ParsedOrder } from '@/types/orders';
 import { Position } from '@/types/positions';
 import { THETANUTS_CONTRACTS } from '@/config/thetanuts';
 
 /**
- * Fetch all available orders directly from Thetanuts V4 API
+ * Fetch all available orders from backend proxy
+ * Backend handles authentication and rate limiting for Thetanuts V4 API
  */
 export async function fetchOrders(): Promise<OrdersApiResponse> {
-  const res = await fetch(THETANUTS_DIRECT_API, {
+  const res = await fetch(THETANUTS_API.ORDERS, {
     cache: 'no-store',
     headers: {
       'Accept': 'application/json',
@@ -297,4 +298,32 @@ export async function triggerSync(token?: string): Promise<{ status: string }> {
     console.error("Failed to trigger sync", e);
     return { status: "error" };
   }
+}
+
+/**
+ * Filter orders by duration (BLITZ, RUSH, CORE, ORBIT)
+ */
+export function filterOrdersByDuration(
+  orders: SignedOrder[],
+  duration: 'BLITZ' | 'RUSH' | 'CORE' | 'ORBIT'
+): SignedOrder[] {
+  const now = Date.now() / 1000;
+
+  return orders.filter(o => {
+    const timeToExpiry = o.order.expiry - now;
+    const hours = timeToExpiry / 3600;
+
+    switch (duration) {
+      case 'BLITZ': // Target 6H (2h - 9h range)
+        return hours >= 2 && hours <= 9;
+      case 'RUSH': // Target 12H (9h - 18h range)
+        return hours > 9 && hours <= 18;
+      case 'CORE': // Target 24H (18h - 36h range)
+        return hours > 18 && hours <= 36;
+      case 'ORBIT': // Target 7D (> 36h)
+        return hours > 36;
+      default:
+        return true;
+    }
+  });
 }

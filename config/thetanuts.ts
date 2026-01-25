@@ -39,4 +39,4 @@ export const THETANUTS_CONTRACTS = {
 } as const;
 
 // ALPHABIT Platform Referrer
-export const ALPHABIT_REFERRER = '0x1A0e000000000000000000000000000000000000'; // Placeholder - Replace with your platform address
+export const ALPHABIT_REFERRER = (process.env.NEXT_PUBLIC_ALPHABIT_REFERRER || '0x1A0e000000000000000000000000000000000000') as `0x${string}`;

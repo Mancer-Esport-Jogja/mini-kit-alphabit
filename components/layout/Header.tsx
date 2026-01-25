@@ -17,12 +17,18 @@ export const Header = () => {
     const { disconnect } = useDisconnect();
 
     const handleConnect = () => {
+        // In Dev Mode (or if Farcaster not found), try the first available connector (usually Coinbase or Injected)
         const connector = connectors.find(c => c.id === 'farcasterFrame') || connectors[0];
-        if (connector) connect({ connector });
+        if (connector) {
+            console.log("Connecting with:", connector.name);
+            connect({ connector });
+        } else {
+            console.error("No suitable connector found");
+        }
     };
 
     // Use Farcaster address as priority, fallback to connected wallet
-    const displayAddress = user?.primaryEthAddress || address;
+    // const displayAddress = user?.primaryEthAddress || address;
 
     return (
         <div className="flex justify-between items-end p-4 bg-slate-900 border-b-4 border-black sticky top-0 z-20 w-full max-w-md mx-auto">
@@ -79,14 +85,14 @@ export const Header = () => {
 
                 {/* Custom Wallet Pill (High Performance) */}
                 <div className="flex flex-col items-end w-full">
-                    {isConnected || (isAuthenticated && user?.primaryEthAddress) ? (
+                    {isConnected && address ? (
                         <button
                             onClick={() => disconnect()}
                             className="flex items-center gap-2 bg-slate-800 border-2 border-slate-700 px-2 py-1 w-full justify-between hover:border-bit-coral transition-colors group"
                         >
                             <div className="w-1.5 h-1.5 rounded-full bg-bit-green group-hover:bg-bit-coral shadow-[0_0_4px_currentColor]"></div>
                             <span className="text-[9px] font-mono text-white tracking-tighter uppercase">
-                                {formatAddress(displayAddress as string)}
+                                {formatAddress(address)}
                             </span>
                         </button>
                     ) : (
@@ -94,7 +100,7 @@ export const Header = () => {
                             onClick={handleConnect}
                             className="bg-slate-800 border-2 border-slate-600 hover:border-bit-green text-white font-pixel text-[9px] px-3 py-1 animate-pulse"
                         >
-                            CONNECT
+                            {isAuthenticated ? 'CONNECT WALLET' : 'CONNECT'}
                         </button>
                     )}
                 </div>

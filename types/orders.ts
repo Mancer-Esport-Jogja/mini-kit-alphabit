@@ -4,9 +4,13 @@
  */
 
 export interface OrdersApiResponse {
+  success: boolean;
   data: {
-    timestamp: string;
-    orders: SignedOrder[];
+    data: {
+      timestamp: string;
+      orders: SignedOrder[];
+    };
+    metadata?: Record<string, unknown>;
   };
 }
 

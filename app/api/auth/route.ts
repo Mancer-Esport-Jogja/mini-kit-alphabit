@@ -3,6 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 const client = createClient();
 
+// Backend API URL
+const BACKEND_AUTH_URL = process.env.NEXT_PUBLIC_BACKEND_URL
+  ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth`
+  : "https://backend-alphabit.onrender.com/api/auth";
+
 export async function GET(request: NextRequest) {
   // Because we're fetching this endpoint via `sdk.quickAuth.fetch`,
   // if we're in a mini app, the request will include the necessary `Authorization` header.
@@ -13,23 +18,62 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ message: "Missing token" }, { status: 401 });
   }
 
+  const token = authorization.split(" ")[1];
+
+  // Dev mode: Forward dev-token directly to backend
+  if (token === "dev-token") {
+    try {
+      const backendResponse = await fetch(BACKEND_AUTH_URL, {
+        method: "POST",
+        headers: {
+          "Accept": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      const data = await backendResponse.json();
+      return NextResponse.json(data, { status: backendResponse.status });
+    } catch (error) {
+      console.error("Backend auth error:", error);
+      return NextResponse.json({ message: "Backend auth failed" }, { status: 500 });
+    }
+  }
+
   try {
-    // Now we verify the token. `domain` must match the domain of the request.
-    // In our case, we're using the `getUrlHost` function to get the domain of the request
-    // based on the Vercel environment. This will vary depending on your hosting provider.
+    // Verify Farcaster JWT
     const payload = await client.verifyJwt({
-      token: authorization.split(" ")[1] as string,
+      token,
       domain: getUrlHost(request),
     });
 
-    // If the token was valid, `payload.sub` will be the user's Farcaster ID.
-    // This is guaranteed to be the user that signed the message in the mini app.
-    // You can now use this to do anything you want, e.g. fetch the user's data from your database
-    // or fetch the user's info from a service like Neynar.
-    const userFid = payload.sub;
+    // Forward verified token to backend to get full user profile
+    const backendResponse = await fetch(BACKEND_AUTH_URL, {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+    });
 
-    // By default, we'll return the user's FID. Update this to meet your needs.
-    return NextResponse.json({ userFid });
+    if (!backendResponse.ok) {
+      // If backend fails, return basic user info from JWT
+      return NextResponse.json({
+        success: true,
+        data: {
+          user: {
+            fid: payload.sub,
+            username: null,
+            displayName: null,
+            pfpUrl: null,
+            primaryEthAddress: null,
+          },
+          isNewUser: false,
+        },
+      });
+    }
+
+    const data = await backendResponse.json();
+    return NextResponse.json(data);
   } catch (e) {
     if (e instanceof Errors.InvalidTokenError) {
       return NextResponse.json({ message: "Invalid token" }, { status: 401 });

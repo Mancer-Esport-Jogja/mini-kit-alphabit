@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown, Info, AlertTriangle, Clock, Flame } from "lucide-react";
+import { TrendingUp, TrendingDown, Info, AlertTriangle, Clock, Flame, Zap } from "lucide-react";
 // import { TutorialOverlay } from "@/components/ui/TutorialOverlay"; // REMOVED: Replaced by Droid Tour
 import { useThetanutsOrders } from "@/hooks/useThetanutsOrders";
 import { parseStrike, parsePrice } from "@/utils/decimals";
@@ -12,6 +12,8 @@ import { TacticalDroid } from "./TacticalDroid";
 import { MissionControl } from "@/components/gamification/MissionControl";
 import { useGamification } from "@/context/GamificationContext";
 import { LevelBadge } from "@/components/gamification/LevelBadge"; // Import Badge
+import { BuyModal } from "./BuyModal";
+import { useTenderlyMint } from "@/hooks/useTenderlyMint";
 
 export const HuntTerminal = () => {
     // Auth State
@@ -30,6 +32,11 @@ export const HuntTerminal = () => {
 
     // UI State
     const [showMissions, setShowMissions] = useState(false);
+    const [showBuyModal, setShowBuyModal] = useState(false);
+
+    // Tenderly Testing (Dev Mode Only)
+    const { mintUSDC, isTestnet } = useTenderlyMint();
+    const [isMinting, setIsMinting] = useState(false);
 
     // --- Gamification Logic ---
     // 1. Complete "Daily Login" on mount & check streak
@@ -63,6 +70,7 @@ export const HuntTerminal = () => {
     } = useThetanutsOrders({
         target: selectedTarget || undefined,
         asset: selectedAsset,
+        duration: selectedDuration,
     });
 
     // Fetch Sentinel Data for AI (Unfiltered by target to see full picture)
@@ -96,7 +104,7 @@ export const HuntTerminal = () => {
         };
     }, [sentimentData]); // removed completeMission from deps to avoid loops
 
-    const bestOrder = orderData?.bestOrder;
+    const bestOrder = orderData?.bestOrder ?? null;
 
     // Chart timeframe options
     const timeframes = [
@@ -162,11 +170,30 @@ export const HuntTerminal = () => {
     // Calculate Payout ROI Estimate
     const roiEstimate = useMemo(() => {
         if (!bestOrder) return 0;
-        const [lower, upper] = bestOrder.order.strikes.map((s) => parseStrike(s));
-        const strikeWidth = upper - lower;
+        
+        const strikes = bestOrder.order.strikes.map((s) => parseStrike(s));
         const premium = parsePrice(bestOrder.order.price);
         if (premium === 0) return 0;
-        return Math.round((strikeWidth / premium - 1) * 100);
+
+        const isSpread = strikes.length >= 2;
+        const isCall = bestOrder.order.isCall;
+
+        if (isSpread) {
+            // Spread: ROI = (Width - Premium) / Premium
+            const lower = strikes[0];
+            const upper = strikes[1];
+            const width = Math.abs(upper - lower);
+            return Math.round(((width - premium) / premium) * 100);
+        } else {
+            // Vanilla
+            if (isCall) {
+                return Infinity; // Unlimited upside
+            } else {
+                // Put: ROI = (Strike - Premium) / Premium
+                // Max profit is Strike - Premium (if price goes to 0)
+                return Math.round(((strikes[0] - premium) / premium) * 100);
+            }
+        }
     }, [bestOrder]);
 
     const handleTargetSelect = (target: "MOON" | "DOOM") => {
@@ -252,6 +279,28 @@ export const HuntTerminal = () => {
                     >
                         <Info size={14} className="text-yellow-500" />
                     </button>
+
+                    {/* Testnet Mint Button (Dev Mode Only) */}
+                    {isTestnet && (
+                        <button
+                            onClick={async () => {
+                                setIsMinting(true);
+                                try {
+                                    await mintUSDC("10000");
+                                    alert("Minted 10,000 test USDC!");
+                                } catch (error) {
+                                    alert("Mint failed: " + (error as Error).message);
+                                } finally {
+                                    setIsMinting(false);
+                                }
+                            }}
+                            disabled={isMinting}
+                            className="bg-yellow-600 p-1.5 rounded hover:bg-yellow-500 transition-colors border border-yellow-500 disabled:opacity-50"
+                            title="Mint Test USDC (Tenderly only)"
+                        >
+                            <Zap size={14} className="text-white" />
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -467,9 +516,9 @@ export const HuntTerminal = () => {
                         {/* Custom Slider Track */}
                         <input
                             type="range"
-                            min="10"
+                            min="1"
                             max="500"
-                            step="10"
+                            step="1"
                             value={collateral}
                             onChange={(e) => setCollateral(Number(e.target.value))}
                             className="w-full h-2 bg-slate-800 appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-8 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-slate-400"
@@ -488,13 +537,13 @@ export const HuntTerminal = () => {
                     <div>
                         <div className="text-[9px] text-slate-500 font-mono mb-1 uppercase">ROI ESTIMATE</div>
                         <div className={`text-lg font-pixel transition-colors ${roiEstimate > 0 ? "text-bit-green" : "text-slate-500"}`}>
-                            {isOrdersLoading ? "..." : (roiEstimate > 0 ? `+${roiEstimate}%` : "N/A")}
+                            {isOrdersLoading ? "..." : (roiEstimate === Infinity ? "UNLIMITED" : (roiEstimate > 0 ? `+${roiEstimate}%` : "N/A"))}
                         </div>
                     </div>
                     <div className="text-right">
                         <div className="text-[9px] text-slate-500 font-mono mb-1 uppercase">TARGET STRIKE</div>
                         <div className="text-lg font-pixel text-yellow-500">
-                            {isOrdersLoading ? "..." : (bestOrder ? `$${parseStrike(bestOrder.order.strikes[selectedTarget === "MOON" ? 0 : 1]).toLocaleString()}` : "---")}
+                            {isOrdersLoading ? "..." : (bestOrder ? `$${parseStrike(bestOrder.order.strikes[0]).toLocaleString()}` : "---")}
                         </div>
                     </div>
                 </div>
@@ -532,6 +581,7 @@ export const HuntTerminal = () => {
                 ) : (
                     <button
                         type="button"
+                        onClick={() => setShowBuyModal(true)}
                         disabled={!selectedTarget || !bestOrder || isOrdersLoading}
                         className={`w-full py-4 font-pixel text-sm uppercase tracking-widest transition-all duration-200 border-b-4 active:border-b-0 active:translate-y-1
                             ${!selectedTarget || !bestOrder || isOrdersLoading
@@ -550,6 +600,15 @@ export const HuntTerminal = () => {
                                     : 'INITIATE SEQUENCE'}
                     </button>
                 )}
+
+            {/* Buy Modal */}
+            <BuyModal
+                isOpen={showBuyModal}
+                onClose={() => setShowBuyModal(false)}
+                order={bestOrder}
+                target={selectedTarget}
+                initialCollateral={collateral}
+            />
             </div>
 
             {/* Error Message */}
