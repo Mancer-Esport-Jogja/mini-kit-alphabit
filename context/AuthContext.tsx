@@ -156,6 +156,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.log("Auth: Auto-connecting Dev Wallet...");
             connect({ connector: devConnector });
         }
+      } else {
+        // Prod: Auto-connect Farcaster Wallet if available
+        if (!isConnected) {
+            const farcasterConnector = connectors.find(c => c.id === 'farcaster');
+            if (farcasterConnector) {
+                console.log("Auth: Auto-connecting Farcaster Wallet...");
+                connect({ connector: farcasterConnector });
+            }
+        }
       }
       
       await authenticate();
