@@ -8,9 +8,25 @@ import { config } from "@/config/wagmi";
 
 import { AuthProvider } from "@/context/AuthContext";
 import { GamificationProvider } from "@/context/GamificationContext";
+import sdk from "@farcaster/miniapp-sdk";
+import { SplashScreen } from "@/components/SplashScreen";
+import { useEffect } from "react";
 
 export function RootProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    const init = async () => {
+      // Small delay to show splash screen and ensure SDK is ready
+      setTimeout(() => {
+        sdk.actions.ready();
+        setIsReady(true);
+      }, 3000);
+    };
+
+    init();
+  }, []);
 
   return (
     <WagmiProvider config={config}>
@@ -31,7 +47,10 @@ export function RootProvider({ children }: { children: ReactNode }) {
                 },
               }}
             >
-              {children}
+              {!isReady && <SplashScreen />}
+              <div style={{ display: isReady ? 'block' : 'none' }}>
+                {children}
+              </div>
             </OnchainKitProvider>
           </GamificationProvider>
         </AuthProvider>
