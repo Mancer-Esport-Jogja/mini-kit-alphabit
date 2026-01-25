@@ -7,17 +7,17 @@ import {
   Trophy, 
   History as HistoryIcon, 
   ArrowLeft, 
-  TrendingUp, 
-  TrendingDown, 
   Globe,
   Loader2,
-  ExternalLink
 } from "lucide-react";
+import Image from "next/image";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { useUserTransactions } from "@/hooks/useUserTransactions";
 import { parseStrike } from "@/utils/decimals";
 import { PnLChart } from "@/components/ui/PnLChart";
+import type { LeaderboardEntry } from "@/types/analytics";
+import { Position } from "@/types/positions";
 
 interface PortfolioViewProps {
   onBack: () => void;
@@ -147,12 +147,12 @@ export const PortfolioView = ({ onBack }: PortfolioViewProps) => {
                   </div>
                 ) : (
                   <div className="divide-y divide-slate-800">
-                    {leaderboard?.map((entry: any, i: number) => (
+                    {leaderboard?.map((entry: LeaderboardEntry, i: number) => (
                       <div key={entry.userId || i} className="p-3 flex items-center gap-3 hover:bg-white/5 transition-colors">
                         <div className="w-6 text-center font-pixel text-[10px] text-slate-500">#{i + 1}</div>
                         <div className="w-8 h-8 bg-black border-2 border-slate-700 overflow-hidden shrink-0">
                           {entry.pfpUrl ? (
-                            <img src={entry.pfpUrl} alt={entry.username} className="w-full h-full object-cover" />
+                            <Image src={entry.pfpUrl} alt={entry.username} width={32} height={32} unoptimized className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-[10px] font-pixel text-slate-800">?</div>
                           )}
@@ -194,7 +194,7 @@ export const PortfolioView = ({ onBack }: PortfolioViewProps) => {
                       <p className="text-[8px] font-mono text-slate-700 uppercase">Complete your first mission to view history</p>
                     </div>
                 ) : (
-                  history.map((pos: any, i: number) => {
+                  history.map((pos: Position, i: number) => {
                     const isCall = pos.optionType === 1;
                     const pnl = pos.settlement ? Number(pos.settlement.payoutBuyer) - Number(pos.entryPremium) : 0;
                     const isWin = pnl > 0;
@@ -219,7 +219,7 @@ export const PortfolioView = ({ onBack }: PortfolioViewProps) => {
                               {pos.underlyingAsset} {isCall ? 'MOON' : 'DOOM'}
                             </div>
                             <div className="text-[9px] font-mono text-slate-500 uppercase">
-                              STRIKES: {pos.strikes.map((s: any) => `$${parseStrike(s)}`).join(' / ')}
+                              STRIKES: {pos.strikes.map((s) => `$${parseStrike(s)}`).join(' / ')}
                             </div>
                           </div>
                           <div className="text-right">
