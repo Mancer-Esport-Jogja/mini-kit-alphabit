@@ -7,7 +7,7 @@ import { parseStrike } from "@/utils/decimals";
 import { Loader2, History, ExternalLink, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export const PositionsList = () => {
+export const PositionsList = ({ onOpenHistory }: { onOpenHistory?: () => void }) => {
   const { data: positions, isLoading, isError } = useUserPositions();
 
   if (isLoading) {
@@ -136,8 +136,11 @@ export const PositionsList = () => {
       </div>
 
       <div className="bg-slate-900/80 p-2 border-t border-slate-800 flex justify-center">
-        <button className="text-[8px] font-pixel text-slate-500 hover:text-white transition-colors uppercase flex items-center gap-1">
-          <ShieldCheck size={8} /> View Historical Rewards
+        <button 
+          onClick={onOpenHistory}
+          className="text-[8px] font-pixel text-slate-500 hover:text-white transition-colors uppercase flex items-center gap-1"
+        >
+          <ShieldCheck size={8} /> View Analytics & History
         </button>
       </div>
     </div>

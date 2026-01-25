@@ -245,7 +245,7 @@ export async function fetchUserPositions(address: string, token?: string): Promi
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(INDEXER_ENDPOINTS.USER_POSITIONS(address), {
+  const res = await fetch(INDEXER_ENDPOINTS.USER_POSITIONS, {
     method: 'POST',
     headers,
     body: JSON.stringify({
@@ -275,7 +275,6 @@ export async function fetchUserPositions(address: string, token?: string): Promi
 
 /**
  * Trigger indexer sync after trade via Backend Proxy
- * @param token Optional auth token
  */
 export async function triggerSync(token?: string): Promise<{ status: string }> {
   try {
@@ -287,12 +286,7 @@ export async function triggerSync(token?: string): Promise<{ status: string }> {
       headers
     });
 
-    interface BackendResponse<T> {
-      success: boolean;
-      data: T;
-    }
-
-    const result: BackendResponse<{ status: string }> = await res.json();
+    const result = await res.json();
     return result.success ? result.data : { status: "error" };
   } catch (e) {
     console.error("Failed to trigger sync", e);

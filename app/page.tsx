@@ -11,6 +11,7 @@ import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { TrendingUp, Gamepad2 } from "lucide-react";
 
 import { Marquee } from "@/components/ui/Marquee";
+import { PortfolioView } from "@/components/features/PortfolioView";
 
 export default function App() {
 
@@ -67,47 +68,61 @@ export default function App() {
             <Header />
 
             <main className="p-4 relative z-10">
-              <div className="bg-black border-x-4 border-slate-700 h-6 mb-6 flex items-center overflow-hidden">
-                <Marquee
-                  text={`/// ALPHABIT SYSTEM READY /// CONNECTED TO BASE MAINNET /// THETANUTS PROTOCOL ACTIVE /// MODE: ${mode} /// `}
-                  speed={20}
-                  className="text-[8px] text-green-400 font-pixel"
-                />
-              </div>
-
-              {/* MODE SWITCHER */}
-              <div className="flex bg-black p-1 border-2 border-slate-700 mb-6 relative">
-                <button
-                  type="button"
-                  onClick={() => setMode("ARCADE")}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider relative z-10 font-pixel transition-colors duration-300 ${mode === "ARCADE" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
-                >
-                  <Gamepad2 size={14} />
-                  ARCADE
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMode("PRO")}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider relative z-10 font-pixel transition-colors duration-300 ${mode === "PRO" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
-                >
-                  <TrendingUp size={14} />
-                  PRO
-                </button>
-                <motion.div
-                  layoutId="mode-bg"
-                  className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white"
-                  initial={false}
-                  animate={{ x: mode === "ARCADE" ? 0 : "100%" }}
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                />
-              </div>
-
-              {mode === "ARCADE" ? (
-                 <ArcadeMode />
+              {view === "portfolio" ? (
+                <PortfolioView onBack={() => setView("home")} />
               ) : (
                 <>
-                  <HuntTerminal />
-                  <PositionsList />
+                  <div className="bg-black border-x-4 border-slate-700 h-6 mb-6 flex items-center overflow-hidden">
+                    <Marquee
+                      text={`/// ALPHABIT SYSTEM READY /// CONNECTED TO BASE MAINNET /// THETANUTS PROTOCOL ACTIVE /// MODE: ${mode} /// `}
+                      speed={20}
+                      className="text-[8px] text-green-400 font-pixel"
+                    />
+                  </div>
+
+                  {/* MODE SWITCHER */}
+                  <div className="flex bg-black p-1 border-2 border-slate-700 mb-6 relative">
+                    <button
+                      type="button"
+                      onClick={() => setMode("ARCADE")}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider relative z-10 font-pixel transition-colors duration-300 ${mode === "ARCADE" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
+                    >
+                      <Gamepad2 size={14} />
+                      ARCADE
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMode("PRO")}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider relative z-10 font-pixel transition-colors duration-300 ${mode === "PRO" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
+                    >
+                      <TrendingUp size={14} />
+                      PRO
+                    </button>
+                    <motion.div
+                      layoutId="mode-bg"
+                      className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white"
+                      initial={false}
+                      animate={{ x: mode === "ARCADE" ? 0 : "100%" }}
+                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    />
+                  </div>
+
+                  {mode === "ARCADE" ? (
+                    <ArcadeMode />
+                  ) : (
+                    <>
+                      <HuntTerminal />
+                      <div className="mt-2 text-center">
+                        <button 
+                          onClick={() => setView("portfolio")}
+                          className="text-[8px] font-pixel text-slate-500 hover:text-white transition-colors uppercase border border-slate-800 px-3 py-1 bg-black/20"
+                        >
+                          Access Full Mission Records / History
+                        </button>
+                      </div>
+                      <PositionsList onOpenHistory={() => setView("portfolio")} />
+                    </>
+                  )}
                 </>
               )}
             </main>

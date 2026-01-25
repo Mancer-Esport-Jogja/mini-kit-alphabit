@@ -30,11 +30,23 @@ export const INDEXER_ENDPOINTS = {
   UPDATE: `${THETANUTS_API.INDEXER_BASE}/update`,
 
   /** Get user's open positions via backend */
-  USER_POSITIONS: (_address: string) =>
-    `${THETANUTS_API.INDEXER_BASE}/positions`,
+  USER_POSITIONS: `${THETANUTS_API.INDEXER_BASE}/positions`,
+
+  /** Get user's historical transactions via backend */
+  USER_HISTORY: `${THETANUTS_API.INDEXER_BASE}/positions`, // Same endpoint, dynamic type in request body
 } as const;
 
 export const MARKET_API = {
   /** Market klines data */
   KLINES: `${ALPHABIT_BACKEND_URL}/market/klines`,
+} as const;
+
+export const ANALYTICS_API = {
+  SUMMARY: `${ALPHABIT_BACKEND_URL}/user/analytics/summary`,
+  PNL_HISTORY: `${ALPHABIT_BACKEND_URL}/user/analytics/pnl-history`,
+  DISTRIBUTION: `${ALPHABIT_BACKEND_URL}/user/analytics/distribution`,
+} as const;
+
+export const LEADERBOARD_API = {
+  GLOBAL: `${ALPHABIT_BACKEND_URL}/leaderboard`,
 } as const;
