@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   fetchOrders,
   filterHuntOrders,
+  filterOrdersByDuration,
   getBestOrder,
   parseOrder,
   groupOrdersByAsset,
@@ -12,6 +13,8 @@ import type { SignedOrder, ParsedOrder } from '@/types/orders';
 interface UseOrdersOptions {
   target?: 'MOON' | 'DOOM';
   asset?: 'ETH' | 'BTC' | 'SOL' | 'DOGE' | 'XRP' | 'BNB';
+  duration?: 'BLITZ' | 'RUSH' | 'CORE' | 'ORBIT';
+
   enabled?: boolean;
   autoRefresh?: boolean;
 }
@@ -46,15 +49,21 @@ export function useThetanutsOrders(options: UseOrdersOptions = {}) {
   } = options;
 
   return useQuery<OrdersData>({
-    queryKey: ['thetanuts-orders', target, asset],
+    queryKey: ['thetanuts-orders', target, asset, options.duration],
     queryFn: async () => {
       const response = await fetchOrders();
 
-      let orders = response.data.orders;
+      // Access nested data structure correctly
+      let orders = response.data.data.orders;
 
       // Apply filters if specified
       if (target || asset) {
         orders = filterHuntOrders(orders, target, asset);
+      }
+
+      // Filter by duration logic
+      if (options.duration) {
+        orders = filterOrdersByDuration(orders, options.duration);
       }
 
       // Parse orders for UI
@@ -82,7 +91,7 @@ export function useThetanutsOrders(options: UseOrdersOptions = {}) {
         parsedOrders,
         bestOrder,
         bestParsedOrder,
-        timestamp: response.data.timestamp,
+        timestamp: response.data.data.timestamp,
         assetGroups,
         expiryGroups,
         stats,

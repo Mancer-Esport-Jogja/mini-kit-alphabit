@@ -1,13 +1,40 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { useAccount } from "wagmi";
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import sdk from "@farcaster/miniapp-sdk";
+import { useConnect, useAccount } from "wagmi";
+import { IS_TESTNET } from "@/config/wagmi";
+import { AUTH_API } from "@/config/api";
 
+/**
+ * User profile from backend auth
+ */
 interface User {
-  username?: string;
-  pfpUrl?: string;
-  streak?: number;
-  primaryEthAddress?: string;
+  id: string;
+  fid: string;
+  username: string | null;
+  displayName: string | null;
+  pfpUrl: string | null;
+  primaryEthAddress: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  lastActiveAt?: string;
+  streak?: number; // For gamification system
+}
+
+/**
+ * Backend auth response format
+ */
+interface BackendAuthResponse {
+  success: boolean;
+  data: {
+    user: User;
+    isNewUser: boolean;
+  };
+  error?: {
+    code: string;
+    message: string;
+  };
 }
 
 interface AuthContextType {
@@ -15,6 +42,7 @@ interface AuthContextType {
   isLoading: boolean;
   token: string | null;
   user: User | null;
+  isDevMode: boolean;
   login: () => Promise<void>;
   logout: () => void;
 }
@@ -22,51 +50,133 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { isConnected, address } = useAccount();
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isDevMode, setIsDevMode] = useState<boolean>(false);
 
-  // Mock authentication when wallet is connected
-  useEffect(() => {
-    if (isConnected && address) {
-      // In a real app, we would sign a message and exchange for JWT here
-      // For now, we simulate a token if connected
-      setToken("mock-token-" + address);
+  const { connect, connectors } = useConnect();
+  const { isConnected } = useAccount();
 
-      // Mock User Data
-      setUser({
-        username: "Pilot-" + address.slice(0, 4),
-        pfpUrl: "https://api.dicebear.com/9.x/pixel-art/svg?seed=" + address,
-        streak: 5, // Mock streak sync
-        primaryEthAddress: address
+  /**
+   * Authenticate with backend
+   * - Dev mode: Use 'dev-token'
+   * - Prod mode: Use Farcaster Quick Auth token
+   */
+  const authenticate = useCallback(async () => {
+    setIsLoading(true);
+
+    try {
+      let authToken: string;
+
+      if (IS_TESTNET) {
+        // Dev mode: Use dev-token for local testing
+        console.log("Auth: Using dev-token for development mode");
+        authToken = "dev-token";
+        
+        // Auto-connect wallet if in dev mode
+        if (!isConnected && connectors.length > 0) {
+            console.log("Auth: Auto-connecting dev wallet...");
+            connect({ connector: connectors[0] });
+        }
+      } else {
+        // Prod mode: Get Farcaster Quick Auth token
+        console.log("Auth: Getting Farcaster Quick Auth token...");
+        const result = await sdk.quickAuth.getToken();
+        authToken = result.token;
+        console.log("Auth: Farcaster token obtained");
+      }
+
+      // Call backend auth endpoint directly
+      const response = await fetch(AUTH_API.AUTH, {
+        method: "POST",
+        headers: {
+          "Accept": "application/json",
+          "Authorization": `Bearer ${authToken}`,
+        },
       });
 
-    } else {
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || errorData.error?.message || "Authentication failed");
+      }
+
+      const data: BackendAuthResponse = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error?.message || "Authentication failed");
+      }
+
+      setToken(authToken);
+      setUser(data.data.user);
+      setIsDevMode(IS_TESTNET);
+
+      console.log("Auth: Successfully authenticated", {
+        fid: data.data.user.fid,
+        username: data.data.user.username,
+        isDevMode: IS_TESTNET,
+        isNewUser: data.data.isNewUser,
+      });
+    } catch (error) {
+      console.error("Auth: Authentication failed", error);
       setToken(null);
       setUser(null);
+      setIsDevMode(false);
+    } finally {
+      setIsLoading(false);
     }
-  }, [isConnected, address]);
+  }, [connect, connectors, isConnected]);
+
+  /**
+   * Auto-authenticate on mount
+   * In dev mode: Always authenticate with dev-token
+   * In prod mode: Authenticate via Farcaster Quick Auth
+   */
+  useEffect(() => {
+    // Delay slightly to ensure SDK is ready
+    const timer = setTimeout(async () => {
+      // Logic for Dev Mode wallet connection enforcement
+      if (IS_TESTNET) {
+        const devConnector = connectors.find(c => c.id === 'dev-wallet');
+        
+        // If we are connected but not to the dev connector (or multiple)
+        if (isConnected && (!connectors[0] || connectors[0].id !== 'dev-wallet')) {
+             console.log("Auth: Connected to wrong wallet in Dev Mode. Disconnecting...");
+             // We can't easily disconnect specific wallet via hooks here without `disconnect` from useDisconnect
+             // But we can try to connect to the correct one which usually overrides
+        }
+
+        if (devConnector && (!isConnected || connectors[0]?.id !== 'dev-wallet')) {
+            console.log("Auth: Auto-connecting Dev Wallet...");
+            connect({ connector: devConnector });
+        }
+      }
+      
+      await authenticate();
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [authenticate, connect, connectors, isConnected]);
 
   const login = async () => {
-    setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsLoading(false);
+    await authenticate();
   };
 
   const logout = () => {
     setToken(null);
     setUser(null);
+    setIsDevMode(false);
+    console.log("Auth: Logged out");
   };
 
   return (
     <AuthContext.Provider
       value={{
-        isAuthenticated: !!token,
+        isAuthenticated: !!token && !!user,
         isLoading,
         token,
         user,
+        isDevMode,
         login,
         logout,
       }}
