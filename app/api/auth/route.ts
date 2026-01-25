@@ -44,9 +44,10 @@ export async function GET(request: NextRequest) {
     // CRITICAL: We must verify against the domain specified in our manifest signature
     // which is "mini-kit-alphabit.vercel.app". Dynamic host detection often fails
     // in containerized environments or internal routing.
+    const domain = process.env.NEXT_PUBLIC_URL ? new URL(process.env.NEXT_PUBLIC_URL).host : "mini-kit-alphabit.vercel.app";
     const payload = await client.verifyJwt({
       token,
-      domain: "mini-kit-alphabit.vercel.app",
+      domain,
     });
 
     // Forward verified token to backend to get full user profile
@@ -90,34 +91,4 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function getUrlHost(request: NextRequest) {
-  // First try to get the origin from the Origin header
-  const origin = request.headers.get("origin");
-  if (origin) {
-    try {
-      const url = new URL(origin);
-      return url.host;
-    } catch (error) {
-      console.warn("Invalid origin header:", origin, error);
-    }
-  }
 
-  // Fallback to Host header
-  const host = request.headers.get("host");
-  if (host) {
-    return host;
-  }
-
-  // Final fallback to environment variables
-  let urlValue: string;
-  if (process.env.VERCEL_ENV === "production") {
-    urlValue = process.env.NEXT_PUBLIC_URL!;
-  } else if (process.env.VERCEL_URL) {
-    urlValue = `https://${process.env.VERCEL_URL}`;
-  } else {
-    urlValue = "http://localhost:3000";
-  }
-
-  const url = new URL(urlValue);
-  return url.host;
-}

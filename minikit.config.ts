@@ -1,7 +1,4 @@
-const ROOT_URL =
-  process.env.NODE_ENV === 'development'
-    ? "http://localhost:3000"
-    : "https://mini-kit-alphabit.vercel.app";
+const ROOT_URL = process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
 
 /**
  * MiniApp configuration object. Must follow the mini app manifest specification.
