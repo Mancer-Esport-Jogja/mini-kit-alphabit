@@ -47,16 +47,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <RootProvider>
-      <html lang="en">
-        <head>
-          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coinbase/onchainkit@latest/styles.css" />
-        </head>
-        <body className={`${inter.variable} ${pressStart2P.variable} ${spaceGrotesk.variable}`}>
+    <html lang="en">
+      <head>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coinbase/onchainkit@latest/styles.css" />
+      </head>
+      <body className={`${inter.variable} ${pressStart2P.variable} ${spaceGrotesk.variable}`}>
+        <RootProvider>
           {children}
-        </body>
-      </html>
-    </RootProvider>
+        </RootProvider>
+      </body>
+    </html>
   );
 }
 
