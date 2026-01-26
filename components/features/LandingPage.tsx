@@ -161,7 +161,13 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
                             icon={Gamepad2}
                             color="bg-neon-red"
                             hoverColor="hover:bg-red-500"
-                            onClick={onStart}
+                            onClick={() => {
+                                // Trigger notification request non-blocking
+                                import("@farcaster/frame-sdk").then((sdk) => {
+                                    sdk.default.actions.addFrame().catch(console.error);
+                                });
+                                onStart();
+                            }}
                         />
                     </div>
                 </motion.div>
