@@ -8,7 +8,7 @@ const BACKEND_AUTH_URL = process.env.NEXT_PUBLIC_BACKEND_URL
   ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth`
   : "https://backend-alphabit.onrender.com/api/auth";
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   // Because we're fetching this endpoint via `sdk.quickAuth.fetch`,
   // if we're in a mini app, the request will include the necessary `Authorization` header.
   const authorization = request.headers.get("Authorization");

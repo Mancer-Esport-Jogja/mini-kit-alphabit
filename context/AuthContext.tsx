@@ -94,7 +94,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Call backend auth endpoint directly
-      const response = await fetch(AUTH_API.AUTH, {
+      const PROXY_AUTH_URL = "/api/auth";
+      console.log("Auth: Calling proxy backend at:", PROXY_AUTH_URL);
+      const response = await fetch(PROXY_AUTH_URL, {
         method: "POST",
         headers: {
           "Accept": "application/json",
@@ -102,12 +104,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       });
 
+      console.log("Auth: Backend response status:", response.status);
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || errorData.error?.message || "Authentication failed");
+        const errorText = await response.text();
+        console.error("Auth: Backend error response:", errorText);
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.message || errorData.error?.message || `Backend returned ${response.status}`);
+        } catch {
+          throw new Error(`Backend returned ${response.status}: ${errorText.substring(0, 100)}`);
+        }
       }
 
       const data: BackendAuthResponse = await response.json();
+      console.log("Auth: Backend response data:", JSON.stringify(data).substring(0, 200));
 
       if (!data.success) {
         throw new Error(data.error?.message || "Authentication failed");
