@@ -72,6 +72,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <meta name="base:app_id" content="697799c888e3bac59cf3d9ed" />
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coinbase/onchainkit@latest/styles.css" />
       </head>
       <body className={`${inter.variable} ${pressStart2P.variable} ${spaceGrotesk.variable}`}>
