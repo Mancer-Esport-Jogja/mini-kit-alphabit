@@ -11,14 +11,18 @@ export async function generateMetadata(): Promise<Metadata> {
     title: minikitConfig.miniapp.name,
     description: minikitConfig.miniapp.description,
     other: {
+      "base:app_id": "697799c888e3bac59cf3d9ed",
       "fc:miniapp": JSON.stringify({
-        version: minikitConfig.miniapp.version,
+        version: "next",
         imageUrl: minikitConfig.miniapp.heroImageUrl,
         button: {
-          title: `Launch ${minikitConfig.miniapp.name}`,
+          title: "Play Now",
           action: {
-            name: `Launch ${minikitConfig.miniapp.name}`,
             type: "launch_miniapp",
+            name: minikitConfig.miniapp.name,
+            url: minikitConfig.miniapp.homeUrl,
+            splashImageUrl: minikitConfig.miniapp.splashImageUrl,
+            splashBackgroundColor: minikitConfig.miniapp.splashBackgroundColor,
           },
         },
       }),
@@ -72,7 +76,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <meta name="base:app_id" content="697799c888e3bac59cf3d9ed" />
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@coinbase/onchainkit@latest/styles.css" />
       </head>
       <body className={`${inter.variable} ${pressStart2P.variable} ${spaceGrotesk.variable}`}>
