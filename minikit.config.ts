@@ -31,8 +31,8 @@ export const minikitConfig = {
     tags: ["trading", "crypto", "options", "defi", "finance"],
     heroImageUrl: `${ROOT_URL}/hero.png`,
     tagline: "Trade Options on Farcaster",
-    ogTitle: "",
-    ogDescription: "",
+    ogTitle: "Alphabit - Crypto Options Trading",
+    ogDescription: "The easiest way to trade crypto options directly on Farcaster. Simple, fast, and secure.",
     ogImageUrl: `${ROOT_URL}/logo-alphabit.png`,
   },
 } as const;
