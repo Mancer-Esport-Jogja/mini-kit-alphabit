@@ -117,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const data: BackendAuthResponse = await response.json();
-      console.log("Auth: Backend response data:", JSON.stringify(data).substring(0, 200));
+      console.log("Auth: Backend response data:", JSON.stringify(data));
 
       if (!data.success) {
         throw new Error(data.error?.message || "Authentication failed");
