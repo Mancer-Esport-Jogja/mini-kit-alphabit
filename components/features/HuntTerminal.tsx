@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown, Info, AlertTriangle, Clock, Flame, Zap } from "lucide-react";
+import { TrendingUp, TrendingDown, Info, AlertTriangle, Clock, Flame } from "lucide-react";
 // import { TutorialOverlay } from "@/components/ui/TutorialOverlay"; // REMOVED: Replaced by Droid Tour
 import { useThetanutsOrders } from "@/hooks/useThetanutsOrders";
 import { parseStrike, parsePrice } from "@/utils/decimals";
@@ -13,7 +13,7 @@ import { MissionControl } from "@/components/gamification/MissionControl";
 import { useGamification } from "@/context/GamificationContext";
 import { LevelBadge } from "@/components/gamification/LevelBadge"; // Import Badge
 import { BuyModal } from "./BuyModal";
-import { useTenderlyMint } from "@/hooks/useTenderlyMint";
+// import { useTenderlyMint } from "@/hooks/useTenderlyMint";
 
 export const HuntTerminal = () => {
     // Auth State
@@ -34,9 +34,9 @@ export const HuntTerminal = () => {
     const [showMissions, setShowMissions] = useState(false);
     const [showBuyModal, setShowBuyModal] = useState(false);
 
-    // Tenderly Testing (Dev Mode Only)
-    const { mintUSDC, isTestnet } = useTenderlyMint();
-    const [isMinting, setIsMinting] = useState(false);
+    // Tenderly Testing (Dev Mode Only
+    // const { mintUSDC, isTestnet } = useTenderlyMint();
+    // const [isMinting, setIsMinting] = useState(false);
 
     // --- Gamification Logic ---
     // 1. Complete "Daily Login" on mount & check streak
@@ -230,7 +230,7 @@ export const HuntTerminal = () => {
                 <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_6px_rgba(239,68,68,0.6)]"></div>
                     <div>
-                        <span className="text-[10px] font-pixel text-slate-400 uppercase leading-none block">Hunt Terminal</span>
+                        <span className="text-[10px] font-pixel text-slate-400 uppercase leading-none block">PRO TERMINAL</span>
                         <div className="flex items-center gap-1">
                             <span className="text-[8px] font-mono text-slate-600">v2.1</span>
                         </div>
@@ -279,28 +279,6 @@ export const HuntTerminal = () => {
                     >
                         <Info size={14} className="text-yellow-500" />
                     </button>
-
-                    {/* Testnet Mint Button (Dev Mode Only) */}
-                    {isTestnet && (
-                        <button
-                            onClick={async () => {
-                                setIsMinting(true);
-                                try {
-                                    await mintUSDC("10000");
-                                    alert("Minted 10,000 test USDC!");
-                                } catch (error) {
-                                    alert("Mint failed: " + (error as Error).message);
-                                } finally {
-                                    setIsMinting(false);
-                                }
-                            }}
-                            disabled={isMinting}
-                            className="bg-yellow-600 p-1.5 rounded hover:bg-yellow-500 transition-colors border border-yellow-500 disabled:opacity-50"
-                            title="Mint Test USDC (Tenderly only)"
-                        >
-                            <Zap size={14} className="text-white" />
-                        </button>
-                    )}
                 </div>
             </div>
 

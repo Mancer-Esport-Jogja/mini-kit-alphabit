@@ -1,3 +1,4 @@
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTacticalBrain, Sentiment } from '../../hooks/useTacticalBrain';
 
@@ -13,6 +14,14 @@ interface TacticalDroidProps {
 
 export const TacticalDroid = ({ marketStats, tutorialStep = 0, onNext }: TacticalDroidProps) => {
     const { dialogue, sentiment, isTalking } = useTacticalBrain(marketStats, true, tutorialStep);
+    const [isDismissed, setIsDismissed] = React.useState(false);
+
+    // Reset dismissal when tutorial is active or sentiment changes drastically (optional, for now just tutorial)
+    React.useEffect(() => {
+        if (tutorialStep > 0) {
+            setIsDismissed(false);
+        }
+    }, [tutorialStep]);
 
     // Dynamic color based on sentiment
     const getLightColor = (s: Sentiment) => {
@@ -29,13 +38,27 @@ export const TacticalDroid = ({ marketStats, tutorialStep = 0, onNext }: Tactica
         <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end pointer-events-none">
             {/* Speech Bubble */}
             <AnimatePresence mode="wait">
-                {isTalking && (
+                {isTalking && !isDismissed && (
                     <motion.div
                         initial={{ opacity: 0, y: 20, scale: 0.8 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.8 }}
-                        className="mb-4 mr-4 bg-[#1a1b26] border-2 border-[#4ADE80] p-4 rounded-tl-xl rounded-tr-xl rounded-bl-xl max-w-xs relative pointer-events-auto font-pixel text-xs leading-relaxed text-white shadow-lg"
+                        className="mb-4 mr-4 bg-[#1a1b26] border-2 border-[#4ADE80] p-4 rounded-tl-xl rounded-tr-xl rounded-bl-xl max-w-xs relative pointer-events-auto font-pixel text-xs leading-relaxed text-white shadow-lg group"
                     >
+                        {/* Close Button */}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsDismissed(true);
+                            }}
+                            className="absolute -top-2 -right-2 bg-slate-800 border border-slate-600 rounded-full p-1 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors z-10"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+
                         <span className={`font-bold block mb-1 ${tutorialStep > 0 ? 'text-purple-400' : 'text-[#4ADE80]'}`}>
                             R.O.B.B.I.E. 9000
                         </span>
@@ -77,7 +100,10 @@ export const TacticalDroid = ({ marketStats, tutorialStep = 0, onNext }: Tactica
                     ease: "easeInOut"
                 }}
                 className="relative w-24 h-24 pointer-events-auto cursor-help group"
-                onClick={onNext} // Creating a click handler on the droid to advance tutorial too
+                onClick={() => {
+                    if (isDismissed) setIsDismissed(false);
+                    else if (onNext) onNext();
+                }}
             >
                 {/* Head */}
                 <div className="absolute top-2 left-2 w-20 h-16 bg-slate-700 border-4 border-black rounded-lg overflow-hidden">
