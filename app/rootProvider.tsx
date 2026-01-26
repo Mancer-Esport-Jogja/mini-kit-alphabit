@@ -1,4 +1,5 @@
 "use client";
+import { MiniAppProvider } from "@neynar/react";
 import { ReactNode, useState } from "react";
 import { base } from "wagmi/chains";
 import { OnchainKitProvider } from "@coinbase/onchainkit";
@@ -24,29 +25,31 @@ export function RootProvider({ children }: { children: ReactNode }) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <GamificationProvider>
-            <OnchainKitProvider
-              apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
-              chain={base}
-              config={{
-                appearance: {
-                  mode: "dark",
-                  theme: "hacker",
-                },
-                wallet: {
-                  display: "modal",
-                  preference: "all",
-                },
-              }}
-            >
-              {!isReady && <LoadingScreen onLoadingComplete={handleLoadingComplete} />}
-              <div style={{ display: isReady ? 'block' : 'none' }}>
-                {children}
-              </div>
-            </OnchainKitProvider>
-          </GamificationProvider>
-        </AuthProvider>
+        <MiniAppProvider>
+          <AuthProvider>
+            <GamificationProvider>
+              <OnchainKitProvider
+                apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
+                chain={base}
+                config={{
+                  appearance: {
+                    mode: "dark",
+                    theme: "hacker",
+                  },
+                  wallet: {
+                    display: "modal",
+                    preference: "all",
+                  },
+                }}
+              >
+                {!isReady && <LoadingScreen onLoadingComplete={handleLoadingComplete} />}
+                <div style={{ display: isReady ? 'block' : 'none' }}>
+                  {children}
+                </div>
+              </OnchainKitProvider>
+            </GamificationProvider>
+          </AuthProvider>
+        </MiniAppProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
