@@ -26,7 +26,7 @@ export const minikitConfig = {
     splashImageUrl: `${ROOT_URL}/logo-alphabit.png`,
     splashBackgroundColor: "#000000",
     homeUrl: ROOT_URL,
-    webhookUrl: `${ROOT_URL}/api/webhook`,
+    webhookUrl: `https://api.neynar.com/f/app/09a5deb5-30e1-499b-b330-c4284fa8d6dd/event`,
     primaryCategory: "finance",
     tags: ["trading", "crypto", "options", "defi", "finance"],
     heroImageUrl: `${ROOT_URL}/hero.png`,
