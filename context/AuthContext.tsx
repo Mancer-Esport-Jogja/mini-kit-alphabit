@@ -85,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
             const result = await sdk.quickAuth.getToken();
             authToken = result.token;
-            console.log("Auth: Farcaster token obtained len:", authToken.length);
+            console.log("Auth: Farcaster token:", authToken);
         } catch (err: unknown) {
              console.error("Auth: Failed sdk.quickAuth.getToken()", err);
              throw err;

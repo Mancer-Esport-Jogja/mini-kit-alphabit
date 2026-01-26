@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
   }
 
   const token = authorization.split(" ")[1];
+  console.log("Proxy received token:", token);
 
   // Dev mode: Forward dev-token directly to backend
   if (token === "dev-token") {
