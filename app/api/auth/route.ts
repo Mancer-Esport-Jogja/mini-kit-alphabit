@@ -60,7 +60,14 @@ export async function POST(request: NextRequest) {
     });
 
     if (!backendResponse.ok) {
-      // If backend fails, return basic user info from JWT
+      const errorText = await backendResponse.text();
+      console.error("Backend auth failed:", {
+        status: backendResponse.status,
+        statusText: backendResponse.statusText,
+        body: errorText
+      });
+
+      // If backend fails, return basic user info from JWT but include the error
       return NextResponse.json({
         success: true,
         data: {
@@ -73,6 +80,11 @@ export async function POST(request: NextRequest) {
           },
           isNewUser: false,
         },
+        // Debug info to help identify why backend failed
+        debug: {
+          backendStatus: backendResponse.status,
+          backendError: errorText
+        }
       });
     }
 
