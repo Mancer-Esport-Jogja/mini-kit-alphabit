@@ -4,7 +4,6 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import sdk from "@farcaster/miniapp-sdk";
 import { useConnect, useAccount } from "wagmi";
 import { IS_TESTNET } from "@/config/wagmi";
-import { AUTH_API } from "@/config/api";
 
 /**
  * User profile from backend auth
