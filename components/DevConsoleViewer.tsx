@@ -98,9 +98,11 @@ export default function DevConsoleViewer() {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-0 right-0 w-12 h-12 opacity-0 z-[9999]"
+        className="fixed top-0 right-0 w-8 h-8 opacity-100 bg-red-600 hover:bg-red-500 z-[9999] rounded-bl-lg flex items-center justify-center text-[8px] text-white font-bold shadow-lg border border-red-400"
         aria-label="Open Dev Console"
-      />
+      >
+        BUG
+      </button>
     );
   }
 

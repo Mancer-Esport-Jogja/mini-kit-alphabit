@@ -82,9 +82,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         // Prod mode: Get Farcaster Quick Auth token
         console.log("Auth: Getting Farcaster Quick Auth token...");
-        const result = await sdk.quickAuth.getToken();
-        authToken = result.token;
-        console.log("Auth: Farcaster token obtained");
+        console.log("Auth: Config - NEXT_PUBLIC_URL:", process.env.NEXT_PUBLIC_URL);
+        try {
+            const result = await sdk.quickAuth.getToken();
+            authToken = result.token;
+            console.log("Auth: Farcaster token obtained len:", authToken.length);
+        } catch (err: unknown) {
+             console.error("Auth: Failed sdk.quickAuth.getToken()", err);
+             throw err;
+        }
       }
 
       // Call backend auth endpoint directly
@@ -121,15 +127,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Signal Farcaster that the app is ready
       sdk.actions.ready();
     } catch (error) {
-      console.error("Auth: Authentication failed", error);
+      console.error("Auth: Authentication failed CRITICAL", error);
+      // Log specific error details if available
+      if (error instanceof Error) {
+        console.error("Auth Error Message:", error.message);
+        console.error("Auth Error Stack:", error.stack);
+      }
+      
       setToken(null);
       setUser(null);
       setIsDevMode(false);
       
-      // Even if auth fails, we should let the app render in guest mode
-      sdk.actions.ready();
     } finally {
       setIsLoading(false);
+      console.log("Auth: Authenticate process finished.");
     }
   }, [connect, connectors, isConnected]);
 
