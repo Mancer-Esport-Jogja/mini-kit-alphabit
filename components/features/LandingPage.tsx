@@ -8,6 +8,7 @@ import { GlitchText } from '@/components/ui/GlitchText';
 import { PowerUpCard } from '@/components/ui/PowerUpCard';
 import { TerminalWindow } from '@/components/ui/TerminalWindow';
 import dynamic from 'next/dynamic';
+import { useAddFrame } from '@coinbase/onchainkit/minikit';
 import { useMiniApp } from '@neynar/react';
 
 // Dynamic import for 3D component to avoid SSR issues
@@ -87,18 +88,34 @@ const developerLogs = [
 
 export const LandingPage = ({ onStart }: LandingPageProps) => {
     const { isSDKLoaded, actions } = useMiniApp();
+    const addFrame = useAddFrame();
 
     const handleStart = async () => {
+        // Try Base Mini App addFrame
+        try {
+            const result = await addFrame();
+            if (result) {
+                console.log('Base Frame saved:', result.url);
+                if (result.token) {
+                    console.log('Base Notification token:', result.token);
+                }
+            }
+        } catch (e) {
+            console.error("Failed to add Base frame", e);
+        }
+
+        // Try Farcaster addMiniApp
         if (isSDKLoaded && actions?.addMiniApp) {
             try {
                 const result = await actions.addMiniApp();
                 if (result.notificationDetails) {
-                    console.log('Notification token:', result.notificationDetails.token);
+                    console.log('Farcaster Notification token:', result.notificationDetails.token);
                 }
             } catch (e) {
-                console.error("Failed to add mini app", e);
+                console.error("Failed to add Farcaster mini app", e);
             }
         }
+        
         onStart();
     };
 
