@@ -8,6 +8,7 @@ import { GlitchText } from '@/components/ui/GlitchText';
 import { PowerUpCard } from '@/components/ui/PowerUpCard';
 import { TerminalWindow } from '@/components/ui/TerminalWindow';
 import dynamic from 'next/dynamic';
+import { useMiniApp } from '@neynar/react';
 
 // Dynamic import for 3D component to avoid SSR issues
 const FloatingCoin3D = dynamic(
@@ -85,6 +86,22 @@ const developerLogs = [
 ];
 
 export const LandingPage = ({ onStart }: LandingPageProps) => {
+    const { isSDKLoaded, actions } = useMiniApp();
+
+    const handleStart = async () => {
+        if (isSDKLoaded && actions?.addMiniApp) {
+            try {
+                const result = await actions.addMiniApp();
+                if (result.notificationDetails) {
+                    console.log('Notification token:', result.notificationDetails.token);
+                }
+            } catch (e) {
+                console.error("Failed to add mini app", e);
+            }
+        }
+        onStart();
+    };
+
     return (
         <div className="flex flex-col gap-0 relative">
             {/* SCANLINE EFFECT */}
@@ -161,13 +178,7 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
                             icon={Gamepad2}
                             color="bg-neon-red"
                             hoverColor="hover:bg-red-500"
-                            onClick={() => {
-                                // Trigger notification request non-blocking
-                                import("@farcaster/frame-sdk").then((sdk) => {
-                                    sdk.default.actions.addFrame().catch(console.error);
-                                });
-                                onStart();
-                            }}
+                            onClick={handleStart}
                         />
                     </div>
                 </motion.div>
