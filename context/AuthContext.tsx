@@ -175,21 +175,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (isMismatch) {
          setNeedsBinding(true);
 
-         // Auto-trigger bind if not attempted yet (SKIP if user is INACTIVE)
+         // Auto-trigger bind if not attempted yet
          if (!hasAttemptedAutoSync) {
-            // Robust check: Inactive users are stuck on Coming Soon and shouldn't bind wallets
-            const isInactive = user.status === 'INACTIVE';
-            
-            if (!isInactive) {
-                console.log("Auth: Auto-triggering wallet binding...");
-                setHasAttemptedAutoSync(true);
-                // Small delay to ensure UI is ready
-                setTimeout(() => {
-                    bindWallet();
-                }, 500);
-            } else {
-                console.log("Auth: Skipping auto-bind for INACTIVE user");
-            }
+            console.log("Auth: Auto-triggering wallet binding...");
+            setHasAttemptedAutoSync(true);
+            // Small delay to ensure UI is ready
+            setTimeout(() => {
+                bindWallet();
+            }, 500);
          }
       } else {
          setNeedsBinding(false);
