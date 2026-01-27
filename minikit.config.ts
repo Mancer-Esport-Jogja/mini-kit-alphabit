@@ -18,7 +18,7 @@ export const minikitConfig = {
   },
   miniapp: {
     version: "1",
-    name: "alphabit",
+    name: "Alphabit",
     subtitle: "Simple Crypto Options Trading",
     description: "Alphabit is the easiest way to trade options on Farcaster. Trade calls and puts with ease.",
     screenshotUrls: [`${ROOT_URL}/hero.png`],
