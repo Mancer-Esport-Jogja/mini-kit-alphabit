@@ -19,6 +19,7 @@ interface User {
   updatedAt?: string;
   lastActiveAt?: string;
   streak?: number; // For gamification system
+  status?: 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
 }
 
 /**

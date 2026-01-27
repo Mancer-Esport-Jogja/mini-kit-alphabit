@@ -9,6 +9,7 @@ export interface User {
   updatedAt: string;
   lastActiveAt: string;
   streak: number;
+  status: 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
 }
 
 export interface AuthState {
