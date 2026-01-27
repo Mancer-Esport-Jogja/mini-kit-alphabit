@@ -43,8 +43,8 @@ export const MissionControl = ({ isOpen, onClose }: MissionControlProps) => {
                         >
                             {/* Header Section */}
                             <div className="bg-slate-800 p-4 pb-6 flex items-start justify-between relative overflow-hidden">
-                                {/* Background Decor */}
-                                <div className="absolute top-0 right-0 p-4 opacity-5">
+                                {/* Background Decor - Added pointer-events-none */}
+                                <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                                     <Trophy size={100} />
                                 </div>
 
@@ -72,10 +72,10 @@ export const MissionControl = ({ isOpen, onClose }: MissionControlProps) => {
                                     </div>
                                 </div>
 
-                                {/* Close Button */}
+                                {/* Close Button - Increased z-index and padding */}
                                 <button
                                     onClick={onClose}
-                                    className="p-1 text-slate-500 hover:text-white transition-colors"
+                                    className="relative z-20 p-2 -mr-2 -mt-2 text-slate-500 hover:text-white transition-colors"
                                 >
                                     <X size={20} />
                                 </button>

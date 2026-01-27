@@ -31,6 +31,10 @@ export default function DevConsoleViewer() {
     const safeStringify = (arg: unknown) => {
         try {
             if (typeof arg === 'object' && arg !== null) {
+                // Better handling for Event objects (like WebSocket errors)
+                if (arg instanceof Event) {
+                   return `[Event type="${arg.type}"]`;
+                }
                 return JSON.stringify(arg, null, 2);
             }
             return String(arg);

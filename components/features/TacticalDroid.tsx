@@ -1,5 +1,9 @@
+
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTacticalBrain, Sentiment } from '../../hooks/useTacticalBrain';
+import { TacticalInterview } from './TacticalInterview';
+import { MessageSquare, X } from 'lucide-react';
 
 interface TacticalDroidProps {
     marketStats: {
@@ -12,7 +16,24 @@ interface TacticalDroidProps {
 }
 
 export const TacticalDroid = ({ marketStats, tutorialStep = 0, onNext }: TacticalDroidProps) => {
-    const { dialogue, sentiment, isTalking } = useTacticalBrain(marketStats, true, tutorialStep);
+    const { 
+        dialogue, 
+        sentiment, 
+        isTalking, 
+        interviewStage, 
+        startInterview, 
+        handleDetailInput, 
+        cancelInterview 
+    } = useTacticalBrain(marketStats, true, tutorialStep);
+    
+    const [isDismissed, setIsDismissed] = React.useState(false);
+
+    // Reset dismissal when tutorial is active or sentiment/interview changes
+    React.useEffect(() => {
+        if (tutorialStep > 0 || interviewStage !== 'IDLE') {
+            setIsDismissed(false);
+        }
+    }, [tutorialStep, interviewStage]);
 
     // Dynamic color based on sentiment
     const getLightColor = (s: Sentiment) => {
@@ -21,7 +42,17 @@ export const TacticalDroid = ({ marketStats, tutorialStep = 0, onNext }: Tactica
             case 'BEARISH': return 'bg-red-500 shadow-[0_0_15px_#ef4444]';
             case 'DANGER': return 'bg-yellow-500 animate-pulse shadow-[0_0_20px_#eab308]';
             case 'TUTORIAL': return 'bg-purple-500 shadow-[0_0_15px_#a855f7]';
+            case 'INTERVIEW': return 'bg-cyan-400 shadow-[0_0_15px_#06b6d4]';
             default: return 'bg-blue-400 shadow-[0_0_10px_#60a5fa]';
+        }
+    };
+
+    // Border color helper
+    const getBorderColor = (s: Sentiment) => {
+        switch (s) {
+            case 'TUTORIAL': return 'border-purple-400';
+            case 'INTERVIEW': return 'border-cyan-400';
+            default: return 'border-green-400';
         }
     };
 
@@ -29,17 +60,41 @@ export const TacticalDroid = ({ marketStats, tutorialStep = 0, onNext }: Tactica
         <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end pointer-events-none">
             {/* Speech Bubble */}
             <AnimatePresence mode="wait">
-                {isTalking && (
+                {(isTalking || interviewStage !== 'IDLE') && !isDismissed && (
                     <motion.div
                         initial={{ opacity: 0, y: 20, scale: 0.8 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.8 }}
-                        className="mb-4 mr-4 bg-[#1a1b26] border-2 border-[#4ADE80] p-4 rounded-tl-xl rounded-tr-xl rounded-bl-xl max-w-xs relative pointer-events-auto font-pixel text-xs leading-relaxed text-white shadow-lg"
+                        className={`mb-4 mr-4 bg-[#1a1b26] border-2 ${getBorderColor(sentiment)} p-4 rounded-tl-xl rounded-tr-xl rounded-bl-xl max-w-xs relative pointer-events-auto font-pixel text-xs leading-relaxed text-white shadow-lg group`}
                     >
-                        <span className={`font-bold block mb-1 ${tutorialStep > 0 ? 'text-purple-400' : 'text-[#4ADE80]'}`}>
-                            R.O.B.B.I.E. 9000
+                        {/* Close Button */}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (interviewStage !== 'IDLE') {
+                                    cancelInterview();
+                                }
+                                setIsDismissed(true);
+                            }}
+                            className="absolute -top-2 -right-2 bg-slate-800 border border-slate-600 rounded-full p-1 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors z-10"
+                        >
+                            <X size={12} />
+                        </button>
+
+                        <span className={`font-bold block mb-1 ${tutorialStep > 0 ? 'text-purple-400' : (interviewStage !== 'IDLE' ? 'text-cyan-400 uppercase' : 'text-[#4ADE80]')}`}>
+                            {interviewStage !== 'IDLE' ? 'TACTICAL ADVISOR' : 'R.O.B.B.I.E. 9000'}
                         </span>
-                        {dialogue}
+                        
+                        <div className="text-slate-200">
+                            {dialogue}
+                        </div>
+
+                        {/* Interactive Interview Components */}
+                        <TacticalInterview 
+                            stage={interviewStage}
+                            onAnswer={handleDetailInput}
+                            onCancel={cancelInterview}
+                        />
 
                         {/* Tutorial Next Button */}
                         {tutorialStep > 0 && onNext && (
@@ -51,10 +106,23 @@ export const TacticalDroid = ({ marketStats, tutorialStep = 0, onNext }: Tactica
                             </button>
                         )}
 
+                        {/* Start Interview Button (shown when IDLE and not talking logic permits) */}
+                        {interviewStage === 'IDLE' && tutorialStep === 0 && (
+                             <div className="mt-2 pt-2 border-t border-slate-800 flex justify-end">
+                                <button 
+                                    onClick={startInterview}
+                                    className="flex items-center gap-1 text-[9px] text-cyan-400 hover:text-cyan-300 font-mono uppercase"
+                                >
+                                    <MessageSquare size={10} />
+                                    Risk Analysis
+                                </button>
+                             </div>
+                        )}
+
                         {/* Pixelated tailored arrow */}
                         <div className={`absolute -bottom-[10px] right-0 w-0 h-0 
               border-l-[10px] border-l-transparent
-              border-t-[10px] ${tutorialStep > 0 ? 'border-t-[#4ADE80]' : 'border-t-[#4ADE80]'}
+              border-t-[10px] ${tutorialStep > 0 ? 'border-t-purple-400' : (interviewStage !== 'IDLE' ? 'border-t-cyan-400' : 'border-t-green-400')}
               border-r-[0px] border-r-transparent`}>
                         </div>
                         <div className="absolute -bottom-[6px] right-[3px] w-0 h-0 
@@ -77,7 +145,11 @@ export const TacticalDroid = ({ marketStats, tutorialStep = 0, onNext }: Tactica
                     ease: "easeInOut"
                 }}
                 className="relative w-24 h-24 pointer-events-auto cursor-help group"
-                onClick={onNext} // Creating a click handler on the droid to advance tutorial too
+                onClick={() => {
+                    if (isDismissed) setIsDismissed(false);
+                    else if (interviewStage === 'IDLE' && tutorialStep === 0) startInterview();
+                    else if (onNext) onNext();
+                }}
             >
                 {/* Head */}
                 <div className="absolute top-2 left-2 w-20 h-16 bg-slate-700 border-4 border-black rounded-lg overflow-hidden">
@@ -107,7 +179,7 @@ export const TacticalDroid = ({ marketStats, tutorialStep = 0, onNext }: Tactica
                     transition={{ duration: 2, repeat: Infinity }}
                     className="absolute -top-2 right-6 w-1 h-6 bg-slate-500 border border-black origin-bottom"
                 >
-                    <div className="absolute -top-1 -left-1 w-3 h-3 bg-red-500 rounded-full border border-black animate-pulse" />
+                    <div className={`absolute -top-1 -left-1 w-3 h-3 ${sentiment === 'INTERVIEW' ? 'bg-cyan-500' : 'bg-red-500'} rounded-full border border-black animate-pulse`} />
                 </motion.div>
 
                 {/* Neck */}
