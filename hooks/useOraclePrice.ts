@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 export type ChartInterval = '1m' | '5m' | '15m' | '1h' | '4h' | '6h' | '12h' | '1d';
 
@@ -38,7 +38,7 @@ export function useOraclePrice({
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
-    const wsRef = useRef<WebSocket | null>(null);
+
 
     // Fetch historical klines from Binance REST API
     const fetchKlines = useCallback(async () => {
@@ -78,27 +78,27 @@ export function useOraclePrice({
         }
     }, [symbol, interval, limit]);
 
-    // Connect to Binance WebSocket for real-time price updates
-    const connectWebSocket = useCallback(() => {
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-            wsRef.current.close();
-        }
+    // Fetch current price from Thetanuts API
+    const fetchCurrentPrice = useCallback(async () => {
+        try {
+            // Map symbol to Thetanuts format (e.g., 'ETHUSDT' -> 'ETH')
+            const thetanutsSymbol = symbol.replace('USDT', '');
 
-        const wsSymbol = symbol.toLowerCase();
-        const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${wsSymbol}@trade`);
+            const response = await fetch('https://round-snowflake-9c31.devops-118.workers.dev/');
 
-        ws.onopen = () => {
-            setIsConnected(true);
-        };
+            if (!response.ok) {
+                throw new Error('Failed to fetch current price');
+            }
 
-        ws.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                const price = parseFloat(data.p);
+            const data = await response.json();
 
+            // Check if market_data exists and has our symbol
+            if (data?.data?.market_data?.[thetanutsSymbol]) {
+                const price = data.data.market_data[thetanutsSymbol];
                 setCurrentPrice(price);
+                setIsConnected(true);
 
-                // Update price change based on first recorded price
+                // Update price change based on first recorded price in history
                 setPriceHistory(prev => {
                     if (prev.length > 0) {
                         const firstPrice = prev[0].price;
@@ -113,38 +113,31 @@ export function useOraclePrice({
                     }
                     return prev;
                 });
-            } catch (e) {
-                console.error('WebSocket message parse error:', e);
             }
-        };
-
-        ws.onclose = () => {
+        } catch (err) {
+            console.error('Error fetching current price:', err);
+            // Don't set error state here to avoid breaking the UI for transient failures
+            // as long as we have historical data
             setIsConnected(false);
-        };
-
-        ws.onerror = (e) => {
-            console.error('WebSocket error:', e);
-            setIsConnected(false);
-        };
-
-        wsRef.current = ws;
+        }
     }, [symbol, limit]);
 
-    // Initial fetch and WebSocket connection
+    // Initial fetch and polling
     useEffect(() => {
         fetchKlines();
-        connectWebSocket();
+        fetchCurrentPrice();
 
         // Refresh klines periodically
-        const intervalId = setInterval(fetchKlines, 60000);
+        const klineIntervalId = setInterval(fetchKlines, 60000);
+
+        // Poll for current price every 30 seconds (recommended by Thetanuts)
+        const priceIntervalId = setInterval(fetchCurrentPrice, 30000);
 
         return () => {
-            clearInterval(intervalId);
-            if (wsRef.current) {
-                wsRef.current.close();
-            }
+            clearInterval(klineIntervalId);
+            clearInterval(priceIntervalId);
         };
-    }, [fetchKlines, connectWebSocket]);
+    }, [fetchKlines, fetchCurrentPrice]);
 
     return {
         currentPrice,

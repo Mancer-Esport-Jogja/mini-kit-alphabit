@@ -4,14 +4,14 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, TrendingUp, TrendingDown, Loader2, ExternalLink, AlertCircle } from "lucide-react";
 import { useFillOrder } from "@/hooks/useFillOrder";
-import { parseStrike, parsePrice } from "@/utils/decimals";
-import type { SignedOrder } from "@/types/orders";
+// import { parseStrike, parsePrice } from "@/utils/decimals";
+import type { ParsedOrder } from "@/types/orders";
 import { THETANUTS_CONTRACTS } from "@/config/thetanuts";
 
 interface BuyModalProps {
   isOpen: boolean;
   onClose: () => void;
-  order: SignedOrder | null;
+  order: ParsedOrder | null;
   target: "MOON" | "DOOM" | null;
   initialCollateral: number;
 }
@@ -42,7 +42,7 @@ export const BuyModal: React.FC<BuyModalProps> = ({ isOpen, onClose, order, targ
     if (!order) return;
     
     try {
-      await executeFillOrder(order, usdcAmount);
+      await executeFillOrder(order.rawOrder, usdcAmount);
       // Success handling - modal will show success state
     } catch (err) {
       console.error("Fill order failed:", err);
@@ -58,12 +58,12 @@ export const BuyModal: React.FC<BuyModalProps> = ({ isOpen, onClose, order, targ
 
   if (!order || !target) return null;
 
-  const strikes = order.order.strikes.map(s => parseStrike(s));
-  const premium = parsePrice(order.order.price);
+  const strikes = order.strikes;
+  const premium = order.premium;
 
   // Safe checks for strikes
-  const isSpread = strikes.length >= 2;
-  const isCall = order.order.isCall;
+  const isSpread = order.isSpread;
+  const isCall = order.direction === 'CALL';
   const strikeWidth = isSpread ? Math.abs(strikes[1] - strikes[0]) : 0;
   
   // Calculate Payout & ROI based on type
@@ -101,14 +101,13 @@ export const BuyModal: React.FC<BuyModalProps> = ({ isOpen, onClose, order, targ
   let limitMsg = "";
   
   if (order) {
-     const maxCollateral = Number(order.order.maxCollateralUsable);
-     const isUSDCCollateral = order.order.collateral.toLowerCase() === THETANUTS_CONTRACTS.TOKENS.USDC.toLowerCase();
+     const maxCollateral = order.maxCollateral; // Already parsed to USDC (6 decimals normalized)
+     const isUSDCCollateral = order.rawOrder.order.collateral.toLowerCase() === THETANUTS_CONTRACTS.TOKENS.USDC.toLowerCase();
      
      if (isUSDCCollateral && strikes.length > 0 && strikes[0] > 0) {
         // USDC Collateral: MaxContracts = MaxCollateral / Strike
-        // MaxCollateral from API is in 6 decimals (USDC)
-        const rawCollateral = maxCollateral; 
-        const collateralReal = rawCollateral / 1e6; // USDC decimals
+        // MaxCollateral from API is in USDC 
+        const collateralReal = maxCollateral; 
         const maxContracts = collateralReal / strikes[0];
         
         // Ensure we don't have extremely small fractions causing issues
@@ -277,6 +276,20 @@ export const BuyModal: React.FC<BuyModalProps> = ({ isOpen, onClose, order, targ
                 </div>
               )}
 
+              {/* MAX RISK WARNING - Moved above buttons */}
+               <div className="bg-red-900/30 border-2 border-red-500 p-3 rounded animate-pulse">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="text-[10px] font-black text-red-500 uppercase flex items-center gap-1 relative z-10">
+                    <AlertCircle className="w-4 h-4" />
+                    MAXIMUM RISK WARNING
+                  </div>
+                  <div className="text-[9px] font-mono text-red-400">100% CAPITAL AT RISK</div>
+                </div>
+                <div className="text-[9px] text-red-300 font-mono leading-tight">
+                  If the market moves against your target, you will lose your <strong>ENTIRE COLLATERAL</strong>. There are no partial refunds.
+                </div>
+              </div>
+
               {/* Action Buttons */}
               <div className="flex gap-3">
                 <button
@@ -308,16 +321,7 @@ export const BuyModal: React.FC<BuyModalProps> = ({ isOpen, onClose, order, targ
                 )}
               </div>
 
-              {/* Risk Warning */}
-              <div className="bg-yellow-900/20 border border-yellow-600/50 p-2 rounded">
-                <div className="text-[9px] text-yellow-400 font-mono uppercase flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  Risk Disclosure
-                </div>
-                <div className="text-[8px] text-slate-400 mt-1">
-                  Options trading involves risk of total loss. Only trade with funds you can afford to lose.
-                </div>
-              </div>
+
             </div>
           </motion.div>
         </motion.div>

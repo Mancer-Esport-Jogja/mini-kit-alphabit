@@ -10,6 +10,24 @@ import { motion, AnimatePresence } from "framer-motion";
 export const PositionsList = ({ onOpenHistory }: { onOpenHistory?: () => void }) => {
   const { data: positions, isLoading, isError } = useUserPositions();
 
+  // Debug: surface raw positions payload in console to diagnose NaN/missing fields in prod
+  React.useEffect(() => {
+    if (positions) {
+      console.debug("[PositionsList] positions payload", positions);
+    }
+  }, [positions]);
+
+  const getCollateralUsdc = (p: Position): number => {
+    const raw =
+      p.collateralAmount ??
+      (typeof p === "object" && p !== null && "collateral" in p
+        ? (p as { collateral?: string | number }).collateral
+        : undefined);
+
+    const num = Number(raw);
+    return Number.isFinite(num) ? num / 10 ** 6 : 0;
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center p-8 bg-black/40 border-2 border-slate-800 border-t-0">
@@ -61,8 +79,18 @@ export const PositionsList = ({ onOpenHistory }: { onOpenHistory?: () => void })
           ) : (
             openPositions.map((pos: Position, idx) => {
               const isCall = pos.optionType === 1; // 1 for Call, 2 for Put spreads usually
-              const lowerStrike = parseStrike(pos.strikes[0]);
-              const upperStrike = parseStrike(pos.strikes[1]);
+
+              const rawLower = pos.strikes?.[0];
+              const rawUpper = pos.strikes?.[1];
+
+              const lowerStrike = Number.isFinite(Number(rawLower))
+                ? parseStrike(rawLower)
+                : null;
+              const upperStrike = Number.isFinite(Number(rawUpper))
+                ? parseStrike(rawUpper)
+                : null;
+
+              const collateral = getCollateralUsdc(pos);
 
               return (
                 <motion.div
@@ -98,7 +126,7 @@ export const PositionsList = ({ onOpenHistory }: { onOpenHistory?: () => void })
                         Collateral
                       </div>
                       <div className="text-[10px] font-pixel text-slate-300">
-                        {Number(pos.collateralAmount) / 10 ** 6}{" "}
+                        {Number.isFinite(collateral) ? collateral : 0}{" "}
                         <span className="text-[8px]">USDC</span>
                       </div>
                     </div>
@@ -107,7 +135,13 @@ export const PositionsList = ({ onOpenHistory }: { onOpenHistory?: () => void })
                         Goal Line
                       </div>
                       <div className="text-[10px] font-pixel text-yellow-500">
-                        ${(isCall ? lowerStrike : upperStrike).toLocaleString()}
+                        {isCall
+                          ? lowerStrike !== null
+                            ? `$${lowerStrike.toLocaleString()}`
+                            : "—"
+                          : upperStrike !== null
+                            ? `$${upperStrike.toLocaleString()}`
+                            : "—"}
                       </div>
                     </div>
                     <div className="text-right">
@@ -115,12 +149,12 @@ export const PositionsList = ({ onOpenHistory }: { onOpenHistory?: () => void })
                         Expiry
                       </div>
                       <div className="text-[10px] font-pixel text-slate-400">
-                        {new Date(
-                          pos.expiryTimestamp * 1000,
-                        ).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        {pos.expiryTimestamp
+                          ? new Date(pos.expiryTimestamp * 1000).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "—"}
                       </div>
                     </div>
                   </div>

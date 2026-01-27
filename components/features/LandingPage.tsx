@@ -268,7 +268,7 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
                             icon="👾"
                             title="Abstracted Math"
                             subtitle="SIMPLICITY"
-                            description="We replaced Greeks with Game Logic. No complex order books—just Strategy. HUNT(Buy) or FARM(Yield) with 0 friction."
+                            description="We replaced Greeks with Game Logic. No complex order books—just Strategy. PRO(Trading) with 0 friction."
                             borderColor="border-neon-yellow"
                             glowColor="hover:glow-yellow"
                         />
@@ -312,15 +312,15 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
                     </div>
 
                     <h2 className="text-2xl font-pixel text-white mb-2">
-                        CHOOSE YOUR <span className="text-neon-yellow">ROLE</span>
+                        ENTER THE <span className="text-neon-yellow">ARENA</span>
                     </h2>
                     <p className="text-slate-400 font-grotesk text-sm max-w-xs mx-auto">
-                        Two ways to play. What is your style?
+                        Professional grade tools, gamified experience.
                     </p>
                 </motion.div>
 
-                <div className="grid gap-6 max-w-md mx-auto">
-                    {/* HUNT MODE EXPLANATION */}
+                <div className="max-w-md mx-auto">
+                    {/* PRO MODE EXPLANATION */}
                     <motion.div
                         variants={scaleIn}
                         className="bg-neon-black border-4 border-neon-yellow p-6 relative overflow-hidden group"
@@ -330,7 +330,7 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
                         </div>
 
                         <div className="relative z-10">
-                            <h3 className="text-xl font-pixel text-bit-green mb-1">HUNT MODE</h3>
+                            <h3 className="text-xl font-pixel text-bit-green mb-1">PRO MODE</h3>
                             <div className="text-[10px] font-mono text-slate-500 mb-4">ROLE: TRADER / SNIPER</div>
 
                             <p className="text-slate-300 font-grotesk text-sm mb-4 leading-relaxed">
@@ -351,41 +351,6 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
 
                             <div className="bg-slate-900/50 p-3 border border-slate-700 rounded text-[10px] text-slate-300 italic">
                                 &quot;Fast-paced action. Real on-chain options with 6-hour expiry.&quot;
-                            </div>
-                        </div>
-                    </motion.div>
-
-                    {/* FARM MODE EXPLANATION */}
-                    <motion.div
-                        variants={scaleIn}
-                        className="bg-neon-black border-4 border-neon-yellow p-6 relative overflow-hidden group"
-                    >
-                        <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-100 transition-opacity">
-                            <div className="text-6xl text-neon-yellow font-pixel">🏦</div>
-                        </div>
-
-                        <div className="relative z-10">
-                            <h3 className="text-xl font-pixel text-neon-yellow mb-1">FARM MODE</h3>
-                            <div className="text-[10px] font-mono text-slate-500 mb-4">ROLE: THE HOUSE / REACTOR ENGINEER</div>
-
-                            <p className="text-slate-300 font-grotesk text-sm mb-4 leading-relaxed">
-                                <strong className="text-white">Objective:</strong> Build <strong>YIELD REACTORS</strong> by locking assets.
-                            </p>
-
-                            <ul className="text-xs font-mono text-slate-400 space-y-2 mb-4">
-                                <li className="flex items-center gap-2">
-                                    <span className="text-neon-yellow">➤</span> Deposit USDC into Vaults (&quot;Shields&quot;).
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <span className="text-neon-yellow">➤</span> Your capital backs the HUNT players.
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <span className="text-neon-yellow">➤</span> Earn automatic yield from premiums.
-                                </li>
-                            </ul>
-
-                            <div className="bg-slate-900/50 p-3 border border-slate-700 rounded text-[10px] text-slate-300 italic">
-                                &quot;Passive strategy. Become the liquidity backbone of the ecosystem.&quot;
                             </div>
                         </div>
                     </motion.div>

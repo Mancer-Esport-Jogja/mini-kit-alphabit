@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Info, AlertTriangle, Clock, Flame } from "lucide-react";
 // import { TutorialOverlay } from "@/components/ui/TutorialOverlay"; // REMOVED: Replaced by Droid Tour
 import { useThetanutsOrders } from "@/hooks/useThetanutsOrders";
-import { parseStrike, parsePrice } from "@/utils/decimals";
 import { useAuth } from "@/context/AuthContext";
 import { useOraclePrice, type ChartInterval } from "@/hooks/useOraclePrice";
 import { TacticalDroid } from "./TacticalDroid";
@@ -13,6 +12,9 @@ import { MissionControl } from "@/components/gamification/MissionControl";
 import { useGamification } from "@/context/GamificationContext";
 import { LevelBadge } from "@/components/gamification/LevelBadge"; // Import Badge
 import { BuyModal } from "./BuyModal";
+import { OrderMatrix } from "./OrderMatrix";
+import { filterOrdersByDuration, getBestOrder, parseOrder } from "@/services/thetanutsApi";
+import { ParsedOrder } from "@/types/orders";
 // import { useTenderlyMint } from "@/hooks/useTenderlyMint";
 
 export const HuntTerminal = () => {
@@ -33,6 +35,8 @@ export const HuntTerminal = () => {
     // UI State
     const [showMissions, setShowMissions] = useState(false);
     const [showBuyModal, setShowBuyModal] = useState(false);
+    const [showOrderMatrix, setShowOrderMatrix] = useState(false);
+    const [manualOrder, setManualOrder] = useState<ParsedOrder | null>(null);
 
     // Tenderly Testing (Dev Mode Only
     // const { mintUSDC, isTestnet } = useTenderlyMint();
@@ -70,7 +74,7 @@ export const HuntTerminal = () => {
     } = useThetanutsOrders({
         target: selectedTarget || undefined,
         asset: selectedAsset,
-        duration: selectedDuration,
+        // duration: selectedDuration, // We fetch ALL orders now and filter locally to support Matrix
     });
 
     // Fetch Sentinel Data for AI (Unfiltered by target to see full picture)
@@ -104,7 +108,21 @@ export const HuntTerminal = () => {
         };
     }, [sentimentData]); // removed completeMission from deps to avoid loops
 
-    const bestOrder = orderData?.bestOrder ?? null;
+    // Calculate Best Order (Priority: Manual > Duration Filtered)
+    const bestOrder = useMemo(() => {
+        if (manualOrder) return manualOrder;
+        if (!orderData?.orders) return null;
+
+        // Filter valid orders first (expiry check is already done in API service but good to be safe)
+        // Then filter by duration
+        const durationOrders = filterOrdersByDuration(orderData.orders, selectedDuration);
+        
+        // Find best price
+        const best = getBestOrder(durationOrders);
+        return best ? parseOrder(best) : null;
+    }, [orderData, selectedDuration, manualOrder]);
+
+
 
     // Chart timeframe options
     const timeframes = [
@@ -171,12 +189,12 @@ export const HuntTerminal = () => {
     const roiEstimate = useMemo(() => {
         if (!bestOrder) return 0;
         
-        const strikes = bestOrder.order.strikes.map((s) => parseStrike(s));
-        const premium = parsePrice(bestOrder.order.price);
+        const strikes = bestOrder.strikes; // ParsedOrder has strikes as number[]
+        const premium = bestOrder.premium; // ParsedOrder has premium as number
         if (premium === 0) return 0;
 
         const isSpread = strikes.length >= 2;
-        const isCall = bestOrder.order.isCall;
+        const isCall = bestOrder.direction === 'CALL'; // bestOrder is now ParsedOrder which has direction string
 
         if (isSpread) {
             // Spread: ROI = (Width - Premium) / Premium
@@ -198,6 +216,7 @@ export const HuntTerminal = () => {
 
     const handleTargetSelect = (target: "MOON" | "DOOM") => {
         setSelectedTarget(target);
+        setManualOrder(null); // Reset manual on target change
     };
 
     // Tutorial Handler
@@ -206,10 +225,10 @@ export const HuntTerminal = () => {
     };
 
     const durations = [
-        { id: 'BLITZ', label: 'BLITZ', time: '6H', color: 'text-yellow-400', border: 'border-yellow-400' },
-        { id: 'RUSH', label: 'RUSH', time: '12H', color: 'text-orange-400', border: 'border-orange-400' },
-        { id: 'CORE', label: 'CORE', time: '24H', color: 'text-blue-400', border: 'border-blue-400' },
-        { id: 'ORBIT', label: 'ORBIT', time: '7D', color: 'text-purple-400', border: 'border-purple-400' },
+        { id: 'BLITZ', label: 'BLITZ', time: '2H-9H', color: 'text-yellow-400', border: 'border-yellow-400', info: 'Optimistic UI. 2h-9h Expiry.' },
+        { id: 'RUSH', label: 'RUSH', time: '9H-18H', color: 'text-orange-400', border: 'border-orange-400', info: 'Standard 9h-18h Expiry.' },
+        { id: 'CORE', label: 'CORE', time: '18H-36H', color: 'text-blue-400', border: 'border-blue-400', info: 'Daily Options (18h-36h).' },
+        { id: 'ORBIT', label: 'ORBIT', time: '>36H', color: 'text-purple-400', border: 'border-purple-400', info: 'Weekly Options (>36h).' },
     ] as const;
 
     return (
@@ -407,8 +426,10 @@ export const HuntTerminal = () => {
                     </div>
                 </div>
 
-                {/* Duration Selector */}
-                <div className="flex gap-2 mb-6 bg-slate-900/50 p-1 rounded-lg border border-slate-700">
+                {/* Duration Selector (Step 1) */}
+                <div className="mb-6">
+                    <label className="block text-[10px] font-pixel text-slate-400 mb-2">1. SELECT DURATION</label>
+                    <div className="flex gap-2 bg-slate-900/50 p-1 rounded-lg border border-slate-700">
                     {durations.map((mode) => (
                         <button
                             key={mode.id}
@@ -424,6 +445,8 @@ export const HuntTerminal = () => {
                                     {mode.label}
                                 </span>
                                 <span className="font-mono text-[9px] text-slate-500">{mode.time}</span>
+
+
                             </div>
                             {selectedDuration === mode.id && (
                                 <div className={`absolute inset-0 opacity-10 ${mode.color.replace('text', 'bg')}`}></div>
@@ -431,60 +454,68 @@ export const HuntTerminal = () => {
                         </button>
                     ))}
                 </div>
-
-                {/* Target Selection Grid */}
-                <div className="grid grid-cols-2 gap-4 mb-8">
-                    {/* LONG / MOON Target */}
-                    <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => handleTargetSelect('MOON')}
-                        className={`group relative h-40 border-4 transition-all duration-300 flex flex-col items-center justify-center gap-2
-                            ${selectedTarget === 'MOON'
-                                ? 'bg-bit-green/10 border-bit-green shadow-[0_0_20px_rgba(74,222,128,0.2)]'
-                                : 'bg-slate-800/50 border-slate-600 hover:border-bit-green/50'
-                            }`}
-                    >
-                        {selectedTarget === 'MOON' && (
-                            <div className="absolute inset-0 border-2 border-bit-green pointer-events-none animate-pulse"></div>
-                        )}
-                        <TrendingUp className={`w-8 h-8 ${selectedTarget === 'MOON' ? 'text-bit-green' : 'text-slate-500 group-hover:text-bit-green'}`} />
-                        <span className={`font-pixel text-sm mt-2 ${selectedTarget === 'MOON' ? 'text-bit-green' : 'text-slate-400 group-hover:text-bit-green'}`}>
-                            TARGET: MOON
-                        </span>
-                        <div className="text-[10px] font-mono text-slate-500 mt-1 uppercase">
-                            {isOrdersLoading && selectedTarget === "MOON" ? "SCANNING..." : "LONG DEPLOYMENT"}
-                        </div>
-                    </motion.button>
-
-                    {/* SHORT / DOOM Target */}
-                    <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => handleTargetSelect('DOOM')}
-                        className={`group relative h-40 border-4 transition-all duration-300 flex flex-col items-center justify-center gap-2
-                            ${selectedTarget === 'DOOM'
-                                ? 'bg-bit-coral/10 border-bit-coral shadow-[0_0_20px_rgba(232,90,90,0.2)]'
-                                : 'bg-slate-800/50 border-slate-600 hover:border-bit-coral/50'
-                            }`}
-                    >
-                        {selectedTarget === 'DOOM' && (
-                            <div className="absolute inset-0 border-2 border-bit-coral pointer-events-none animate-pulse"></div>
-                        )}
-                        <TrendingDown className={`w-8 h-8 ${selectedTarget === 'DOOM' ? 'text-bit-coral' : 'text-slate-500 group-hover:text-bit-coral'}`} />
-                        <span className={`font-pixel text-sm mt-2 ${selectedTarget === 'DOOM' ? 'text-bit-coral' : 'text-slate-400 group-hover:text-bit-coral'}`}>
-                            TARGET: DOOM
-                        </span>
-                        <div className="text-[10px] font-mono text-slate-500 mt-1 uppercase">
-                            {isOrdersLoading && selectedTarget === "DOOM" ? "SCANNING..." : "SHORT DEPLOYMENT"}
-                        </div>
-                    </motion.button>
                 </div>
 
-                {/* Collateral Throttle */}
+
+
+                {/* Target Selection Grid (Step 2) */}
+                <div className="mb-8">
+                    <label className="block text-[10px] font-pixel text-slate-400 mb-2">2. SELECT TARGET</label>
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* LONG / MOON Target */}
+                        <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => handleTargetSelect('MOON')}
+                            className={`group relative h-40 border-4 transition-all duration-300 flex flex-col items-center justify-center gap-2
+                                ${selectedTarget === 'MOON'
+                                    ? 'bg-bit-green/10 border-bit-green shadow-[0_0_20px_rgba(74,222,128,0.2)]'
+                                    : 'bg-slate-800/50 border-slate-600 hover:border-bit-green/50'
+                                }`}
+                        >
+                            {selectedTarget === 'MOON' && (
+                                <div className="absolute inset-0 border-2 border-bit-green pointer-events-none animate-pulse"></div>
+                            )}
+                            <TrendingUp className={`w-8 h-8 ${selectedTarget === 'MOON' ? 'text-bit-green' : 'text-slate-500 group-hover:text-bit-green'}`} />
+                            <span className={`font-pixel text-sm mt-2 ${selectedTarget === 'MOON' ? 'text-bit-green' : 'text-slate-400 group-hover:text-bit-green'}`}>
+                                TARGET: MOON
+                            </span>
+                            <div className="text-[10px] font-mono text-slate-500 mt-1 uppercase">
+                                {isOrdersLoading && selectedTarget === "MOON" ? "SCANNING..." : "LONG DEPLOYMENT"}
+                            </div>
+                        </motion.button>
+
+                        {/* SHORT / DOOM Target */}
+                        <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => handleTargetSelect('DOOM')}
+                            className={`group relative h-40 border-4 transition-all duration-300 flex flex-col items-center justify-center gap-2
+                                ${selectedTarget === 'DOOM'
+                                    ? 'bg-bit-coral/10 border-bit-coral shadow-[0_0_20px_rgba(232,90,90,0.2)]'
+                                    : 'bg-slate-800/50 border-slate-600 hover:border-bit-coral/50'
+                                }`}
+                        >
+                            {selectedTarget === 'DOOM' && (
+                                <div className="absolute inset-0 border-2 border-bit-coral pointer-events-none animate-pulse"></div>
+                            )}
+                            <TrendingDown className={`w-8 h-8 ${selectedTarget === 'DOOM' ? 'text-bit-coral' : 'text-slate-500 group-hover:text-bit-coral'}`} />
+                            <span className={`font-pixel text-sm mt-2 ${selectedTarget === 'DOOM' ? 'text-bit-coral' : 'text-slate-400 group-hover:text-bit-coral'}`}>
+                                TARGET: DOOM
+                            </span>
+                            <div className="text-[10px] font-mono text-slate-500 mt-1 uppercase">
+                                {isOrdersLoading && selectedTarget === "DOOM" ? "SCANNING..." : "SHORT DEPLOYMENT"}
+                            </div>
+                        </motion.button>
+                    </div>
+                </div>
+
+
+
+                {/* Collateral Throttle (Step 3) */}
                 <div className="mb-6">
                     <div className="flex justify-between items-end mb-2">
-                        <label className="text-[10px] font-pixel text-slate-400">COMMIT COLLATERAL</label>
+                        <label className="text-[10px] font-pixel text-slate-400">3. COMMIT COLLATERAL</label>
                         <span className="font-mono text-xl text-white tracking-widest">
                             {collateral} <span className="text-xs text-slate-500">USDC</span>
                         </span>
@@ -510,20 +541,51 @@ export const HuntTerminal = () => {
                     </div>
                 </div>
 
-                {/* Mission Stats */}
-                <div className="bg-slate-900/80 border border-slate-700 p-3 mb-4 grid grid-cols-2 gap-4">
-                    <div>
-                        <div className="text-[9px] text-slate-500 font-mono mb-1 uppercase">ROI ESTIMATE</div>
-                        <div className={`text-lg font-pixel transition-colors ${roiEstimate > 0 ? "text-bit-green" : "text-slate-500"}`}>
-                            {isOrdersLoading ? "..." : (roiEstimate === Infinity ? "UNLIMITED" : (roiEstimate > 0 ? `+${roiEstimate}%` : "N/A"))}
-                        </div>
+                {/* Payload Config (Step 4 - Was Mission Stats + Manual Override) */}
+                <div className="mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                        <label className="text-[10px] font-pixel text-slate-400">4. PAYLOAD CONFIG</label>
+                        {manualOrder && (
+                            <button 
+                                onClick={() => setManualOrder(null)}
+                                className="px-2 py-0.5 bg-red-900/50 border border-red-500 text-[9px] font-pixel text-red-400 hover:bg-red-900"
+                            >
+                                RESET TO AUTO
+                            </button>
+                        )}
                     </div>
-                    <div className="text-right">
-                        <div className="text-[9px] text-slate-500 font-mono mb-1 uppercase">TARGET STRIKE</div>
-                        <div className="text-lg font-pixel text-yellow-500">
-                            {isOrdersLoading ? "..." : (bestOrder ? `$${parseStrike(bestOrder.order.strikes[0]).toLocaleString()}` : "---")}
+                    
+                    <button
+                        onClick={() => setShowOrderMatrix(true)}
+                        className={`w-full group relative bg-slate-900/80 border-2 p-3 pr-24 text-left transition-all
+                            ${manualOrder 
+                                ? 'border-yellow-500/50 hover:border-yellow-400' 
+                                : 'border-slate-700 hover:border-slate-500'
+                            }`}
+                    >
+                        <div className="absolute top-2 right-2 max-w-[55%]">
+                            <span className="block text-[9px] font-pixel bg-slate-800 px-1.5 py-0.5 rounded text-slate-400 group-hover:bg-slate-700 group-hover:text-white transition-colors truncate text-right">
+                                {manualOrder ? "MANUAL_LOCK" : "AUTO_BEST"} :: CHANGE &gt;
+                            </span>
                         </div>
-                    </div>
+
+                        <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 sm:gap-4">
+                            <div className="min-w-0 pr-3 sm:pr-4">
+                                <div className="text-[9px] text-slate-500 font-mono mb-1 uppercase">ESTIMATED YIELD</div>
+                                <div
+                                    className={`font-pixel transition-colors whitespace-normal sm:whitespace-nowrap text-2xl sm:text-[26px] md:text-[28px] leading-tight ${roiEstimate > 0 ? "text-bit-green" : "text-slate-500"}`}
+                                >
+                                    {isOrdersLoading ? "..." : (roiEstimate === Infinity ? "UNLIMITED" : (roiEstimate > 0 ? `+${roiEstimate}%` : "N/A"))}
+                                </div>
+                            </div>
+                            <div className="min-w-0 sm:text-right">
+                                <div className="text-[9px] text-slate-500 font-mono mb-1 uppercase">TARGET STRIKE</div>
+                                <div className="font-pixel text-yellow-500 text-xl sm:text-[22px] md:text-[24px] leading-tight">
+                                    {isOrdersLoading ? "..." : (bestOrder ? `$${bestOrder.strikes[0].toLocaleString()}` : "---")}
+                                </div>
+                            </div>
+                        </div>
+                    </button>
                 </div>
 
                 {/* Risk Warning Banner */}
@@ -586,6 +648,19 @@ export const HuntTerminal = () => {
                 order={bestOrder}
                 target={selectedTarget}
                 initialCollateral={collateral}
+            />
+            
+            {/* Order Matrix Modal */}
+            <OrderMatrix
+                isOpen={showOrderMatrix}
+                onClose={() => setShowOrderMatrix(false)}
+                orders={orderData?.parsedOrders || []}
+                currentAsset={selectedAsset}
+                currentTarget={selectedTarget}
+                onSelect={(order) => {
+                    setManualOrder(order);
+                    setShowOrderMatrix(false);
+                }}
             />
             </div>
 
