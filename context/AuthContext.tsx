@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import sdk from "@farcaster/miniapp-sdk";
-import { useConnect, useAccount } from "wagmi";
+import { useConnect, useAccount, useSignMessage } from "wagmi";
 import { IS_TESTNET } from "@/config/wagmi";
 
 /**
@@ -44,6 +44,8 @@ interface AuthContextType {
   isDevMode: boolean;
   login: () => Promise<void>;
   logout: () => void;
+  bindWallet: () => Promise<void>;
+  needsBinding: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -55,7 +57,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isDevMode, setIsDevMode] = useState<boolean>(false);
 
   const { connect, connectors } = useConnect();
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
+  const { signMessageAsync } = useSignMessage();
+  const [needsBinding, setNeedsBinding] = useState(false);
+  const [hasAttemptedAutoSync, setHasAttemptedAutoSync] = useState(false);
 
   /**
    * Authenticate with backend
@@ -155,6 +160,84 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [connect, connectors, isConnected]);
 
   /**
+   * Check if wallet needs binding & Auto-Trigger
+   */
+  /**
+   * Check if wallet needs binding & Auto-Trigger
+   */
+  useEffect(() => {
+    const isAuthenticated = !!token && !!user;
+    
+    if (isAuthenticated && user && isConnected && address) {
+      const isMismatch = !user.primaryEthAddress || user.primaryEthAddress.toLowerCase() !== address.toLowerCase();
+      
+      if (isMismatch) {
+         setNeedsBinding(true);
+
+         // Auto-trigger bind if not attempted yet
+         if (!hasAttemptedAutoSync) {
+            console.log("Auth: Auto-triggering wallet binding...");
+            setHasAttemptedAutoSync(true);
+            // Small delay to ensure UI is ready
+            setTimeout(() => {
+                bindWallet();
+            }, 500);
+         }
+      } else {
+         setNeedsBinding(false);
+      }
+    } else {
+      setNeedsBinding(false);
+    }
+  }, [token, user, isConnected, address, hasAttemptedAutoSync]); 
+
+  /**
+   * Bind current wallet to user account (SIWE)
+   */
+  const bindWallet = async () => {
+    if (!token || !user || !address) return;
+
+    try {
+      setIsLoading(true);
+      console.log("Auth: Binding wallet...", address);
+      
+      const message = `Bind Wallet ${address} to Alphabit Account ${user.fid}`;
+      const signature = await signMessageAsync({ message });
+
+      const response = await fetch("/api/auth/bind-wallet", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          address,
+          signature
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to bind wallet");
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        // Update local user state
+        setUser(prev => prev ? { ...prev, primaryEthAddress: address } : null);
+        setNeedsBinding(false);
+        console.log("Auth: Wallet bound successfully");
+      }
+
+    } catch (error) {
+      console.error("Auth: Failed to bind wallet", error);
+      // We don't re-throw here for the auto-trigger to avoid crashing layout
+      // User can retry manually via Header prompt if auto fails
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
    * Auto-authenticate on mount
    * In dev mode: Always authenticate with dev-token
    * In prod mode: Authenticate via Farcaster Quick Auth
@@ -215,6 +298,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isDevMode,
         login,
         logout,
+        bindWallet,
+        needsBinding
       }}
     >
       {children}
