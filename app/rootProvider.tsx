@@ -13,6 +13,34 @@ import sdk from "@farcaster/miniapp-sdk";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { useCallback } from "react";
 
+import { useRouter, usePathname } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { useEffect } from "react";
+
+function UserStatusGuard({ children }: { children: ReactNode }) {
+  const { user, isAuthenticated } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    // Skip check if not authenticated yet
+    if (!isAuthenticated || !user) return;
+
+    // Check status
+    if (user.status === 'INACTIVE') {
+       if (pathname !== '/coming-soon') {
+         router.push('/coming-soon');
+       }
+    } else if (pathname === '/coming-soon' && user.status === 'ACTIVE') {
+       // If user becomes active, redirect back to home (or dashboard)
+       router.push('/');
+    }
+
+  }, [user, isAuthenticated, pathname, router]);
+
+  return <>{children}</>;
+}
+
 export function RootProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
   const [isReady, setIsReady] = useState(false);
@@ -47,7 +75,9 @@ export function RootProvider({ children }: { children: ReactNode }) {
               >
                 {!isReady && <LoadingScreen onLoadingComplete={handleLoadingComplete} />}
                 <div style={{ display: isReady ? 'block' : 'none' }}>
-                  {children}
+                  <UserStatusGuard>
+                    {children}
+                  </UserStatusGuard>
                 </div>
               </OnchainKitProvider>
             </GamificationProvider>

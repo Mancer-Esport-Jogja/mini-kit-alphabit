@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { usePathname } from "next/navigation";
 
 type LogType = "log" | "error" | "warn" | "info";
 
@@ -14,6 +15,7 @@ export default function DevConsoleViewer() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
 
   // Scroll to bottom when logs update
   useEffect(() => {
@@ -97,6 +99,11 @@ export default function DevConsoleViewer() {
       console.info = originalInfo;
     };
   }, []);
+
+  // Hide button on coming-soon page
+  if (pathname === '/coming-soon') {
+    return null;
+  }
 
   if (!isOpen) {
     return (
