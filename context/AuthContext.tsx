@@ -209,7 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       console.log("Auth: Binding wallet...", address);
       
-      const message = `Bind Wallet ${address} to Alphabit Account ${user.fid}`;
+      const message = `Sync Wallet ${address} to Alphabit Account ${user.fid}`;
       const signature = await signMessageAsync({ message });
 
       const response = await fetch("/api/auth/bind-wallet", {
