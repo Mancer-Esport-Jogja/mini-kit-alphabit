@@ -175,14 +175,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (isMismatch) {
          setNeedsBinding(true);
 
-         // Auto-trigger bind if not attempted yet
+         // Auto-trigger bind if not attempted yet (SKIP if on coming-soon page)
          if (!hasAttemptedAutoSync) {
-            console.log("Auth: Auto-triggering wallet binding...");
-            setHasAttemptedAutoSync(true);
-            // Small delay to ensure UI is ready
-            setTimeout(() => {
-                bindWallet();
-            }, 500);
+            const isComingSoon = window.location.pathname === '/coming-soon';
+            
+            if (!isComingSoon) {
+                console.log("Auth: Auto-triggering wallet binding...");
+                setHasAttemptedAutoSync(true);
+                // Small delay to ensure UI is ready
+                setTimeout(() => {
+                    bindWallet();
+                }, 500);
+            } else {
+                console.log("Auth: Skipping auto-bind on Coming Soon page");
+            }
          }
       } else {
          setNeedsBinding(false);

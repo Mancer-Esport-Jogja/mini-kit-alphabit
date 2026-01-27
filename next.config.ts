@@ -16,6 +16,10 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: '**.farcaster.xyz',
       },
+      {
+        protocol: 'https',
+        hostname: 'imagedelivery.net',
+      },
     ],
   },
   webpack: (config) => {

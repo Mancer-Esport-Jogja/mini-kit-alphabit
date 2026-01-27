@@ -136,9 +136,24 @@ export function useFillOrder() {
         usdcSpendAmount: string
     ) => {
         if (!address) throw new Error('Wallet not connected');
+        if (ALPHABIT_REFERRER === '0x1A0e000000000000000000000000000000000000') {
+            console.warn('ALPHABIT_REFERRER is using the fallback placeholder. Set NEXT_PUBLIC_ALPHABIT_REFERRER in .env to your platform referrer address.');
+        }
 
         setCurrentStep('idle');
         const usdcAmount = parseUnits(usdcSpendAmount, 6);
+
+        // Guard: prevent user from signing a transaction that is guaranteed
+        // to revert because the RFQ quote has already expired.
+        const now = Math.floor(Date.now() / 1000);
+        if (order.order.orderExpiryTimestamp <= now + 5) {
+            // add small buffer for mempool delay
+            throw new Error('This quote has expired. Refresh orders and try again.');
+        }
+        // Guard: prevent taking options that are already past their actual expiry
+        if (order.order.expiry <= now + 30) {
+            throw new Error('This option series has already expired. Please pick another order.');
+        }
 
         if (usdcBalance && usdcBalance < usdcAmount) {
             throw new Error(`Insufficient USDC balance.`);
