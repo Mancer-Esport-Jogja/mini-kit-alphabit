@@ -24,6 +24,9 @@ export const HuntTerminal = () => {
 
     // Mission State
     const [collateral, setCollateral] = useState(50);
+    const [collateralSlider, setCollateralSlider] = useState(50);
+    const [isEditingCollateral, setIsEditingCollateral] = useState(false);
+    const [collateralText, setCollateralText] = useState(() => String(50));
     const [selectedTarget, setSelectedTarget] = useState<"MOON" | "DOOM" | null>(null);
     const [selectedDuration, setSelectedDuration] = useState<'BLITZ' | 'RUSH' | 'CORE' | 'ORBIT'>('BLITZ');
     const [selectedAsset, setSelectedAsset] = useState<'ETH' | 'BTC'>('ETH');
@@ -64,6 +67,67 @@ export const HuntTerminal = () => {
             completeMission('first_strike');
         }
     }, [selectedTarget, completeMission]);
+
+    useEffect(() => {
+        if (!isEditingCollateral) {
+            setCollateralText(String(collateral));
+        }
+    }, [collateral, isEditingCollateral]);
+
+    const parseCollateralInput = (text: string): number | null => {
+        // Accept: "1000", "1,000", "1.000", "50,5", "50.5", "1.000,5", "1,000.5"
+        const raw = text.trim().replace(/\s+/g, '');
+        const cleaned = raw.replace(/[^0-9.,]/g, '');
+        if (!cleaned) return null;
+
+        const hasComma = cleaned.includes(',');
+        const hasDot = cleaned.includes('.');
+
+        let normalized = cleaned;
+        if (hasComma && hasDot) {
+            // Use the last separator as the decimal separator, treat the other as thousands separators.
+            const lastComma = cleaned.lastIndexOf(',');
+            const lastDot = cleaned.lastIndexOf('.');
+            const decimalSep = lastComma > lastDot ? ',' : '.';
+            const thousandsSep = decimalSep === ',' ? '.' : ',';
+            normalized = cleaned.split(thousandsSep).join('');
+            if (decimalSep === ',') normalized = normalized.replace(',', '.');
+        } else if (hasComma && !hasDot) {
+            // Treat comma as decimal separator (common in id-ID).
+            normalized = cleaned.replace(',', '.');
+        } else {
+            // Dot as decimal separator; nothing to do.
+            normalized = cleaned;
+        }
+
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) ? parsed : null;
+    };
+
+    const commitCollateral = () => {
+        const parsed = parseCollateralInput(collateralText);
+        if (parsed === null) {
+            setCollateralText(String(collateral));
+            setIsEditingCollateral(false);
+            return;
+        }
+
+        const clamped = Math.min(500, Math.max(0, parsed));
+        const rounded = Math.round(clamped * 100) / 100; // allow decimals (e.g. 0.5), keep sane precision
+
+        // Slider stays minimum 1 even if free text is < 1.
+        const sliderValue = Math.min(500, Math.max(1, Math.round(rounded)));
+
+        setCollateral(rounded);
+        setCollateralSlider(sliderValue);
+        setCollateralText(String(rounded));
+        setIsEditingCollateral(false);
+    };
+
+    const cancelCollateralEdit = () => {
+        setCollateralText(String(collateral));
+        setIsEditingCollateral(false);
+    };
 
 
     // Fetch live orders via Backend Proxy (Filtered for Trading)
@@ -516,9 +580,37 @@ export const HuntTerminal = () => {
                 <div className="mb-6">
                     <div className="flex justify-between items-end mb-2">
                         <label className="text-[10px] font-pixel text-slate-400">3. COMMIT COLLATERAL</label>
-                        <span className="font-mono text-xl text-white tracking-widest">
-                            {collateral} <span className="text-xs text-slate-500">USDC</span>
-                        </span>
+                        {isEditingCollateral ? (
+                            <div className="flex items-end gap-2">
+                                <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={collateralText}
+                                    onChange={(e) => setCollateralText(e.target.value)}
+                                    onBlur={commitCollateral}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') commitCollateral();
+                                        if (e.key === 'Escape') cancelCollateralEdit();
+                                    }}
+                                    autoFocus
+                                    aria-label="Collateral amount in USDC"
+                                    className="w-24 font-mono text-xl text-white tracking-widest text-right bg-black border border-slate-700 px-2 py-1 focus:outline-none focus:border-bit-green"
+                                />
+                                <span className="text-xs text-slate-500 font-mono">USDC</span>
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setCollateralText(String(collateral));
+                                    setIsEditingCollateral(true);
+                                }}
+                                className="font-mono text-xl text-white tracking-widest hover:text-bit-green transition-colors"
+                                aria-label="Edit collateral amount"
+                            >
+                                {collateral} <span className="text-xs text-slate-500">USDC</span>
+                            </button>
+                        )}
                     </div>
 
                     <div className="relative h-12 bg-slate-900 border-2 border-slate-700 flex items-center px-4">
@@ -528,8 +620,13 @@ export const HuntTerminal = () => {
                             min="1"
                             max="500"
                             step="1"
-                            value={collateral}
-                            onChange={(e) => setCollateral(Number(e.target.value))}
+                            value={collateralSlider}
+                            onChange={(e) => {
+                                const next = Number(e.target.value);
+                                setCollateralSlider(next);
+                                setCollateral(next);
+                                if (!isEditingCollateral) setCollateralText(String(next));
+                            }}
                             className="w-full h-2 bg-slate-800 appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-8 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-slate-400"
                         />
                         {/* Background ticks */}
