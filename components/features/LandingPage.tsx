@@ -91,31 +91,38 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
     const addFrame = useAddFrame();
 
     const handleStart = async () => {
-        // Try Base Mini App addFrame
-        try {
-            const result = await addFrame();
-            if (result) {
-                console.log('Base Frame saved:', result.url);
-                if (result.token) {
-                    console.log('Base Notification token:', result.token);
-                }
-            }
-        } catch (e) {
-            console.error("Failed to add Base frame", e);
+        // Optional: Try Base Mini App addFrame (non-blocking)
+        // This is a nice-to-have feature that shouldn't block the main flow
+        if (addFrame && typeof addFrame === 'function') {
+            Promise.resolve()
+                .then(() => addFrame())
+                .then((result) => {
+                    if (result && typeof result === 'object') {
+                        console.log('Base Frame saved:', result);
+                    }
+                })
+                .catch((e) => {
+                    // Silently fail - this is optional
+                    console.warn("Optional: Base frame not available", e);
+                });
         }
 
-        // Try Farcaster addMiniApp
+        // Optional: Try Farcaster addMiniApp (non-blocking)
         if (isSDKLoaded && actions?.addMiniApp) {
-            try {
-                const result = await actions.addMiniApp();
-                if (result.notificationDetails) {
-                    console.log('Farcaster Notification token:', result.notificationDetails.token);
-                }
-            } catch (e) {
-                console.error("Failed to add Farcaster mini app", e);
-            }
+            Promise.resolve()
+                .then(() => actions.addMiniApp())
+                .then((result) => {
+                    if (result && result.notificationDetails) {
+                        console.log('Farcaster Notification token:', result.notificationDetails.token);
+                    }
+                })
+                .catch((e) => {
+                    // Silently fail - this is optional
+                    console.warn("Optional: Farcaster mini app not available", e);
+                });
         }
         
+        // Always proceed to start the game
         onStart();
     };
 
