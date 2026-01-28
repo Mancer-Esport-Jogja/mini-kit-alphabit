@@ -85,26 +85,37 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setMode("ARCADE")}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider relative z-10 font-pixel transition-colors duration-300 ${mode === "ARCADE" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
+                      className={`relative flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider font-pixel transition-colors duration-300 ${mode === "ARCADE" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
                     >
-                      <Gamepad2 size={14} />
-                      ARCADE
+                      {mode === "ARCADE" && (
+                        <motion.div
+                          layoutId="mode-bg"
+                          className="absolute inset-0 bg-white pointer-events-none"
+                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        />
+                      )}
+                      <span className="relative z-10 flex items-center justify-center gap-2">
+                        <Gamepad2 size={14} />
+                        ARCADE
+                      </span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setMode("PRO")}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider relative z-10 font-pixel transition-colors duration-300 ${mode === "PRO" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
+                      className={`relative flex-1 flex items-center justify-center gap-2 py-2 font-bold text-[10px] uppercase tracking-wider font-pixel transition-colors duration-300 ${mode === "PRO" ? "text-black" : "text-slate-500 hover:text-slate-300"}`}
                     >
-                      <TrendingUp size={14} />
-                      PRO
+                      {mode === "PRO" && (
+                        <motion.div
+                          layoutId="mode-bg"
+                          className="absolute inset-0 bg-white pointer-events-none"
+                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        />
+                      )}
+                      <span className="relative z-10 flex items-center justify-center gap-2">
+                        <TrendingUp size={14} />
+                        PRO
+                      </span>
                     </button>
-                    <motion.div
-                      layoutId="mode-bg"
-                      className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white"
-                      initial={false}
-                      animate={{ x: mode === "ARCADE" ? 0 : "100%" }}
-                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    />
                   </div>
 
                   {mode === "ARCADE" ? (
