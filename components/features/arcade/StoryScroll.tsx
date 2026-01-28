@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 
 export const StoryScroll = ({ onComplete }: { onComplete: () => void }) => {
   return (
-    <div className="absolute inset-0 bg-gradient-to-b from-black via-slate-950 to-black z-50 flex items-center justify-center overflow-hidden">
+    <div className="fixed inset-y-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 w-full max-w-md bg-gradient-to-b from-black via-slate-950 to-black z-[100] flex items-center justify-center overflow-hidden border-x border-slate-800/50">
       {/* Animated Starfield Background */}
       <div className="absolute inset-0">
         {[...Array(50)].map((_, i) => (
@@ -52,37 +52,37 @@ export const StoryScroll = ({ onComplete }: { onComplete: () => void }) => {
         }}
       >
         <motion.div
-          initial={{ y: '100%', opacity: 0 }}
-          animate={{ y: '-250%', opacity: 1 }}
-          transition={{ 
-            duration: 20, 
-            ease: "linear",
-            opacity: { duration: 2 }
-          }}
-          onAnimationComplete={onComplete}
-          className="w-full max-w-2xl px-8 pb-20"
-          style={{ 
-            transform: 'rotateX(30deg)',
-            transformStyle: 'preserve-3d',
-            transformOrigin: 'bottom center'
-          }}
-        >
+           initial={{ y: '100%', opacity: 0 }}
+           animate={{ y: '-500%', opacity: 1 }}
+           transition={{ 
+             duration: 65, 
+             ease: "linear",
+             opacity: { duration: 4 }
+           }}
+           onAnimationComplete={onComplete}
+           className="w-full max-w-2xl px-4 pb-60"
+           style={{ 
+             transform: 'rotateX(25deg)',
+             transformStyle: 'preserve-3d',
+             transformOrigin: 'bottom center'
+           }}
+         >
           {/* Episode Header with Glow */}
           <div className="text-center mb-12 space-y-4">
             <motion.div
               animate={{ 
                 textShadow: [
                   '0 0 10px rgba(234, 179, 8, 0.5)',
-                  '0 0 20px rgba(234, 179, 8, 0.8)',
+                  '0 0 25px rgba(234, 179, 8, 0.8)',
                   '0 0 10px rgba(234, 179, 8, 0.5)',
                 ]
               }}
               transition={{ duration: 2, repeat: Infinity }}
-              className="text-5xl md:text-6xl font-black font-pixel text-yellow-400 tracking-widest drop-shadow-[0_0_20px_rgba(234,179,8,0.6)]"
+              className="text-4xl md:text-5xl font-black font-pixel text-yellow-400 tracking-widest drop-shadow-[0_0_30px_rgba(234,179,8,0.7)]"
             >
               EPISODE IV
             </motion.div>
-            <h2 className="text-3xl md:text-4xl font-pixel text-cyan-300 tracking-wider drop-shadow-[0_0_15px_rgba(34,211,238,0.5)]">
+            <h2 className="text-3xl md:text-4xl font-pixel text-cyan-300 tracking-wider drop-shadow-[0_0_20px_rgba(34,211,238,0.6)]">
               A NEW ALPHA
             </h2>
             <div className="h-1 w-32 mx-auto bg-gradient-to-r from-transparent via-yellow-400 to-transparent" />
@@ -90,18 +90,18 @@ export const StoryScroll = ({ onComplete }: { onComplete: () => void }) => {
 
           {/* Story Text with Better Styling */}
           <div className="space-y-8 text-center">
-            <p className="text-lg md:text-xl leading-relaxed text-yellow-100 font-grotesk drop-shadow-lg">
-              It is a time of <span className="text-red-400 font-bold">volatility</span>. 
+            <p className="text-[10px] md:text-xs leading-loose text-yellow-400 font-pixel drop-shadow-[2px_2px_0px_rgba(0,0,0,1)] text-balance uppercase tracking-[0.2em] antialiased [text-rendering:optimizeSpeed]">
+              It is a time of <span className="text-rose-500 font-bold underline decoration-2 underline-offset-4">volatility</span>. 
               Monsters have overtaken the <span className="text-cyan-400">Bit Nebula</span>, 
               causing chaos in the markets.
             </p>
             
-            <p className="text-lg md:text-xl leading-relaxed text-yellow-100 font-grotesk drop-shadow-lg">
-              You are an elite pilot of the <span className="text-yellow-400 font-bold font-pixel">ALPHABIT SQUAD</span>. 
+            <p className="text-[10px] md:text-xs leading-loose text-yellow-400 font-pixel drop-shadow-[2px_2px_0px_rgba(0,0,0,1)] text-balance uppercase tracking-[0.2em] antialiased [text-rendering:optimizeSpeed]">
+              You are an elite pilot of the <span className="text-yellow-200 font-bold">ALPHABIT SQUAD</span>. 
               Your mission: Hunt down the premiums and restore balance to the portfolio.
             </p>
             
-            <p className="text-lg md:text-xl leading-relaxed text-yellow-100 font-grotesk drop-shadow-lg">
+            <p className="text-[10px] md:text-xs leading-loose text-yellow-400 font-pixel drop-shadow-[2px_2px_0px_rgba(0,0,0,1)] text-balance uppercase tracking-[0.2em] antialiased [text-rendering:optimizeSpeed]">
               Choose your ship, lock your target, and <span className="text-emerald-400 font-bold">secure the bag</span>
               ... before the expiry strikes!
             </p>
