@@ -32,9 +32,9 @@ export const Header = () => {
 
     return (
         <div className="flex justify-between items-end p-4 bg-slate-900 border-b-4 border-black sticky top-0 z-20 w-full max-w-md mx-auto">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
                 {/* Brand Icon or User PFP */}
-                <div className="relative">
+                <div className="relative shrink-0">
                     {isAuthenticated && user?.pfpUrl ? (
                         <div className="w-12 h-12 bg-black border-4 border-bit-green overflow-hidden relative">
                             <Image
@@ -53,13 +53,13 @@ export const Header = () => {
                         <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-bit-green border-2 border-black rounded-full shadow-[0_0_8px_rgba(74,222,128,0.6)]"></div>
                     )}
                 </div>
-                <div>
-                    <h2 className="font-bold text-white text-xs mb-1 font-pixel tracking-widest">
+                <div className="min-w-0">
+                    <h2 className="font-bold text-white text-xs mb-1 font-pixel tracking-widest truncate whitespace-nowrap">
                         {isAuthenticated ? user?.username?.toUpperCase() : 'ALPHABIT'}
                     </h2>
-                    <div className="bg-black px-2 py-1 border border-slate-700 flex items-center gap-2">
+                    <div className="bg-black px-2 py-1 border border-slate-700 inline-flex items-center gap-2 w-fit max-w-full">
                         <div className="w-2 h-2 rounded-full animate-pulse bg-green-500"></div>
-                        <span className="text-[8px] text-slate-400 font-mono uppercase">
+                        <span className="text-[8px] text-slate-400 font-mono uppercase whitespace-nowrap">
                             SYSTEM: ONLINE
                         </span>
                     </div>
