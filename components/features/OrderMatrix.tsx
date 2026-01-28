@@ -140,7 +140,7 @@ export const OrderMatrix = ({ isOpen, onClose, orders, onSelect, currentAsset, c
                                 <DollarSign size={10} /> PREMIUM {getSortIcon('premium')}
                             </div>
                             <div onClick={() => handleSort('roi')} className="flex items-center gap-1 cursor-pointer hover:text-slate-300">
-                                <TrendingUp size={10} /> EST. YIELD {getSortIcon('roi')}
+                                <TrendingUp size={10} /> MAX ROI {getSortIcon('roi')}
                             </div>
                             <div className="text-right">ACTION</div>
                         </div>

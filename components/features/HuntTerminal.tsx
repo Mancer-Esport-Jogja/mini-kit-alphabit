@@ -571,7 +571,7 @@ export const HuntTerminal = () => {
 
                         <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 sm:gap-4">
                             <div className="min-w-0 pr-3 sm:pr-4">
-                                <div className="text-[9px] text-slate-500 font-mono mb-1 uppercase">ESTIMATED YIELD</div>
+                                <div className="text-[9px] text-slate-500 font-mono mb-1 uppercase">MAX ROI</div>
                                 <div
                                     className={`font-pixel transition-colors whitespace-normal sm:whitespace-nowrap text-2xl sm:text-[26px] md:text-[28px] leading-tight ${roiEstimate > 0 ? "text-bit-green" : "text-slate-500"}`}
                                 >
