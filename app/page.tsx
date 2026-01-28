@@ -53,7 +53,7 @@ export default function App() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
           >
-            <LandingPage onStart={() => setView("home")} />
+            <LandingPage onStart={() => { setMode("ARCADE"); setView("home"); }} />
           </motion.div>
         ) : (
           <motion.div
