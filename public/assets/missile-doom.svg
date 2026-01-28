@@ -1,0 +1,5 @@
+<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges"><rect x="6" y="4" width="4" height="10" fill="#7c2d12" /><rect x="7" y="3" width="2" height="1" fill="#ef4444" /><path d="M6 12 h-1 v1 h1 z" fill="#f97316" /><path d="M10 12 h1 v1 h-1 z" fill="#f97316" />
+                <rect x="7" y="14" width="2" height="2" fill="#f97316">
+                    <animate attributeName="opacity" values="1;0.4;1" dur="0.1s" repeatCount="indefinite" />
+                    <animate attributeName="height" values="2;3;2" dur="0.15s" repeatCount="indefinite" />
+                </rect></svg>

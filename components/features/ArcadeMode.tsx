@@ -139,22 +139,58 @@ export function ArcadeMode() {
             <div className="h-full flex flex-col items-center justify-center space-y-8 p-8 relative overflow-hidden">
                 <div className="absolute inset-0 bg-[url('/assets/grid-bg.png')] opacity-20 animate-[pulse_4s_infinite]"></div>
                 
+                {/* Decorative HUD Lines */}
+                <div className="absolute top-1/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent" />
+                <div className="absolute bottom-1/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
+
                 <div className="text-center space-y-2 z-10">
-                    <h1 className="text-4xl font-black font-pixel text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-orange-500 drop-shadow-sm">
+                    <motion.h1 
+                        initial={{ y: -20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        className="text-5xl font-black font-pixel text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 via-orange-400 to-orange-600 drop-shadow-[0_0_15px_rgba(234,179,8,0.4)]"
+                    >
                         ALPHA WAR
-                    </h1>
-                    <p className="text-[10px] font-mono text-emerald-400 tracking-[0.2em] animate-pulse">
-                        INSERT COIN TO START
+                    </motion.h1>
+                    <p className="text-[10px] font-mono text-emerald-400 tracking-[0.3em] animate-pulse">
+                        ACCESS TERMINAL :: INSERT COIN
                     </p>
                 </div>
 
-                <div className="relative w-32 h-32 animate-bounce z-10">
-                    <Image src="/assets/fighter-moon.svg" alt="Ship" fill className="object-contain" />
+                {/* Fleet Preview Area */}
+                <div className="relative w-full h-48 flex items-center justify-center z-10">
+                    {/* Ships Formation */}
+                    <div className="flex items-center gap-8">
+                        <motion.div 
+                            initial={{ x: -50, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            transition={{ delay: 0.2 }}
+                            className="relative w-24 h-24 animate-bounce"
+                        >
+                            <Image src="/assets/fighter-moon.svg" alt="Fighter" fill className="object-contain drop-shadow-[0_0_10px_rgba(52,211,153,0.4)]" />
+                            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-[8px] font-pixel text-emerald-400 opacity-60">FIGHTER</div>
+                        </motion.div>
+
+                        <motion.div 
+                            initial={{ x: 50, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            transition={{ delay: 0.4 }}
+                            className="relative w-24 h-24 animate-bounce [animation-delay:0.5s]"
+                        >
+                            <Image src="/assets/bomber-doom.svg" alt="Bomber" fill className="object-contain drop-shadow-[0_0_10px_rgba(251,146,60,0.4)]" />
+                            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-[8px] font-pixel text-orange-400 opacity-60">BOMBER</div>
+                        </motion.div>
+                    </div>
                 </div>
 
-                <ArcadeButton size="lg" onClick={() => setGameState('STORY')} className="z-10 animate-pulse">
-                    START MISSION
-                </ArcadeButton>
+                <div className="space-y-4 w-full max-w-xs z-10">
+                    <ArcadeButton size="lg" onClick={() => setGameState('STORY')} className="animate-pulse">
+                        START MISSION
+                    </ArcadeButton>
+                    <div className="flex justify-between px-2">
+                        <span className="text-[8px] font-pixel text-slate-500">v2.2.0-ARCADE</span>
+                        <span className="text-[8px] font-pixel text-slate-500">BETA_PILOT_ACCESS</span>
+                    </div>
+                </div>
             </div>
         );
     }
@@ -198,10 +234,10 @@ export function ArcadeMode() {
                                     <Image src="/assets/fighter-moon.svg" alt="Fighter" fill className="object-contain group-hover:scale-110 transition-transform" />
                                 </div>
                                 <div className="text-center space-y-1">
-                                    <div className="text-2xl font-black font-pixel bg-gradient-to-r from-emerald-400 via-emerald-300 to-emerald-400 bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]">
+                                    <div className="text-xl font-black font-pixel bg-gradient-to-r from-emerald-400 via-emerald-300 to-emerald-400 bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]">
                                         FIGHTER
                                     </div>
-                                    <div className="text-sm font-pixel text-emerald-400/80">Asset: ETH</div>
+                                    <div className="text-[10px] font-pixel text-emerald-400/80">Asset: ETH</div>
                                     <div className="text-[8px] font-mono text-slate-500 uppercase">Speed • Agile</div>
                                 </div>
                             </motion.button>
@@ -216,10 +252,10 @@ export function ArcadeMode() {
                                     <Image src="/assets/bomber-doom.svg" alt="Bomber" fill className="object-contain group-hover:scale-110 transition-transform" />
                                 </div>
                                 <div className="text-center space-y-1">
-                                    <div className="text-2xl font-black font-pixel bg-gradient-to-r from-orange-400 via-orange-300 to-orange-400 bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(251,146,60,0.5)]">
+                                    <div className="text-xl font-black font-pixel bg-gradient-to-r from-orange-400 via-orange-300 to-orange-400 bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(251,146,60,0.5)]">
                                         BOMBER
                                     </div>
-                                    <div className="text-sm font-pixel text-orange-400/80">Asset: BTC</div>
+                                    <div className="text-[10px] font-pixel text-orange-400/80">Asset: BTC</div>
                                     <div className="text-[8px] font-mono text-slate-500 uppercase">Heavy • Armor</div>
                                 </div>
                             </motion.button>
@@ -284,8 +320,8 @@ export function ArcadeMode() {
                             >
                                 <div className="absolute inset-0 bg-emerald-500/5 group-hover:bg-emerald-500/10 transition-colors" />
                                 <div className="relative z-10 flex flex-col items-center gap-2">
-                                    <div className="p-3 bg-emerald-500 rounded-lg text-black shadow-lg">
-                                        <Rocket size={32} className="rotate-45" />
+                                    <div className="p-2 bg-emerald-500/20 border-2 border-emerald-500/30 rounded-xl text-black shadow-lg relative w-16 h-16">
+                                        <Image src="/assets/missile-moon.svg" alt="Moon Laser" fill className="object-contain p-1" />
                                     </div>
                                     <div className="text-center space-y-1">
                                         <div className="text-2xl font-black font-pixel bg-gradient-to-r from-emerald-400 via-emerald-300 to-emerald-400 bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]">
@@ -303,8 +339,8 @@ export function ArcadeMode() {
                             >
                                 <div className="absolute inset-0 bg-rose-500/5 group-hover:bg-rose-500/10 transition-colors" />
                                 <div className="relative z-10 flex flex-col items-center gap-2">
-                                    <div className="p-3 bg-rose-500 rounded-lg text-black shadow-lg">
-                                        <Rocket size={32} className="rotate-[135deg]" />
+                                    <div className="p-2 bg-rose-500/20 border-2 border-rose-500/30 rounded-xl text-black shadow-lg relative w-16 h-16">
+                                        <Image src="/assets/missile-doom.svg" alt="Doom Missile" fill className="object-contain p-1" />
                                     </div>
                                     <div className="text-center space-y-1">
                                         <div className="text-2xl font-black font-pixel bg-gradient-to-r from-rose-400 via-rose-300 to-rose-400 bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(244,63,94,0.5)]">
