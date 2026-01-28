@@ -9,6 +9,8 @@ import { useThetanutsOrders } from '@/hooks/useThetanutsOrders';
 import { useFillOrder } from '@/hooks/useFillOrder';
 import { useAccount } from 'wagmi';
 import { filterOrdersByDuration } from '@/services/thetanutsApi';
+import { useAuth } from '@/context/AuthContext';
+import { useGamification } from '@/context/GamificationContext';
 
 import { ArcadeButton } from './arcade/ArcadeButton';
 import { StoryScroll } from './arcade/StoryScroll';
@@ -28,6 +30,9 @@ const PLANETS = [
 
 export function ArcadeMode() {
     const { address } = useAccount();
+    const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+    const { completeMission, addXp } = useGamification();
+
     const [gameState, setGameState] = useState<GameState>('INTRO');
     
     // Selection State
@@ -40,7 +45,7 @@ export function ArcadeMode() {
     // Data Hooks
     const { data: orderData } = useThetanutsOrders();
     const orders = orderData?.parsedOrders || [];
-    const { executeFillOrder, isPending, isSuccess, error: txError, reset: resetTx } = useFillOrder();
+    const { executeFillOrder, isPending, isConfirming, isSuccess, error: txError, hash, reset: resetTx } = useFillOrder();
     
     // Result State
     const [lastSuccessOrder, setLastSuccessOrder] = useState<any>(null);
@@ -106,8 +111,14 @@ export function ArcadeMode() {
         
         try {
             await executeFillOrder(order.rawOrder, inputAmount);
+            
+            // Success! 
             setLastSuccessOrder(order);
             setGameState('RESULT');
+
+            // Gamification: Reward the pilot
+            completeMission('first_strike');
+            addXp(100); // Bonus for arcade mission
         } catch (e) {
             console.error(e);
         }
@@ -330,14 +341,23 @@ export function ArcadeMode() {
                             />
                         </div>
 
-                        <ArcadeButton 
-                            size="lg" 
-                            variant="danger" 
-                            onClick={handleLaunch}
-                            className="text-lg animate-pulse"
-                        >
-                            LAUNCH MISSION
-                        </ArcadeButton>
+                        {!isAuthenticated ? (
+                            <div className="space-y-4">
+                                <div className="p-3 bg-red-900/20 border border-red-500/50 text-[10px] font-pixel text-red-400 uppercase">
+                                    {isAuthLoading ? "Synchronizing Comms..." : "Pilot Auth Required"}
+                                </div>
+                                <p className="text-[10px] font-mono text-slate-500">Log in via Header to initiate launch sequence.</p>
+                            </div>
+                        ) : (
+                            <ArcadeButton 
+                                size="lg" 
+                                variant="danger" 
+                                onClick={handleLaunch}
+                                className="text-lg animate-pulse"
+                            >
+                                LAUNCH MISSION
+                            </ArcadeButton>
+                        )}
                         
                         <button onClick={() => setGameState('SELECT_WEAPON')} className="text-[10px] font-pixel text-slate-500 hover:text-white">
                             ABORT SEQUENCE
@@ -352,35 +372,92 @@ export function ArcadeMode() {
                         className="flex-1 p-8 flex flex-col items-center justify-center text-center space-y-6"
                         key="result"
                     >
-                        {isPending ? (
+                        {isPending || isConfirming ? (
                             <div className="space-y-4">
                                 <div className="w-16 h-16 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto" />
-                                <div className="font-pixel text-yellow-400">TRANSMITTING...</div>
+                                <div className="font-pixel text-yellow-400">
+                                    {isPending ? 'TRANSMITTING...' : 'CONFIRMING ON BASE...'}
+                                </div>
+                                <div className="text-[10px] font-mono text-slate-500 animate-pulse uppercase">
+                                    Awaiting stellar synchronization
+                                </div>
                             </div>
                         ) : isSuccess ? (
                             <>
                                 <CheckCircle2 className="w-20 h-20 text-emerald-400 mx-auto" />
                                 <h2 className="text-2xl font-pixel text-white uppercase">Mission Confirmed</h2>
                                 
-                                {lastSuccessOrder && (
-                                    <div className="bg-emerald-900/20 border border-emerald-500/30 p-4 rounded-xl space-y-2 w-full max-w-xs mx-auto animate-in fade-in zoom-in duration-500">
-                                        <div className="flex justify-between items-center text-[10px] font-mono">
-                                            <span className="text-slate-400">TARGET:</span>
-                                            <span className="text-emerald-400 font-bold">{lastSuccessOrder.strikeFormatted}</span>
+                                {lastSuccessOrder && (() => {
+                                    const strikes = lastSuccessOrder.strikes;
+                                    const premium = lastSuccessOrder.premium;
+                                    const isSpread = lastSuccessOrder.isSpread;
+                                    const isCall = lastSuccessOrder.direction === 'CALL';
+                                    const strikeWidth = isSpread ? Math.abs(strikes[1] - strikes[0]) : 0;
+                                    
+                                    let roi = 0;
+                                    if (isSpread) {
+                                        const maxPayout = strikeWidth - premium;
+                                        roi = premium > 0 ? Math.round((maxPayout / premium) * 100) : 0;
+                                    } else {
+                                        if (!isCall) {
+                                            const maxPayout = strikes[0] - premium;
+                                            roi = premium > 0 ? Math.round((maxPayout / premium) * 100) : 0;
+                                        }
+                                    }
+
+                                    return (
+                                        <div className="bg-emerald-900/20 border border-emerald-500/30 p-4 rounded-xl space-y-2 w-full max-w-xs mx-auto animate-in fade-in zoom-in duration-500">
+                                            <div className="flex justify-between items-center text-[10px] font-mono">
+                                                <span className="text-slate-400">TARGET:</span>
+                                                <span className="text-emerald-400 font-bold">${lastSuccessOrder.strikeFormatted}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-[10px] font-mono">
+                                                <span className="text-slate-400">EXPIRY:</span>
+                                                <span className="text-white">{lastSuccessOrder.expiryFormatted}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-[10px] font-mono">
+                                                <span className="text-slate-400">MISSION TYPE:</span>
+                                                <span className="text-emerald-400">{lastSuccessOrder.direction}</span>
+                                            </div>
+                                            {(roi > 0 || !isCall) && (
+                                                <div className="flex justify-between items-center text-[10px] font-mono border-t border-emerald-500/20 pt-2">
+                                                    <span className="text-slate-400">EST. PROFIT POTENTIAL:</span>
+                                                    <span className="text-emerald-400 font-bold">
+                                                        {roi === 0 && isCall ? 'UNLIMITED' : `+${roi}%`}
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="flex justify-between items-center text-[10px] font-mono">
-                                            <span className="text-slate-400">EXPIRY:</span>
-                                            <span className="text-white">{lastSuccessOrder.expiryFormatted}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-[10px] font-mono border-t border-emerald-500/20 pt-2">
-                                            <span className="text-slate-400">TYPE:</span>
-                                            <span className="text-emerald-400">{lastSuccessOrder.direction}</span>
-                                        </div>
-                                    </div>
-                                )}
+                                    );
+                                })()}
 
                                 <p className="text-[10px] font-mono text-slate-400">Orbits synchronized. Position secured.</p>
-                                <ArcadeButton onClick={resetGame}>RETURN TO BASE</ArcadeButton>
+                                
+                                <div className="flex flex-col gap-3 w-full max-w-xs">
+                                    {hash && (
+                                        <a 
+                                            href={`https://basescan.org/tx/${hash}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[9px] font-mono text-emerald-400 hover:text-emerald-300 underline underline-offset-4 decoration-emerald-500/30"
+                                        >
+                                            VIEW TRANSMISSION LOGS
+                                        </a>
+                                    )}
+
+                                    <ArcadeButton 
+                                        onClick={() => {
+                                            const text = `Just secured a ${lastSuccessOrder.direction} mission on ${lastSuccessOrder.asset} via @alphabit! 🚀\n\nTarget: $${lastSuccessOrder.strikeFormatted}\nMode: Arcade 🕹️`;
+                                            window.open(`https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`, '_blank');
+                                        }}
+                                        variant="outline"
+                                        className="text-[10px]"
+                                    >
+                                        SHARE MISSION
+                                    </ArcadeButton>
+
+                                    <ArcadeButton onClick={resetGame}>RETURN TO BASE</ArcadeButton>
+                                </div>
                             </>
                         ) : (
                             <>

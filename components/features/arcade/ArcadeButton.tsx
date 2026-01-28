@@ -2,7 +2,7 @@ import React from "react";
 import { motion, HTMLMotionProps } from "framer-motion";
 
 interface ArcadeButtonProps extends HTMLMotionProps<"button"> {
-  variant?: "primary" | "danger" | "warning";
+  variant?: "primary" | "danger" | "warning" | "outline";
   size?: "sm" | "md" | "lg";
   children: React.ReactNode;
 }
@@ -14,6 +14,7 @@ export const ArcadeButton = ({ variant = "primary", size = "md", className = "",
     primary: "bg-emerald-500 border-b-4 border-emerald-800 text-white shadow-[0_4px_0_#064e3b]",
     danger: "bg-rose-500 border-b-4 border-rose-800 text-white shadow-[0_4px_0_#881337]",
     warning: "bg-yellow-400 border-b-4 border-yellow-700 text-black shadow-[0_4px_0_#a16207]",
+    outline: "bg-transparent border-2 border-white/20 border-b-4 border-slate-700 text-slate-300 hover:text-white hover:border-white shadow-[0_4px_0_#1e293b]",
   };
 
   const sizeStyles = {
