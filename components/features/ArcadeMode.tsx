@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Rocket, AlertTriangle, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import Image from 'next/image';
 
 import { useThetanutsOrders } from '@/hooks/useThetanutsOrders';
@@ -11,6 +11,7 @@ import { useAccount } from 'wagmi';
 import { filterOrdersByDuration } from '@/services/thetanutsApi';
 import { useAuth } from '@/context/AuthContext';
 import { useGamification } from '@/context/GamificationContext';
+import type { ParsedOrder } from '@/types/orders';
 
 import { ArcadeButton } from './arcade/ArcadeButton';
 import { StoryScroll } from './arcade/StoryScroll';
@@ -27,6 +28,12 @@ const PLANETS = [
     { type: 'ICE', name: 'CORE', timeframe: '18H-36H', minHours: 18, maxHours: 36 },
     { type: 'TERRA', name: 'ORBIT', timeframe: '>36H', minHours: 36, maxHours: 9999 },
 ] as const;
+
+type AvailablePlanet = (typeof PLANETS)[number] & {
+    index: number;
+    count: number;
+    isAvailable: boolean;
+};
 
 export function ArcadeMode() {
     const { address } = useAccount();
@@ -48,23 +55,17 @@ export function ArcadeMode() {
     const { executeFillOrder, isPending, isConfirming, isSuccess, error: txError, hash, reset: resetTx } = useFillOrder();
     
     // Result State
-    const [lastSuccessOrder, setLastSuccessOrder] = useState<any>(null);
+    const [lastSuccessOrder, setLastSuccessOrder] = useState<ParsedOrder | null>(null);
 
     // --- HELPER LOGIC ---
     
-    // Filter available ships based on orders
-    const availableShips = ['FIGHTER', 'BOMBER'].filter(ship => {
-        const asset = ship === 'FIGHTER' ? 'ETH' : 'BTC';
-        return orders.some(o => o.asset === asset); // Only show if we have orders
-    });
-
     // Filter planets (expiries) available for selected ship
-    const getAvailablePlanets = () => {
+    const getAvailablePlanets = (): AvailablePlanet[] => {
         if (!selectedShip) return [];
         const asset = selectedShip === 'FIGHTER' ? 'ETH' : 'BTC';
         const shipOrders = orders.filter(o => o.asset === asset);
         
-        return PLANETS.map((p, idx) => {
+        return PLANETS.map((p, idx): AvailablePlanet => {
             // Use real duration filtering logic
             const matchingOrders = filterOrdersByDuration(
                 shipOrders.map(o => o.rawOrder), 
@@ -80,7 +81,7 @@ export function ArcadeMode() {
     };
 
     // Filter orders for the selected configuration
-    const getTargetOrder = () => {
+    const getTargetOrder = (): ParsedOrder | null => {
         if (!selectedShip || selectedPlanetIndex === null || !selectedWeapon) return null;
         
         const asset = selectedShip === 'FIGHTER' ? 'ETH' : 'BTC';
@@ -102,7 +103,7 @@ export function ArcadeMode() {
             Number(curr.order.price) < Number(best.order.price) ? curr : best
         );
 
-        return orders.find(o => o.rawOrder.order.ticker === bestRaw.order.ticker);
+        return orders.find(o => o.rawOrder.order.ticker === bestRaw.order.ticker) ?? null;
     };
 
     const handleLaunch = async () => {
@@ -280,7 +281,7 @@ export function ArcadeMode() {
                                 <PlanetCard 
                                     key={planet.name}
                                     name={planet.name}
-                                    type={planet.type as any}
+                                    type={planet.type}
                                     timeframe={planet.timeframe}
                                     isSelected={selectedPlanetIndex === planet.index}
                                     onClick={() => planet.isAvailable && setSelectedPlanetIndex(planet.index)}
@@ -418,12 +419,14 @@ export function ArcadeMode() {
                                     Awaiting stellar synchronization
                                 </div>
                             </div>
-                        ) : isSuccess ? (
-                            <>
-                                <CheckCircle2 className="w-20 h-20 text-emerald-400 mx-auto" />
-                                <h2 className="text-2xl font-pixel text-white uppercase">Mission Confirmed</h2>
-                                
-                                {lastSuccessOrder && (() => {
+                         ) : isSuccess ? (
+                             <>
+                                 <CheckCircle2 className="w-20 h-20 text-emerald-400 mx-auto" />
+                                 <h2 className="text-2xl font-pixel text-white uppercase">Mission Confirmed</h2>
+                                 
+                                {(() => {
+                                    if (!lastSuccessOrder) return null;
+
                                     const strikes = lastSuccessOrder.strikes;
                                     const premium = lastSuccessOrder.premium;
                                     const isSpread = lastSuccessOrder.isSpread;
@@ -481,16 +484,21 @@ export function ArcadeMode() {
                                         </a>
                                     )}
 
-                                    <ArcadeButton 
-                                        onClick={() => {
-                                            const text = `Just secured a ${lastSuccessOrder.direction} mission on ${lastSuccessOrder.asset} via @alphabit! 🚀\n\nTarget: $${lastSuccessOrder.strikeFormatted}\nMode: Arcade 🕹️`;
-                                            window.open(`https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`, '_blank');
-                                        }}
-                                        variant="outline"
-                                        className="text-[10px]"
-                                    >
-                                        SHARE MISSION
-                                    </ArcadeButton>
+                                    {lastSuccessOrder && (
+                                        <ArcadeButton 
+                                            onClick={() => {
+                                                const order = lastSuccessOrder;
+                                                if (!order) return;
+
+                                                const text = `Just secured a ${order.direction} mission on ${order.asset} via @alphabit! 🚀\n\nTarget: $${order.strikeFormatted}\nMode: Arcade 🕹️`;
+                                                window.open(`https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`, '_blank');
+                                            }}
+                                            variant="outline"
+                                            className="text-[10px]"
+                                        >
+                                            SHARE MISSION
+                                        </ArcadeButton>
+                                    )}
 
                                     <ArcadeButton onClick={resetGame}>RETURN TO BASE</ArcadeButton>
                                 </div>

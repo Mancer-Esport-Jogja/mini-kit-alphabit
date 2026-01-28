@@ -48,7 +48,7 @@ export default function DevConsoleViewer() {
         <div className="text-gray-600 italic text-center mt-10">
           <div className="text-yellow-400 font-bold mb-2">⚠ Console Interception Disabled</div>
           <div className="text-xs">Console interception has been disabled to prevent React lifecycle errors.</div>
-          <div className="text-xs mt-2">Check your browser's native console (F12) for logs.</div>
+          <div className="text-xs mt-2">Check your browser&apos;s native console (F12) for logs.</div>
         </div>
       </div>
     </div>
