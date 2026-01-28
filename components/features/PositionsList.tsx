@@ -172,9 +172,9 @@ export const PositionsList = ({ onOpenHistory }: { onOpenHistory?: () => void })
       <div className="bg-slate-900/80 p-2 border-t border-slate-800 flex justify-center">
         <button 
           onClick={onOpenHistory}
-          className="text-[8px] font-pixel text-slate-500 hover:text-white transition-colors uppercase flex items-center gap-1"
+          className="text-[10px] font-pixel text-slate-300 hover:text-white transition-colors uppercase flex items-center gap-1.5"
         >
-          <ShieldCheck size={8} /> View Analytics & History
+          <ShieldCheck size={12} /> View Analytics & History
         </button>
       </div>
     </div>
