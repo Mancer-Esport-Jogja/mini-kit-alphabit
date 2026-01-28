@@ -2,255 +2,511 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Trophy, Swords } from 'lucide-react';
+import { Rocket, AlertTriangle, ChevronRight, CheckCircle2 } from 'lucide-react';
+import Image from 'next/image';
+
+import { useThetanutsOrders } from '@/hooks/useThetanutsOrders';
+import { useFillOrder } from '@/hooks/useFillOrder';
+import { useAccount } from 'wagmi';
+import { filterOrdersByDuration } from '@/services/thetanutsApi';
+import { useAuth } from '@/context/AuthContext';
+import { useGamification } from '@/context/GamificationContext';
+
+import { ArcadeButton } from './arcade/ArcadeButton';
+import { StoryScroll } from './arcade/StoryScroll';
+import { PlanetCard } from './arcade/PlanetCard';
+
+// --- GAME TYPES ---
+type GameState = 'INTRO' | 'STORY' | 'SELECT_SHIP' | 'SELECT_PLANET' | 'SELECT_WEAPON' | 'ARM_WEAPON' | 'LAUNCH' | 'RESULT';
+type ShipType = 'FIGHTER' | 'BOMBER'; // ETH vs BTC
+type WeaponType = 'LASER' | 'MISSILE'; // Call vs Put
+
+const PLANETS = [
+    { type: 'MAGMA', name: 'BLITZ', timeframe: '2H-9H', minHours: 2, maxHours: 9 },
+    { type: 'GAS', name: 'RUSH', timeframe: '9H-18H', minHours: 9, maxHours: 18 },
+    { type: 'ICE', name: 'CORE', timeframe: '18H-36H', minHours: 18, maxHours: 36 },
+    { type: 'TERRA', name: 'ORBIT', timeframe: '>36H', minHours: 36, maxHours: 9999 },
+] as const;
 
 export function ArcadeMode() {
-    const [gameState, setGameState] = useState<'IDLE' | 'CHARGING' | 'CLASH' | 'VICTORY'>('IDLE');
-    const [power, setPower] = useState(50);
-    const [side, setSide] = useState<'BULL' | 'BEAR' | null>(null);
+    const { address } = useAccount();
+    const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+    const { completeMission, addXp } = useGamification();
 
-    // --- HANDLERS ---
-    const handleCharge = () => {
-        if (gameState !== 'IDLE') return;
-        setGameState('CHARGING');
+    const [gameState, setGameState] = useState<GameState>('INTRO');
+    
+    // Selection State
+    const [selectedShip, setSelectedShip] = useState<ShipType | null>(null);
+    const [selectedPlanetIndex, setSelectedPlanetIndex] = useState<number | null>(null); 
+    const [selectedWeapon, setSelectedWeapon] = useState<WeaponType | null>(null);
+
+    const [inputAmount, setInputAmount] = useState<string>('50');
+
+    // Data Hooks
+    const { data: orderData } = useThetanutsOrders();
+    const orders = orderData?.parsedOrders || [];
+    const { executeFillOrder, isPending, isConfirming, isSuccess, error: txError, hash, reset: resetTx } = useFillOrder();
+    
+    // Result State
+    const [lastSuccessOrder, setLastSuccessOrder] = useState<any>(null);
+
+    // --- HELPER LOGIC ---
+    
+    // Filter available ships based on orders
+    const availableShips = ['FIGHTER', 'BOMBER'].filter(ship => {
+        const asset = ship === 'FIGHTER' ? 'ETH' : 'BTC';
+        return orders.some(o => o.asset === asset); // Only show if we have orders
+    });
+
+    // Filter planets (expiries) available for selected ship
+    const getAvailablePlanets = () => {
+        if (!selectedShip) return [];
+        const asset = selectedShip === 'FIGHTER' ? 'ETH' : 'BTC';
+        const shipOrders = orders.filter(o => o.asset === asset);
+        
+        return PLANETS.map((p, idx) => {
+            // Use real duration filtering logic
+            const matchingOrders = filterOrdersByDuration(
+                shipOrders.map(o => o.rawOrder), 
+                p.name as 'BLITZ' | 'RUSH' | 'CORE' | 'ORBIT'
+            );
+            return { 
+                ...p, 
+                index: idx, 
+                count: matchingOrders.length,
+                isAvailable: matchingOrders.length > 0 
+            };
+        }); 
     };
 
-    const handlePush = () => {
-        setGameState('CLASH');
-        // Simulate result
-        setTimeout(() => {
-            setGameState('VICTORY');
-        }, 2500);
+    // Filter orders for the selected configuration
+    const getTargetOrder = () => {
+        if (!selectedShip || selectedPlanetIndex === null || !selectedWeapon) return null;
+        
+        const asset = selectedShip === 'FIGHTER' ? 'ETH' : 'BTC';
+        const isCall = selectedWeapon === 'LASER';
+        const planet = PLANETS[selectedPlanetIndex];
+        
+        const shipOrders = orders.filter(o => o.asset === asset && (o.direction === 'CALL') === isCall);
+        
+        // Find best order matching criteria (Asset + Direction + Duration)
+        const durationOrders = filterOrdersByDuration(
+            shipOrders.map(o => o.rawOrder), 
+            planet.name as 'BLITZ' | 'RUSH' | 'CORE' | 'ORBIT'
+        );
+
+        if (durationOrders.length === 0) return null;
+
+        // Find the one in our parsed list to return ParsedOrder type
+        const bestRaw = durationOrders.reduce((best, curr) => 
+            Number(curr.order.price) < Number(best.order.price) ? curr : best
+        );
+
+        return orders.find(o => o.rawOrder.order.ticker === bestRaw.order.ticker);
     };
 
-    const reset = () => {
-        setGameState('IDLE');
-        setSide(null);
-        setPower(50);
+    const handleLaunch = async () => {
+        const order = getTargetOrder();
+        if (!order) return;
+        
+        try {
+            await executeFillOrder(order.rawOrder, inputAmount);
+            
+            // Success! 
+            setLastSuccessOrder(order);
+            setGameState('RESULT');
+
+            // Gamification: Reward the pilot
+            completeMission('first_strike');
+            addXp(100); // Bonus for arcade mission
+        } catch (e) {
+            console.error(e);
+        }
     };
+
+    const resetGame = () => {
+        setGameState('INTRO');
+        setSelectedShip(null);
+        setSelectedPlanetIndex(null);
+        setSelectedWeapon(null);
+        resetTx();
+    };
+
+    // --- RENDERERS ---
+
+    if (gameState === 'INTRO') {
+        return (
+            <div className="h-full flex flex-col items-center justify-center space-y-8 p-8 relative overflow-hidden">
+                <div className="absolute inset-0 bg-[url('/assets/grid-bg.png')] opacity-20 animate-[pulse_4s_infinite]"></div>
+                
+                {/* Decorative HUD Lines */}
+                <div className="absolute top-1/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent" />
+                <div className="absolute bottom-1/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
+
+                <div className="text-center space-y-2 z-10">
+                    <motion.h1 
+                        initial={{ y: -20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        className="text-5xl font-black font-pixel text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 via-orange-400 to-orange-600 drop-shadow-[0_0_15px_rgba(234,179,8,0.4)]"
+                    >
+                        ALPHA WAR
+                    </motion.h1>
+                    <p className="text-[10px] font-mono text-emerald-400 tracking-[0.3em] animate-pulse">
+                        ACCESS TERMINAL :: INSERT COIN
+                    </p>
+                </div>
+
+                {/* Fleet Preview Area */}
+                <div className="relative w-full h-48 flex items-center justify-center z-10">
+                    {/* Ships Formation */}
+                    <div className="flex items-center gap-8">
+                        <motion.div 
+                            initial={{ x: -50, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            transition={{ delay: 0.2 }}
+                            className="relative w-24 h-24 animate-bounce"
+                        >
+                            <Image src="/assets/fighter-moon.svg" alt="Fighter" fill className="object-contain drop-shadow-[0_0_10px_rgba(52,211,153,0.4)]" />
+                            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-[8px] font-pixel text-emerald-400 opacity-60">FIGHTER</div>
+                        </motion.div>
+
+                        <motion.div 
+                            initial={{ x: 50, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            transition={{ delay: 0.4 }}
+                            className="relative w-24 h-24 animate-bounce [animation-delay:0.5s]"
+                        >
+                            <Image src="/assets/bomber-doom.svg" alt="Bomber" fill className="object-contain drop-shadow-[0_0_10px_rgba(251,146,60,0.4)]" />
+                            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-[8px] font-pixel text-orange-400 opacity-60">BOMBER</div>
+                        </motion.div>
+                    </div>
+                </div>
+
+                <div className="space-y-4 w-full max-w-xs z-10">
+                    <ArcadeButton size="lg" onClick={() => setGameState('STORY')} className="animate-pulse">
+                        START MISSION
+                    </ArcadeButton>
+                    <div className="flex justify-between px-2">
+                        <span className="text-[8px] font-pixel text-slate-500">v2.2.0-ARCADE</span>
+                        <span className="text-[8px] font-pixel text-slate-500">BETA_PILOT_ACCESS</span>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (gameState === 'STORY') {
+        return <StoryScroll onComplete={() => setGameState('SELECT_SHIP')} />;
+    }
 
     return (
-        <div className="min-h-[600px] bg-[#0f0f16] font-sans text-white overflow-hidden relative selection:bg-indigo-500/30 rounded-xl border-4 border-slate-700">
-
-            {/* 1. AMBIENT BACKGROUND (Lava Lamp Blob) */}
-            <div className="absolute inset-0 z-0 overflow-hidden">
-                <div className="absolute top-[-20%] left-[-20%] w-[800px] h-[800px] bg-indigo-600/20 rounded-full blur-[120px] animate-pulse"></div>
-                <div className="absolute bottom-[-20%] right-[-20%] w-[600px] h-[600px] bg-rose-600/20 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
-
-                {/* Grid overlay */}
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-            </div>
-
-            {/* 2. HEADER (Bento Style) */}
-            <div className="relative z-20 p-6 pt-8">
-                <div className="flex justify-between items-center">
-                    {/* Profile Pill */}
-                    <motion.div
-                        whileTap={{ scale: 0.95 }}
-                        className="flex items-center gap-3 bg-white/10 backdrop-blur-md rounded-full pl-2 pr-4 py-2 border border-white/10 shadow-xl"
-                    >
-                        <div className="w-10 h-10 bg-gradient-to-tr from-yellow-400 to-orange-500 rounded-full border-2 border-white/50 flex items-center justify-center text-xl shadow-inner">
-                            🦁
-                        </div>
-                        <div>
-                            <div className="text-[10px] text-white/60 font-bold tracking-wider">LEVEL 5</div>
-                            <div className="text-sm font-bold">KING_ALPHA</div>
-                        </div>
-                    </motion.div>
-
-                    {/* Beast Streak */}
-                    <motion.div
-                        animate={{ scale: [1, 1.1, 1] }}
-                        transition={{ repeat: Infinity, duration: 2 }}
-                        className="relative"
-                    >
-                        <div className="absolute inset-0 bg-orange-500 blur-xl opacity-50"></div>
-                        <div className="relative bg-gradient-to-br from-orange-500 to-red-600 w-12 h-12 rounded-2xl rotate-3 flex items-center justify-center text-2xl shadow-lg border-2 border-white/20">
-                            🔥
-                            <div className="absolute -bottom-2 -right-2 bg-white text-black text-xs font-black px-1.5 rounded-md shadow-sm">
-                                x7
-                            </div>
-                        </div>
-                    </motion.div>
+        <div className="h-full flex flex-col relative overflow-hidden">
+            {/* Header / HUD */}
+            <div className="flex justify-between items-center p-4 bg-black/40 border-b border-white/10 z-20">
+                <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${address ? 'bg-emerald-500' : 'bg-red-500'} animate-pulse`} />
+                    <span className="text-[10px] font-pixel text-slate-400">
+                        {address ? `PILOT: ${address.slice(0, 4)}...${address.slice(-4)}` : 'OFFLINE'}
+                    </span>
                 </div>
+                <div className="text-[10px] font-pixel text-yellow-400">CREDITS: ∞</div>
             </div>
 
-            {/* 3. MAIN ARENA (The Brawl) */}
-            <div className="relative z-10 flex-1 h-[60vh] flex flex-col items-center justify-center">
-
-                {/* THE PRICE BALL ORB */}
-                <motion.div
-                    className="w-32 h-32 rounded-full relative z-10"
-                    animate={gameState === 'CLASH' ? {
-                        x: [0, -10, 10, -10, 10, 500], // Shake then fly off
-                        scale: [1, 0.9, 1.1, 0.5]
-                    } : {
-                        y: [0, -20, 0] // Idle hover
-                    }}
-                    transition={gameState === 'CLASH' ? { duration: 2, times: [0, 0.1, 0.2, 0.3, 0.4, 1] } : { repeat: Infinity, duration: 4, ease: "easeInOut" }}
-                >
-                    {/* Core */}
-                    <div className="absolute inset-0 rounded-full bg-white shadow-[0_0_50px_rgba(255,255,255,0.8)]"></div>
-                    {/* Aura */}
-                    <div className="absolute -inset-4 rounded-full bg-indigo-500/50 blur-xl animate-pulse"></div>
-                </motion.div>
-
-
-                {/* CHARACTERS (Sumo Wrestlers) */}
-                <div className="absolute inset-x-0 flex justify-between px-4 items-center top-1/2 -translate-y-1/2">
-
-                    {/* BULL (Player) */}
-                    <motion.div
-                        animate={gameState === 'CLASH' ? { x: 100, scale: 1.2 } : { x: 0, scale: 1 }}
-                        className={`relative transition-all duration-500 ${side === 'BULL' ? 'opacity-100 scale-110' : 'opacity-60'}`}
+            <AnimatePresence mode="wait">
+                
+                {/* 1. SELECT SHIP */}
+                {gameState === 'SELECT_SHIP' && (
+                    <motion.div 
+                        initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+                        className="flex-1 p-6 flex flex-col items-center justify-center space-y-8"
+                        key="ship"
                     >
-                        <div className="w-32 h-32 bg-emerald-500/20 rounded-3xl backdrop-blur-sm border-2 border-emerald-500/50 flex items-center justify-center transform -rotate-6">
-                            <span className="text-6xl filter drop-shadow-[0_10px_0_rgba(0,0,0,0.5)]">🐂</span>
-                        </div>
-                        {side === 'BULL' && (
-                            <motion.div
-                                layoutId="indicator"
-                                className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-emerald-400 font-black tracking-widest text-xs bg-emerald-900/50 px-3 py-1 rounded-full border border-emerald-500/50"
-                            >
-                                YOU
-                            </motion.div>
-                        )}
-                    </motion.div>
-
-                    {/* BEAR (Enemy) */}
-                    <motion.div
-                        animate={gameState === 'CLASH' ? { x: 400, opacity: 0, rotate: 90 } : { x: 0 }}
-                        className={`relative transition-all duration-500 ${side === 'BEAR' ? 'opacity-100 scale-110' : 'opacity-60'}`}
-                    >
-                        <div className="w-32 h-32 bg-rose-500/20 rounded-3xl backdrop-blur-sm border-2 border-rose-500/50 flex items-center justify-center transform rotate-6">
-                            <span className="text-6xl filter drop-shadow-[0_10px_0_rgba(0,0,0,0.5)]">🐻</span>
-                        </div>
-                        {side === 'BEAR' && (
-                            <motion.div
-                                layoutId="indicator"
-                                className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-rose-400 font-black tracking-widest text-xs bg-rose-900/50 px-3 py-1 rounded-full border border-rose-500/50"
-                            >
-                                YOU
-                            </motion.div>
-                        )}
-                    </motion.div>
-
-                </div>
-
-                {/* VS TEXT */}
-                {gameState === 'IDLE' && (
-                    <div className="absolute font-black text-6xl text-white/5 italic opacity-50 z-0">
-                        BRAWL
-                    </div>
-                )}
-            </div>
-
-            {/* 4. CONTROLS (BottomSheet) */}
-            <motion.div
-                initial={{ y: 100 }}
-                animate={{ y: 0 }}
-                className="absolute bottom-0 inset-x-0 bg-white/5 backdrop-blur-xl border-t border-white/10 rounded-t-[3rem] p-8 pb-10 z-30"
-            >
-
-                <AnimatePresence mode='wait'>
-                    {gameState === 'IDLE' && (
-                        <motion.div
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="space-y-6"
-                        >
-                            <div className="text-center space-y-2">
-                                <h2 className="text-2xl font-black text-white">PICK YOUR FIGHTER</h2>
-                                <p className="text-white/40 text-sm">Who will push the price?</p>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <motion.button
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => { setSide('BULL'); handleCharge(); }}
-                                    className="h-32 bg-gradient-to-b from-emerald-500 to-emerald-700 rounded-3xl border-b-8 border-emerald-900 shadow-2xl flex flex-col items-center justify-center gap-2 group"
-                                >
-                                    <Shield size={32} className="text-white/80 group-hover:scale-110 transition-transform" />
-                                    <span className="font-black text-xl text-white">BULL</span>
-                                </motion.button>
-
-                                <motion.button
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => { setSide('BEAR'); handleCharge(); }}
-                                    className="h-32 bg-gradient-to-b from-rose-500 to-rose-700 rounded-3xl border-b-8 border-rose-900 shadow-2xl flex flex-col items-center justify-center gap-2 group"
-                                >
-                                    <Swords size={32} className="text-white/80 group-hover:scale-110 transition-transform" />
-                                    <span className="font-black text-xl text-white">BEAR</span>
-                                </motion.button>
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {gameState === 'CHARGING' && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                            className="space-y-8"
-                        >
-                            {/* Slider */}
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center text-sm font-bold tracking-widest">
-                                    <span className="text-white/40">POWER (USDC)</span>
-                                    <span className="text-white text-xl">{power}</span>
-                                </div>
-                                <input
-                                    type="range"
-                                    value={power} onChange={(e) => setPower(Number(e.target.value))}
-                                    className="w-full h-8 bg-white/10 rounded-full appearance-none cursor-pointer overflow-hidden accent-white"
-                                />
-                            </div>
-
-                            {/* BIG BUTTON */}
+                        <h2 className="text-xl font-pixel text-white text-center">CHOOSE YOUR SHIP</h2>
+                        
+                        <div className="grid grid-cols-2 gap-4 w-full">
                             <motion.button
-                                whileTap={{ scale: 0.9 }}
-                                onClick={handlePush}
-                                className={`w-full py-6 rounded-3xl font-black text-2xl tracking-widest text-white shadow-[0_0_40px_rgba(255,255,255,0.3)] border-b-8 active:border-b-0 active:translate-y-2 transition-all
-                        ${side === 'BULL' ? 'bg-emerald-500 border-emerald-800' : 'bg-rose-500 border-rose-800'}`}
+                                whileTap={{ scale: 0.95 }}
+                                whileHover={{ scale: 1.05 }}
+                                onClick={() => { setSelectedShip('FIGHTER'); setGameState('SELECT_PLANET'); }}
+                                className="group relative bg-slate-800/50 border-2 border-slate-700 hover:border-emerald-500 rounded-xl p-4 flex flex-col items-center gap-3 transition-all duration-300"
                             >
-                                {side === 'BULL' ? 'PUSH UP!' : 'SMASH DOWN!'}
+                                <div className="w-20 h-20 relative">
+                                    <Image src="/assets/fighter-moon.svg" alt="Fighter" fill className="object-contain group-hover:scale-110 transition-transform" />
+                                </div>
+                                <div className="text-center space-y-1">
+                                    <div className="text-xl font-black font-pixel bg-gradient-to-r from-emerald-400 via-emerald-300 to-emerald-400 bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]">
+                                        FIGHTER
+                                    </div>
+                                    <div className="text-[10px] font-pixel text-emerald-400/80">Asset: ETH</div>
+                                    <div className="text-[8px] font-mono text-slate-500 uppercase">Speed • Agile</div>
+                                </div>
                             </motion.button>
-                        </motion.div>
-                    )}
 
-                    {gameState === 'VICTORY' && (
-                        <motion.div
-                            initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                            className="text-center space-y-6"
-                        >
-                            <Trophy size={64} className="text-yellow-400 mx-auto animate-bounce" />
-                            <div>
-                                <h2 className="text-3xl font-black text-white italic">KNOCKOUT!</h2>
-                                <p className="text-white/60">Balance updated.</p>
-                            </div>
+                            <motion.button
+                                whileTap={{ scale: 0.95 }}
+                                whileHover={{ scale: 1.05 }}
+                                onClick={() => { setSelectedShip('BOMBER'); setGameState('SELECT_PLANET'); }}
+                                className="group relative bg-slate-800/50 border-2 border-slate-700 hover:border-orange-500 rounded-xl p-4 flex flex-col items-center gap-3 transition-all duration-300"
+                            >
+                                <div className="w-20 h-20 relative">
+                                    <Image src="/assets/bomber-doom.svg" alt="Bomber" fill className="object-contain group-hover:scale-110 transition-transform" />
+                                </div>
+                                <div className="text-center space-y-1">
+                                    <div className="text-xl font-black font-pixel bg-gradient-to-r from-orange-400 via-orange-300 to-orange-400 bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(251,146,60,0.5)]">
+                                        BOMBER
+                                    </div>
+                                    <div className="text-[10px] font-pixel text-orange-400/80">Asset: BTC</div>
+                                    <div className="text-[8px] font-mono text-slate-500 uppercase">Heavy • Armor</div>
+                                </div>
+                            </motion.button>
+                        </div>
+                    </motion.div>
+                )}
 
-                            <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex justify-between items-center">
-                                <span className="text-white/50 text-sm font-bold">REWARD</span>
-                                <span className="text-2xl font-black text-emerald-400">+${(power * 1.8).toFixed(0)}</span>
-                            </div>
+                {/* 2. SELECT PLANET (EXPIRY) */}
+                {gameState === 'SELECT_PLANET' && (
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+                        className="flex-1 p-6 flex flex-col space-y-6"
+                        key="planet"
+                    >
+                        <div className="text-center">
+                            <h2 className="text-lg font-pixel text-white mb-1">TARGET SECTOR</h2>
+                            <p className="text-[10px] font-mono text-slate-400">Where are the monsters hiding?</p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 p-2 overflow-visible">
+                            {getAvailablePlanets().map((planet) => (
+                                <PlanetCard 
+                                    key={planet.name}
+                                    name={planet.name}
+                                    type={planet.type as any}
+                                    timeframe={planet.timeframe}
+                                    isSelected={selectedPlanetIndex === planet.index}
+                                    onClick={() => planet.isAvailable && setSelectedPlanetIndex(planet.index)}
+                                />
+                            ))}
+                        </div>
+
+                        <div className="mt-auto">
+                            <ArcadeButton 
+                                size="lg" 
+                                disabled={selectedPlanetIndex === null}
+                                onClick={() => setGameState('SELECT_WEAPON')}
+                                className={selectedPlanetIndex === null ? 'opacity-50 grayscale' : ''}
+                            >
+                                LOCK COORDINATES
+                            </ArcadeButton>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* 3. SELECT WEAPON (STRATEGY) */}
+                {gameState === 'SELECT_WEAPON' && (
+                    <motion.div 
+                        initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+                        className="flex-1 p-6 flex flex-col space-y-8"
+                        key="weapon"
+                    >
+                        <div className="text-center">
+                            <h2 className="text-lg font-pixel text-white">SELECT WEAPON</h2>
+                            <p className="text-[10px] font-mono text-slate-400">Predict the market trajectory</p>
+                        </div>
+
+                        <div className="space-y-4">
+                            <button
+                                onClick={() => { setSelectedWeapon('LASER'); setGameState('ARM_WEAPON'); }}
+                                className="w-full bg-gradient-to-r from-emerald-900/40 to-emerald-800/40 border-2 border-emerald-500/50 p-6 rounded-xl flex flex-col items-center gap-3 hover:from-emerald-900/60 hover:to-emerald-800/60 transition-all duration-300 group relative overflow-hidden"
+                            >
+                                <div className="absolute inset-0 bg-emerald-500/5 group-hover:bg-emerald-500/10 transition-colors" />
+                                <div className="relative z-10 flex flex-col items-center gap-2">
+                                    <div className="p-2 bg-emerald-500/20 border-2 border-emerald-500/30 rounded-xl text-black shadow-lg relative w-16 h-16">
+                                        <Image src="/assets/missile-moon.svg" alt="Moon Laser" fill className="object-contain p-1" />
+                                    </div>
+                                    <div className="text-center space-y-1">
+                                        <div className="text-2xl font-black font-pixel bg-gradient-to-r from-emerald-400 via-emerald-300 to-emerald-400 bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]">
+                                            MOON LASER
+                                        </div>
+                                        <div className="text-sm font-pixel text-emerald-400/80">Strategy: CALL</div>
+                                        <div className="text-[10px] font-mono text-slate-400">Long • Bullish</div>
+                                    </div>
+                                </div>
+                            </button>
 
                             <button
-                                onClick={reset}
-                                className="w-full py-4 bg-white text-black font-black rounded-2xl hover:bg-gray-200"
+                                onClick={() => { setSelectedWeapon('MISSILE'); setGameState('ARM_WEAPON'); }}
+                                className="w-full bg-gradient-to-r from-rose-900/40 to-rose-800/40 border-2 border-rose-500/50 p-6 rounded-xl flex flex-col items-center gap-3 hover:from-rose-900/60 hover:to-rose-800/60 transition-all duration-300 group relative overflow-hidden"
                             >
-                                PLAY AGAIN
+                                <div className="absolute inset-0 bg-rose-500/5 group-hover:bg-rose-500/10 transition-colors" />
+                                <div className="relative z-10 flex flex-col items-center gap-2">
+                                    <div className="p-2 bg-rose-500/20 border-2 border-rose-500/30 rounded-xl text-black shadow-lg relative w-16 h-16">
+                                        <Image src="/assets/missile-doom.svg" alt="Doom Missile" fill className="object-contain p-1" />
+                                    </div>
+                                    <div className="text-center space-y-1">
+                                        <div className="text-2xl font-black font-pixel bg-gradient-to-r from-rose-400 via-rose-300 to-rose-400 bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(244,63,94,0.5)]">
+                                            DOOM MISSILE
+                                        </div>
+                                        <div className="text-sm font-pixel text-rose-400/80">Strategy: PUT</div>
+                                        <div className="text-[10px] font-mono text-slate-400">Long • Bearish</div>
+                                    </div>
+                                </div>
                             </button>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                        </div>
+                    </motion.div>
+                )}
 
-            </motion.div>
+                {/* 4. ARM WEAPON (AMOUNT) + LAUNCH */}
+                {gameState === 'ARM_WEAPON' && (
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                        className="flex-1 p-6 flex flex-col justify-center space-y-8 text-center"
+                        key="arm"
+                    >
+                        <div className="space-y-2">
+                            <AlertTriangle className="w-8 h-8 text-yellow-400 mx-auto animate-pulse" />
+                            <h2 className="text-xl font-pixel text-white">ARMING SEQUENCE</h2>
+                        </div>
 
-            {/* 5. PARTICLES (Simulated) */}
-            {gameState === 'CLASH' && (
-                <div className="absolute inset-0 pointer-events-none z-50 flex items-center justify-center">
-                    <div className="w-[150vw] h-[50px] bg-white absolute rotate-45 animate-ping opacity-20"></div>
-                    <div className="w-[150vw] h-[50px] bg-white absolute -rotate-45 animate-ping opacity-20"></div>
-                </div>
-            )}
+                        <div className="bg-slate-800 border-2 border-slate-600 p-6 rounded-2xl">
+                            <label className="text-[10px] font-mono text-slate-400 mb-2 block uppercase">Payload Size (USDC)</label>
+                            <input 
+                                type="number" 
+                                value={inputAmount}
+                                onChange={(e) => setInputAmount(e.target.value)}
+                                className="w-full bg-black border-none text-center text-3xl font-pixel text-white py-2 focus:ring-0"
+                            />
+                        </div>
 
+                        {!isAuthenticated ? (
+                            <div className="space-y-4">
+                                <div className="p-3 bg-red-900/20 border border-red-500/50 text-[10px] font-pixel text-red-400 uppercase">
+                                    {isAuthLoading ? "Synchronizing Comms..." : "Pilot Auth Required"}
+                                </div>
+                                <p className="text-[10px] font-mono text-slate-500">Log in via Header to initiate launch sequence.</p>
+                            </div>
+                        ) : (
+                            <ArcadeButton 
+                                size="lg" 
+                                variant="danger" 
+                                onClick={handleLaunch}
+                                className="text-lg animate-pulse"
+                            >
+                                LAUNCH MISSION
+                            </ArcadeButton>
+                        )}
+                        
+                        <button onClick={() => setGameState('SELECT_WEAPON')} className="text-[10px] font-pixel text-slate-500 hover:text-white">
+                            ABORT SEQUENCE
+                        </button>
+                    </motion.div>
+                )}
+
+                {/* 5. RESULT */}
+                {gameState === 'RESULT' && (
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+                        className="flex-1 p-8 flex flex-col items-center justify-center text-center space-y-6"
+                        key="result"
+                    >
+                        {isPending || isConfirming ? (
+                            <div className="space-y-4">
+                                <div className="w-16 h-16 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto" />
+                                <div className="font-pixel text-yellow-400">
+                                    {isPending ? 'TRANSMITTING...' : 'CONFIRMING ON BASE...'}
+                                </div>
+                                <div className="text-[10px] font-mono text-slate-500 animate-pulse uppercase">
+                                    Awaiting stellar synchronization
+                                </div>
+                            </div>
+                        ) : isSuccess ? (
+                            <>
+                                <CheckCircle2 className="w-20 h-20 text-emerald-400 mx-auto" />
+                                <h2 className="text-2xl font-pixel text-white uppercase">Mission Confirmed</h2>
+                                
+                                {lastSuccessOrder && (() => {
+                                    const strikes = lastSuccessOrder.strikes;
+                                    const premium = lastSuccessOrder.premium;
+                                    const isSpread = lastSuccessOrder.isSpread;
+                                    const isCall = lastSuccessOrder.direction === 'CALL';
+                                    const strikeWidth = isSpread ? Math.abs(strikes[1] - strikes[0]) : 0;
+                                    
+                                    let roi = 0;
+                                    if (isSpread) {
+                                        const maxPayout = strikeWidth - premium;
+                                        roi = premium > 0 ? Math.round((maxPayout / premium) * 100) : 0;
+                                    } else {
+                                        if (!isCall) {
+                                            const maxPayout = strikes[0] - premium;
+                                            roi = premium > 0 ? Math.round((maxPayout / premium) * 100) : 0;
+                                        }
+                                    }
+
+                                    return (
+                                        <div className="bg-emerald-900/20 border border-emerald-500/30 p-4 rounded-xl space-y-2 w-full max-w-xs mx-auto animate-in fade-in zoom-in duration-500">
+                                            <div className="flex justify-between items-center text-[10px] font-mono">
+                                                <span className="text-slate-400">TARGET:</span>
+                                                <span className="text-emerald-400 font-bold">${lastSuccessOrder.strikeFormatted}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-[10px] font-mono">
+                                                <span className="text-slate-400">EXPIRY:</span>
+                                                <span className="text-white">{lastSuccessOrder.expiryFormatted}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-[10px] font-mono">
+                                                <span className="text-slate-400">MISSION TYPE:</span>
+                                                <span className="text-emerald-400">{lastSuccessOrder.direction}</span>
+                                            </div>
+                                            {(roi > 0 || !isCall) && (
+                                                <div className="flex justify-between items-center text-[10px] font-mono border-t border-emerald-500/20 pt-2">
+                                                    <span className="text-slate-400">EST. PROFIT POTENTIAL:</span>
+                                                    <span className="text-emerald-400 font-bold">
+                                                        {roi === 0 && isCall ? 'UNLIMITED' : `+${roi}%`}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+
+                                <p className="text-[10px] font-mono text-slate-400">Orbits synchronized. Position secured.</p>
+                                
+                                <div className="flex flex-col gap-3 w-full max-w-xs">
+                                    {hash && (
+                                        <a 
+                                            href={`https://basescan.org/tx/${hash}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[9px] font-mono text-emerald-400 hover:text-emerald-300 underline underline-offset-4 decoration-emerald-500/30"
+                                        >
+                                            VIEW TRANSMISSION LOGS
+                                        </a>
+                                    )}
+
+                                    <ArcadeButton 
+                                        onClick={() => {
+                                            const text = `Just secured a ${lastSuccessOrder.direction} mission on ${lastSuccessOrder.asset} via @alphabit! 🚀\n\nTarget: $${lastSuccessOrder.strikeFormatted}\nMode: Arcade 🕹️`;
+                                            window.open(`https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`, '_blank');
+                                        }}
+                                        variant="outline"
+                                        className="text-[10px]"
+                                    >
+                                        SHARE MISSION
+                                    </ArcadeButton>
+
+                                    <ArcadeButton onClick={resetGame}>RETURN TO BASE</ArcadeButton>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <AlertTriangle className="w-20 h-20 text-rose-500 mx-auto" />
+                                <h2 className="text-xl font-pixel text-white">LAUNCH FAILURE</h2>
+                                <p className="text-xs font-mono text-slate-400">{txError?.message || "Signal lost."}</p>
+                                <ArcadeButton variant="warning" onClick={() => setGameState('ARM_WEAPON')}>RETRY</ArcadeButton>
+                            </>
+                        )}
+                    </motion.div>
+                )}
+
+            </AnimatePresence>
         </div>
     );
 }
