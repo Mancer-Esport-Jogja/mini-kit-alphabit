@@ -2,15 +2,16 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown, Info, AlertTriangle, Clock, Flame } from "lucide-react";
+import { TrendingUp, TrendingDown, AlertTriangle, Clock, Flame } from "lucide-react";
 // import { TutorialOverlay } from "@/components/ui/TutorialOverlay"; // REMOVED: Replaced by Droid Tour
 import { useThetanutsOrders } from "@/hooks/useThetanutsOrders";
+import { TacticalDroid } from '@/components/features/TacticalDroid';
 import { useAuth } from "@/context/AuthContext";
 import { useOraclePrice, type ChartInterval } from "@/hooks/useOraclePrice";
-import { TacticalDroid } from "./TacticalDroid";
 import { MissionControl } from "@/components/gamification/MissionControl";
 import { useGamification } from "@/context/GamificationContext";
 import { LevelBadge } from "@/components/gamification/LevelBadge"; // Import Badge
+import { useDroid } from "@/context/DroidContext";
 import { BuyModal } from "./BuyModal";
 import { OrderMatrix } from "./OrderMatrix";
 import { filterOrdersByDuration, getBestOrder, parseOrder } from "@/services/thetanutsApi";
@@ -20,7 +21,10 @@ import { ParsedOrder } from "@/types/orders";
 export const HuntTerminal = () => {
     // Auth State
     const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
-    const { completeMission, addXp, level, streak, rankTitle, checkStreak } = useGamification(); // Gamification Hook
+    const { completeMission, level, streak, rankTitle, checkStreak } = useGamification(); // Gamification Hook
+
+    const { isOnboarding, completeOnboarding, tradeIntent, clearTradeIntent } = useDroid(); // Droid Context for Tutorial Control
+
 
     // Mission State
     const [collateral, setCollateral] = useState(50);
@@ -28,15 +32,17 @@ export const HuntTerminal = () => {
     const [selectedDuration, setSelectedDuration] = useState<'BLITZ' | 'RUSH' | 'CORE' | 'ORBIT'>('BLITZ');
     const [selectedAsset, setSelectedAsset] = useState<'ETH' | 'BTC'>('ETH');
     const [chartInterval, setChartInterval] = useState<ChartInterval>('5m');
+    const [tutorialStep, setTutorialStep] = useState(0);
 
-    // Tutorial State (AI Guided)
-    const [tutorialStep, setTutorialStep] = useState(0); // 0 = Off
+
 
     // UI State
     const [showMissions, setShowMissions] = useState(false);
     const [showBuyModal, setShowBuyModal] = useState(false);
     const [showOrderMatrix, setShowOrderMatrix] = useState(false);
     const [manualOrder, setManualOrder] = useState<ParsedOrder | null>(null);
+
+
 
     // Tenderly Testing (Dev Mode Only
     // const { mintUSDC, isTestnet } = useTenderlyMint();
@@ -46,17 +52,23 @@ export const HuntTerminal = () => {
     // 1. Complete "Daily Login" on mount & check streak
     useEffect(() => {
         checkStreak();
-    }, [checkStreak]);
-
-    // 2. Unlock "Bootcamp" when tutorial finishes
-    useEffect(() => {
-        if (tutorialStep === 4) {
-            const timer = setTimeout(() => {
-                addXp(200);
-            }, 3000);
-            return () => clearTimeout(timer);
+        // If user is new (isOnboarding from context is true), start tutorial
+        if (isOnboarding) {
+            setTutorialStep(1);
         }
-    }, [tutorialStep, addXp]);
+    }, [checkStreak, isOnboarding]);
+
+    const handleNextTutorial = () => {
+        if (tutorialStep < 7) {
+             setTutorialStep(prev => prev + 1);
+        } else {
+             // Tutorial Complete
+             setTutorialStep(0);
+             completeOnboarding('SAFE', 'SHORT'); // Set default safe/short or handle via chat later
+        }
+    };
+
+
 
     // 3. Complete "First Strike" when target selected
     useEffect(() => {
@@ -77,36 +89,79 @@ export const HuntTerminal = () => {
         // duration: selectedDuration, // We fetch ALL orders now and filter locally to support Matrix
     });
 
-    // Fetch Sentinel Data for AI (Unfiltered by target to see full picture)
-    const { data: sentimentData } = useThetanutsOrders({
-        asset: selectedAsset,
-        autoRefresh: false // Don't double poll too aggressively
-    });
+    // Handle Global Trade Intent (from Chat) - Moved here to access orderData
+    useEffect(() => {
+        if (tradeIntent) {
+            // 1. Asset Mismatch Check: If asset is different, switch and WAIT for re-fetch
+            // This prevents running the search logic against stale (ETH) data when we want BTC
+            if (tradeIntent.asset !== selectedAsset) {
+                setSelectedAsset(tradeIntent.asset);
+                setSelectedDuration(tradeIntent.duration);
+                setSelectedTarget(tradeIntent.target);
+                return; // Return early and wait for next render/fetch
+            }
 
-    // Calculate Market Stats for AI
+            // 2. Only proceed if we have data and it matches our intent (implicit via selectedAsset)
+            if (orderData?.parsedOrders) {
+                // Ensure UI is synced (e.g. duration/target might need update even if asset matches)
+                setSelectedDuration(tradeIntent.duration);
+                setSelectedTarget(tradeIntent.target);
+
+                // Try to find the best matching order
+                let matchedOrder: ParsedOrder | null = null;
+    
+                // 1. Filter by Direction/Target (Strict)
+                const directionCandidates = orderData.parsedOrders.filter(o => {
+                     const isCall = tradeIntent.target === 'MOON';
+                     // Loose match because API might return PUT or PUT_SPREAD
+                     return isCall ? o.direction === 'CALL' : o.direction.includes('PUT');
+                });
+    
+                // 2. Try Strike Match (If provided)
+                if (tradeIntent.strike && directionCandidates.length > 0) {
+                     const targetStrike = tradeIntent.strike;
+                     matchedOrder = directionCandidates.reduce((prev, curr) => {
+                         const prevDiff = Math.abs(prev.strikes[0] - targetStrike);
+                         const currDiff = Math.abs(curr.strikes[0] - targetStrike);
+                         return currDiff < prevDiff ? curr : prev;
+                     });
+                }
+    
+                // 3. Fallback: Use Best Available (Standard Sorting) if no strike match was found
+                // This ensures we always open the modal with SOMETHING if the direction is valid
+                if (!matchedOrder && directionCandidates.length > 0) {
+                     // Sort by ROI (lowest premium) or simply take the first one as a fallback
+                     matchedOrder = directionCandidates.reduce((best, current) => current.premium < best.premium ? current : best);
+                }
+                
+                // Set the manual order to force the specific trade
+                setManualOrder(matchedOrder);
+                
+                // Open Modal & Clear Intent
+                setTimeout(() => {
+                    if (matchedOrder) setShowBuyModal(true);
+                    clearTradeIntent(); 
+                }, 100);
+            }
+        }
+    }, [tradeIntent, clearTradeIntent, orderData?.parsedOrders, selectedAsset]);
+
+
     const droidStats = useMemo(() => {
-        if (!sentimentData?.stats) return { callVolume: 0, putVolume: 0, spreadSize: 0 };
-
-        // Calculate max spread to detect volatility
-        let maxSpread = 0;
-        if (sentimentData.parsedOrders?.length > 0) {
-            const spreads = sentimentData.parsedOrders
-                .filter(o => o.strikes.length >= 2)
-                .map(o => Math.abs(o.strikes[1] - o.strikes[0]));
-            if (spreads.length > 0) maxSpread = Math.max(...spreads);
+        if (!orderData?.stats) {
+            return {
+                callVolume: 0,
+                putVolume: 0,
+                spreadSize: 0
+            };
         }
-
-        // Gamification: "Market Recon" mission - if viewing charts/data
-        if (sentimentData.stats.total > 0) {
-            // completeMission('market_watch'); // This would trigger too often. Real app needs a timer.
-        }
-
         return {
-            callVolume: sentimentData.stats.calls,
-            putVolume: sentimentData.stats.puts,
-            spreadSize: maxSpread
+            callVolume: orderData.stats.calls,
+            putVolume: orderData.stats.puts,
+            spreadSize: orderData.stats.spreads
         };
-    }, [sentimentData]); // removed completeMission from deps to avoid loops
+    }, [orderData]);
+
 
     // Calculate Best Order (Priority: Manual > Duration Filtered)
     const bestOrder = useMemo(() => {
@@ -134,12 +189,81 @@ export const HuntTerminal = () => {
         { id: '1d' as ChartInterval, label: '1D' },
     ];
 
-    // Oracle Realtime Price for Chart
-    const { currentPrice, priceHistory, priceChange, isConnected, isLoading: isChartLoading } = useOraclePrice({
-        symbol: `${selectedAsset}USDT`,
+    // Oracle Realtime Price for Chart (ETH)
+    const { 
+        currentPrice: ethPrice, 
+        priceHistory: ethHistory, 
+        priceChange: ethChange, 
+        isConnected: isEthConnected, 
+        isLoading: isEthLoading 
+    } = useOraclePrice({
+        symbol: 'ETHUSDT',
         interval: chartInterval,
         limit: 50
     });
+
+    // Oracle Realtime Price for Chart (BTC)
+    const { 
+        currentPrice: btcPrice, 
+        priceHistory: btcHistory, 
+        priceChange: btcChange, 
+        isConnected: isBtcConnected, 
+        isLoading: isBtcLoading 
+    } = useOraclePrice({
+        symbol: 'BTCUSDT',
+        interval: chartInterval,
+        limit: 50
+    });
+
+    // Derived stats for the currently selected asset (for UI display)
+    const currentPrice = selectedAsset === 'ETH' ? ethPrice : btcPrice;
+    const priceHistory = selectedAsset === 'ETH' ? ethHistory : btcHistory;
+    const priceChange = selectedAsset === 'ETH' ? ethChange : btcChange;
+    const isConnected = selectedAsset === 'ETH' ? isEthConnected : isBtcConnected;
+    const isChartLoading = selectedAsset === 'ETH' ? isEthLoading : isBtcLoading;
+
+    // --- SYNC TO DROID CONTEXT ---
+    const { updateMarketData } = useDroid();
+    
+    // Sync ETH Data
+    useEffect(() => {
+        if (ethPrice && ethHistory.length > 0) {
+            let sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = 'NEUTRAL';
+            if (ethChange > 0.5) sentiment = 'BULLISH';
+            if (ethChange < -0.5) sentiment = 'BEARISH';
+
+            updateMarketData({
+                currentPrice: ethPrice,
+                priceChange: ethChange,
+                volume24h: 0,
+                callVolume: 0, // TODO: Fetch specifically for ETH if we have stats
+                putVolume: 0,
+                sentiment,
+                priceHistory: ethHistory.map(p => p.price),
+                asset: 'ETH'
+            });
+        }
+    }, [ethPrice, ethChange, ethHistory, updateMarketData]);
+
+    // Sync BTC Data
+    useEffect(() => {
+        if (btcPrice && btcHistory.length > 0) {
+            let sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = 'NEUTRAL';
+            if (btcChange > 0.5) sentiment = 'BULLISH';
+            if (btcChange < -0.5) sentiment = 'BEARISH';
+
+            updateMarketData({
+                currentPrice: btcPrice,
+                priceChange: btcChange,
+                volume24h: 0,
+                callVolume: 0, 
+                putVolume: 0,
+                sentiment,
+                priceHistory: btcHistory.map(p => p.price),
+                asset: 'BTC'
+            });
+        }
+    }, [btcPrice, btcChange, btcHistory, updateMarketData]);
 
     // Generate SVG path from price history
     const { chartPath, priceIndicators } = useMemo(() => {
@@ -219,10 +343,7 @@ export const HuntTerminal = () => {
         setManualOrder(null); // Reset manual on target change
     };
 
-    // Tutorial Handler
-    const handleNextTutorial = () => {
-        setTutorialStep(prev => prev >= 4 ? 0 : prev + 1);
-    };
+
 
     const durations = [
         { id: 'BLITZ', label: 'BLITZ', time: '2H-9H', color: 'text-yellow-400', border: 'border-yellow-400', info: 'Optimistic UI. 2h-9h Expiry.' },
@@ -236,7 +357,7 @@ export const HuntTerminal = () => {
             {/* GAMIFICATION OVERLAY (Integrated) */}
             <MissionControl isOpen={showMissions} onClose={() => setShowMissions(false)} />
 
-            {/* AI TACTICAL DROID - Now with Tutorial Props */}
+            {/* AI TACTICAL DROID - Now Global Drawer */}
             <TacticalDroid
                 marketStats={droidStats}
                 tutorialStep={tutorialStep}
@@ -291,13 +412,7 @@ export const HuntTerminal = () => {
                     </button>
 
                     {/* Help Button */}
-                    <button
-                        onClick={() => setTutorialStep(1)} // Start Tour
-                        className="bg-slate-700 p-1.5 rounded hover:bg-slate-600 transition-colors border border-slate-600"
-                        title="Start Tutorial"
-                    >
-                        <Info size={14} className="text-yellow-500" />
-                    </button>
+
                 </div>
             </div>
 
@@ -331,7 +446,11 @@ export const HuntTerminal = () => {
                             backgroundSize: '16px 16px'
                         }}></div>
 
-                        {/* Loading State */}
+
+
+
+
+            {/* Mission Toast */}
                         {(isChartLoading || isOrdersLoading) && priceHistory.length === 0 && (
                             <div className="absolute inset-0 z-10 bg-black/90 flex items-center justify-center gap-2">
                                 <div className="w-3 h-3 bg-bit-green animate-ping"></div>

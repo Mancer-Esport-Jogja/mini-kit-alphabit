@@ -5,6 +5,7 @@ import { minikitConfig } from "@/minikit.config";
 import { RootProvider } from "./rootProvider";
 import "./globals.css";
 import DevConsoleViewer from "@/components/DevConsoleViewer";
+import { DroidDrawer } from "@/components/droid/DroidDrawer";
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -81,6 +82,9 @@ export default function RootLayout({
       <body className={`${inter.variable} ${pressStart2P.variable} ${spaceGrotesk.variable}`}>
         <RootProvider>
           {children}
+          <div className="z-[100] relative">
+            <DroidDrawer />
+          </div>
           <DevConsoleViewer />
         </RootProvider>
       </body>

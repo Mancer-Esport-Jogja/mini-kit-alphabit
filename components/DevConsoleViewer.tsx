@@ -62,14 +62,17 @@ export default function DevConsoleViewer() {
          return String(arg);
       });
 
-      setLogs((prev) => [
-        ...prev,
-        {
-          timestamp: new Date().toISOString().split("T")[1].slice(0, -1),
-          type,
-          messages: processedArgs,
-        },
-      ]);
+      // Defer state update to avoid "useInsertionEffect must not schedule updates" error
+      // when console logs occur during critical render phases (e.g. Radix UI or Emotion warnings)
+      const logEntry: LogEntry = {
+        timestamp: new Date().toISOString().split("T")[1].slice(0, -1),
+        type,
+        messages: processedArgs,
+      };
+
+      setTimeout(() => {
+        setLogs((prev) => [...prev, logEntry]);
+      }, 0);
     };
 
     console.log = (...args) => {

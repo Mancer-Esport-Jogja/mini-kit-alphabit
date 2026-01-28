@@ -12,6 +12,7 @@ import { GamificationProvider } from "@/context/GamificationContext";
 import sdk from "@farcaster/miniapp-sdk";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { useCallback } from "react";
+import { DroidProvider } from "@/context/DroidContext";
 
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -27,7 +28,8 @@ function UserStatusGuard({ children }: { children: ReactNode }) {
     if (!isAuthenticated || !user) return;
 
     // Check status
-    if (user.status === 'INACTIVE') {
+    // Skip redirect in development mode for easier testing
+    if (user.status === 'INACTIVE' && process.env.NODE_ENV !== 'development') {
        if (pathname !== '/coming-soon') {
          router.push('/coming-soon');
        }
@@ -56,30 +58,32 @@ export function RootProvider({ children }: { children: ReactNode }) {
         <MiniAppProvider>
           <AuthProvider>
             <GamificationProvider>
-            <OnchainKitProvider
-                apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
-                chain={base}
-                miniKit={{
-                  enabled: true,
-                }}
-                config={{
-                  appearance: {
-                    mode: "dark",
-                    theme: "hacker",
-                  },
-                  wallet: {
-                    display: "modal",
-                    preference: "all",
-                  },
-                }}
-              >
-                {!isReady && <LoadingScreen onLoadingComplete={handleLoadingComplete} />}
-                <div style={{ display: isReady ? 'block' : 'none' }}>
-                  <UserStatusGuard>
-                    {children}
-                  </UserStatusGuard>
-                </div>
-              </OnchainKitProvider>
+              <DroidProvider>
+                <OnchainKitProvider
+                    apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
+                    chain={base}
+                    miniKit={{
+                      enabled: true,
+                    }}
+                    config={{
+                      appearance: {
+                        mode: "dark",
+                        theme: "hacker",
+                      },
+                      wallet: {
+                        display: "modal",
+                        preference: "all",
+                      },
+                    }}
+                  >
+                    {!isReady && <LoadingScreen onLoadingComplete={handleLoadingComplete} />}
+                    <div style={{ display: isReady ? 'block' : 'none' }}>
+                      <UserStatusGuard>
+                        {children}
+                      </UserStatusGuard>
+                    </div>
+                  </OnchainKitProvider>
+              </DroidProvider>
             </GamificationProvider>
           </AuthProvider>
         </MiniAppProvider>
