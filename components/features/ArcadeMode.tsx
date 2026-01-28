@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { useThetanutsOrders } from '@/hooks/useThetanutsOrders';
 import { useFillOrder } from '@/hooks/useFillOrder';
 import { useAccount } from 'wagmi';
+import { filterOrdersByDuration } from '@/services/thetanutsApi';
 
 import { ArcadeButton } from './arcade/ArcadeButton';
 import { StoryScroll } from './arcade/StoryScroll';
@@ -37,9 +38,12 @@ export function ArcadeMode() {
     const [inputAmount, setInputAmount] = useState<string>('50');
 
     // Data Hooks
-    const { data } = useThetanutsOrders();
-    const orders = data?.parsedOrders || [];
+    const { data: orderData } = useThetanutsOrders();
+    const orders = orderData?.parsedOrders || [];
     const { executeFillOrder, isPending, isSuccess, error: txError, reset: resetTx } = useFillOrder();
+    
+    // Result State
+    const [lastSuccessOrder, setLastSuccessOrder] = useState<any>(null);
 
     // --- HELPER LOGIC ---
     
@@ -55,9 +59,19 @@ export function ArcadeMode() {
         const asset = selectedShip === 'FIGHTER' ? 'ETH' : 'BTC';
         const shipOrders = orders.filter(o => o.asset === asset);
         
-        // Return planets that have matching orders
-        // This logic is simplified; real mapping would check expiry dates
-        return PLANETS.map((p, idx) => ({ ...p, index: idx, count: shipOrders.length })); 
+        return PLANETS.map((p, idx) => {
+            // Use real duration filtering logic
+            const matchingOrders = filterOrdersByDuration(
+                shipOrders.map(o => o.rawOrder), 
+                p.name as 'BLITZ' | 'RUSH' | 'CORE' | 'ORBIT'
+            );
+            return { 
+                ...p, 
+                index: idx, 
+                count: matchingOrders.length,
+                isAvailable: matchingOrders.length > 0 
+            };
+        }); 
     };
 
     // Filter orders for the selected configuration
@@ -66,13 +80,24 @@ export function ArcadeMode() {
         
         const asset = selectedShip === 'FIGHTER' ? 'ETH' : 'BTC';
         const isCall = selectedWeapon === 'LASER';
+        const planet = PLANETS[selectedPlanetIndex];
         
-        // Find best order matching criteria (Asset + Direction + "Planet Duration")
-        // Simplified: Just picking first available valid order for demo
-        return orders.find((o) => 
-            o.asset === asset && 
-            (o.direction === 'CALL') === isCall
+        const shipOrders = orders.filter(o => o.asset === asset && (o.direction === 'CALL') === isCall);
+        
+        // Find best order matching criteria (Asset + Direction + Duration)
+        const durationOrders = filterOrdersByDuration(
+            shipOrders.map(o => o.rawOrder), 
+            planet.name as 'BLITZ' | 'RUSH' | 'CORE' | 'ORBIT'
         );
+
+        if (durationOrders.length === 0) return null;
+
+        // Find the one in our parsed list to return ParsedOrder type
+        const bestRaw = durationOrders.reduce((best, curr) => 
+            Number(curr.order.price) < Number(best.order.price) ? curr : best
+        );
+
+        return orders.find(o => o.rawOrder.order.ticker === bestRaw.order.ticker);
     };
 
     const handleLaunch = async () => {
@@ -81,6 +106,7 @@ export function ArcadeMode() {
         
         try {
             await executeFillOrder(order.rawOrder, inputAmount);
+            setLastSuccessOrder(order);
             setGameState('RESULT');
         } catch (e) {
             console.error(e);
@@ -203,14 +229,14 @@ export function ArcadeMode() {
                         </div>
 
                         <div className="grid grid-cols-2 gap-4 p-2 overflow-visible">
-                            {PLANETS.map((planet, idx) => (
+                            {getAvailablePlanets().map((planet) => (
                                 <PlanetCard 
                                     key={planet.name}
                                     name={planet.name}
                                     type={planet.type as any}
                                     timeframe={planet.timeframe}
-                                    isSelected={selectedPlanetIndex === idx}
-                                    onClick={() => setSelectedPlanetIndex(idx)}
+                                    isSelected={selectedPlanetIndex === planet.index}
+                                    onClick={() => planet.isAvailable && setSelectedPlanetIndex(planet.index)}
                                 />
                             ))}
                         </div>
@@ -334,8 +360,26 @@ export function ArcadeMode() {
                         ) : isSuccess ? (
                             <>
                                 <CheckCircle2 className="w-20 h-20 text-emerald-400 mx-auto" />
-                                <h2 className="text-2xl font-pixel text-white">MISSION CONFIRMED</h2>
-                                <p className="text-xs font-mono text-slate-400">Orbits synchronized. Target locked.</p>
+                                <h2 className="text-2xl font-pixel text-white uppercase">Mission Confirmed</h2>
+                                
+                                {lastSuccessOrder && (
+                                    <div className="bg-emerald-900/20 border border-emerald-500/30 p-4 rounded-xl space-y-2 w-full max-w-xs mx-auto animate-in fade-in zoom-in duration-500">
+                                        <div className="flex justify-between items-center text-[10px] font-mono">
+                                            <span className="text-slate-400">TARGET:</span>
+                                            <span className="text-emerald-400 font-bold">{lastSuccessOrder.strikeFormatted}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[10px] font-mono">
+                                            <span className="text-slate-400">EXPIRY:</span>
+                                            <span className="text-white">{lastSuccessOrder.expiryFormatted}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[10px] font-mono border-t border-emerald-500/20 pt-2">
+                                            <span className="text-slate-400">TYPE:</span>
+                                            <span className="text-emerald-400">{lastSuccessOrder.direction}</span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <p className="text-[10px] font-mono text-slate-400">Orbits synchronized. Position secured.</p>
                                 <ArcadeButton onClick={resetGame}>RETURN TO BASE</ArcadeButton>
                             </>
                         ) : (
