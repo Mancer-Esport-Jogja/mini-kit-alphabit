@@ -108,12 +108,12 @@ export const OrderMatrix = ({ isOpen, onClose, orders, onSelect, currentAsset, c
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm">
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center px-2 sm:px-4 bg-black/80 backdrop-blur-sm pt-16 sm:pt-0">
                     <motion.div
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.9, opacity: 0 }}
-                        className="w-full max-w-2xl bg-slate-900 border-4 border-slate-700 shadow-[20px_20px_0px_0px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-[80vh]"
+                        className="w-[95%] md:w-full max-w-2xl bg-slate-900 border-4 border-slate-700 shadow-[20px_20px_0px_0px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-[85vh] sm:max-h-[80vh]"
                     >
                         {/* Header */}
                         <div className="bg-slate-800 p-3 border-b-4 border-slate-700 flex justify-between items-center">
