@@ -23,6 +23,7 @@ export const minikitConfig = {
     description: "Alphabit is the easiest way to trade options on Farcaster. Trade calls and puts with ease.",
     screenshotUrls: [`${ROOT_URL}/hero.png`],
     iconUrl: `${ROOT_URL}/logo-alphabit.png`,
+    imageUrl: `${ROOT_URL}/logo-alphabit.png`,
     splashImageUrl: `${ROOT_URL}/logo-alphabit.png`,
     splashBackgroundColor: "#000000",
     homeUrl: ROOT_URL,
