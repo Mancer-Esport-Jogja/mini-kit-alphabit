@@ -20,7 +20,7 @@ export const PnLChart = ({ data, height = 120, color = "#4ade80" }: PnLChartProp
   const { points, min, max, firstDate, lastDate, lastValue, chartData, margin } = useMemo(() => {
     if (!data.length) return { points: "", min: 0, max: 0, firstDate: "", lastDate: "", lastValue: 0, chartData: [] };
 
-    const margin = 20;
+    const margin = 30;
     const chartHeight = height - margin * 2;
     const chartWidth = 300; 
 
@@ -134,7 +134,7 @@ export const PnLChart = ({ data, height = 120, color = "#4ade80" }: PnLChartProp
             animate={{ opacity: 1 }}
             transition={{ duration: 1 }}
             fill="url(#chartGradient)"
-            points={`${points} 300,${height - (margin || 20)} 0,${height - (margin || 20)}`}
+            points={`${points} 300,${height - (margin || 30)} 0,${height - (margin || 30)}`}
           />
 
           {/* Line */}
