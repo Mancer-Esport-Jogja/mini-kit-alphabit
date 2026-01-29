@@ -8,7 +8,7 @@ import Image from 'next/image';
 import { useThetanutsOrders } from '@/hooks/useThetanutsOrders';
 import { useFillOrder } from '@/hooks/useFillOrder';
 import { useAccount } from 'wagmi';
-import { filterOrdersByDuration } from '@/services/thetanutsApi';
+import { filterOrdersByDuration, filterHuntOrders, parseOrder } from '@/services/thetanutsApi';
 import { useAuth } from '@/context/AuthContext';
 import { useGamification } from '@/context/GamificationContext';
 import type { ParsedOrder } from '@/types/orders';
@@ -51,7 +51,14 @@ export function ArcadeMode() {
 
     // Data Hooks
     const { data: orderData } = useThetanutsOrders();
-    const orders = orderData?.parsedOrders || [];
+    
+    // Strict Safety Filter: Ensure we only show orders where User can BUY (isLong: false)
+    // This mirrors the logic in HuntTerminal
+    const orders = React.useMemo(() => {
+        if (!orderData?.orders) return [];
+        const safeRawOrders = filterHuntOrders(orderData.orders);
+        return safeRawOrders.map(parseOrder);
+    }, [orderData?.orders]);
     const { executeFillOrder, isPending, isConfirming, isSuccess, error: txError, hash, reset: resetTx } = useFillOrder();
     
     // Result State

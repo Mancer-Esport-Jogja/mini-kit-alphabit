@@ -179,8 +179,11 @@ export function filterHuntOrders(
     // Only include orders that are not expired
     if (o.order.orderExpiryTimestamp <= Date.now() / 1000) return false;
 
-    // Strict: Only BUY orders (isLong = true)
-    if (!o.order.isLong) return false;
+    // Strict: User wants to BUY (Long)
+    // In the Order Book, Makers (MMs) are SELLING (Short).
+    // So the Maker's signed order has isLong: false.
+    // If we want to Buy, we look for orders where Maker is Short.
+    if (o.order.isLong) return false;
 
     // Only vanilla options and spreads (1-2 strikes)
     if (o.order.strikes.length > 3) return false;
