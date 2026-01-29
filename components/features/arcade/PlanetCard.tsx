@@ -27,10 +27,10 @@ export const PlanetCard = ({ name, timeframe, type, isSelected, isAvailable = tr
       whileTap={isAvailable ? { scale: 0.95 } : {}}
       whileHover={isAvailable ? { scale: 1.02 } : {}}
       animate={isSelected ? { scale: 1.05, borderColor: "#10b981" } : { scale: 1, borderColor: "rgba(255,255,255,0.1)" }}
-      className={`relative flex flex-col items-center justify-center p-4 border-2 rounded-xl backdrop-blur-sm transition-all duration-300 cursor-pointer group ${
-        !isAvailable ? "opacity-40 grayscale cursor-not-allowed bg-black/60" :
-        isSelected ? "bg-emerald-900/20 shadow-[0_0_20px_rgba(16,185,129,0.3)]" : 
-        "bg-black/40 hover:bg-white/5"
+      className={`relative flex flex-col items-center justify-center p-4 border-2 rounded-xl backdrop-blur-sm transition-all duration-300 cursor-pointer group overflow-hidden ${
+        !isAvailable ? "opacity-60 border-slate-800 bg-slate-900/40" :
+        isSelected ? "bg-emerald-900/20 shadow-[0_0_20px_rgba(16,185,129,0.3)] border-emerald-500" : 
+        "bg-black/40 hover:bg-white/5 border-slate-700"
       }`}
     >
       <div className={`w-16 h-16 relative mb-2 ${isAvailable ? "animate-[spin_20s_linear_infinite]" : ""}`}>
@@ -47,7 +47,7 @@ export const PlanetCard = ({ name, timeframe, type, isSelected, isAvailable = tr
         <div className={`text-[10px] font-mono px-2 py-1 rounded border ${
             isAvailable ? "text-emerald-400 bg-emerald-900/30 border-emerald-800" : "text-slate-500 bg-slate-900/30 border-slate-800"
         }`}>
-          {isAvailable ? timeframe : "OFFLINE"}
+          {isAvailable ? timeframe : "0 TARGETS"}
         </div>
       </div>
 
@@ -58,9 +58,15 @@ export const PlanetCard = ({ name, timeframe, type, isSelected, isAvailable = tr
       )}
 
       {!isAvailable && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-xl pointer-events-none">
-            <div className="font-pixel text-[8px] text-red-500/80 bg-black/80 px-2 py-1 border border-red-500/30">NO SIGNAL</div>
-        </div>
+        <>
+            <div className="absolute inset-0 bg-[url('/assets/grid-bg.png')] opacity-10 pointer-events-none" />
+            <div className="absolute inset-0 flex items-center justify-center rounded-xl">
+                <div className="font-pixel text-[8px] text-slate-400 bg-black/90 px-3 py-1.5 border border-slate-700 shadow-xl tracking-widest flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                    SECTOR EMPTY
+                </div>
+            </div>
+        </>
       )}
     </motion.div>
   );

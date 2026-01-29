@@ -195,7 +195,7 @@ export const PortfolioView = ({ onBack }: PortfolioViewProps) => {
                     </div>
                 ) : (
                   history.map((pos: Position, i: number) => {
-                    const isCall = pos.optionType === 257;
+                    const isCall = pos.optionType === 256;
                     
                     // Calculate PNL with proper decimal normalization
                     const decimals = pos.collateralDecimals || 6;

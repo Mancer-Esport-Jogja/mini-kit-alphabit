@@ -68,6 +68,83 @@ function calculateNumContracts(usdcAmount: bigint, price: bigint): bigint {
     return BigInt(Math.floor(numberOfContracts * 1e6));
 }
 
+/**
+ * Calculate the maximum USDC amount a user can spend on this order
+ * based on the Maker's available collateral.
+ */
+export function calculateMaxSpend(order: SignedOrder['order']): number {
+    const collateral = order.collateral.toLowerCase();
+    const usdc = THETANUTS_CONTRACTS.TOKENS.USDC.toLowerCase();
+    const isUsdcCollateral = collateral === usdc;
+
+    const maxCollateral = BigInt(order.maxCollateralUsable);
+    const price = BigInt(order.price); // 8 decimals
+    const strikes = order.strikes.map(s => BigInt(s)); // 8 decimals
+
+    let maxContracts = 0n; // Scaled 1e6
+
+    if (isUsdcCollateral) {
+        // MAKER IS SHORT PUT (or Spread)
+        // Collateral locked = Contracts * (StrikeDiff or Strike)
+        let collateralPerContract = 0n;
+
+        if (strikes.length === 1) {
+            // Vanilla Put: Collateral = Strike
+            // Strike is 8 decimals. Collateral is 6 decimals (USDC).
+            // We need to match scales.
+            // Collateral (Units) = Contracts * Strike (Price).
+            // 7500 USDC = C * 3000 USDC.
+            // 7500e6 = C_units * 3000e8 ? No.
+            // Standard: 1 Contract (1e6 units) locks 1 Token * Strike.
+            // If Strike=3000 (3000*1e8).
+            // Collateral Required = 1 * 3000 * 1e6 = 3000e6.
+            // So CollatReq = Strike / 100.
+
+            // Formula: CollatReq = Strike / 100 (Convert 8 dec to 6 dec)
+            collateralPerContract = strikes[0] / 100n;
+        } else if (strikes.length === 2) {
+            // Put Spread: Collateral = HigherStrike - LowerStrike
+            const diff = strikes[1] > strikes[0] ? strikes[1] - strikes[0] : strikes[0] - strikes[1];
+            collateralPerContract = diff / 100n;
+        } else {
+            // Butterfly/Condor - Conservative estimate or assume Strike1
+            collateralPerContract = strikes[0] / 100n;
+        }
+
+        if (collateralPerContract === 0n) return 0; // Avoid div by zero
+        // maxContracts (1e6) = (maxCollateral / collatPerContract) * 1e6
+        maxContracts = (maxCollateral * 1000000n) / collateralPerContract;
+
+    } else {
+        // MAKER IS SHORT CALL (Asset Collateral)
+        // Collateral locked = Contracts * 1 Asset (usually)
+        // maxCollateral is in Asset Units.
+        // If ETH (18 dec). Contract (6 dec).
+        // 1 Contract (1e6) -> 1 ETH (1e18).
+        // scale = 1e12.
+        // maxContracts = maxCollateral / 1e12.
+        // Default assumption for Asset collateral
+        maxContracts = maxCollateral / 1000000000000n; // 1e12
+
+        // Safety: If maxContracts is extremely small, maybe different scale?
+        // But Thetanuts usually uses 1e18 for ETH.
+    }
+
+    // Calculate Max Spend (Premium)
+    // Spend = (maxContracts * price) / 1e6 ?
+    // maxContracts is 1e6 scaled. Price is 1e8.
+    // Cost = (C * P) / 1e8. (Result in USDC 6 dec? No)
+    // Cost (USDC 6dec) = Units * Price (USDC 6dec? No price is 8dec).
+    // Let's re-verify cost formula:
+    // calcNumContracts: (USDC * 1e8) / Price.
+    // So USDC = (Contracts * Price) / 1e8.
+
+    const maxSpendRaw = (maxContracts * price) / 100000000n;
+
+    // Return Number (USDC 6 decimals -> Float)
+    return Number(maxSpendRaw) / 1e6;
+}
+
 export function useFillOrder() {
     const { address } = useAccount();
     const { token } = useAuth();

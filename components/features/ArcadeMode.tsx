@@ -2,11 +2,11 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronLeft } from 'lucide-react';
 import Image from 'next/image';
 
 import { useThetanutsOrders } from '@/hooks/useThetanutsOrders';
-import { useFillOrder } from '@/hooks/useFillOrder';
+import { useFillOrder, calculateMaxSpend } from '@/hooks/useFillOrder';
 import { useAccount } from 'wagmi';
 import { filterOrdersByDuration, filterHuntOrders, parseOrder } from '@/services/thetanutsApi';
 import { useAuth } from '@/context/AuthContext';
@@ -35,12 +35,27 @@ type AvailablePlanet = (typeof PLANETS)[number] & {
     isAvailable: boolean;
 };
 
+// Simple Toast Component for Arcade
+const SystemMessage = ({ message, onClear }: { message: string, onClear: () => void }) => (
+    <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        onClick={onClear}
+        className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 bg-black/90 border border-red-500/50 text-red-400 px-6 py-3 rounded-lg font-pixel text-xs shadow-[0_0_15px_rgba(239,68,68,0.2)] flex items-center gap-3 backdrop-blur-md cursor-pointer hover:bg-black/80 transition-colors"
+    >
+        <AlertTriangle size={14} className="animate-pulse" />
+        {message}
+    </motion.div>
+);
+
 export function ArcadeMode() {
     const { address } = useAccount();
     const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
     const { completeMission, addXp } = useGamification();
 
     const [gameState, setGameState] = useState<GameState>('INTRO');
+    const [systemMessage, setSystemMessage] = useState<string | null>(null);
     
     // Selection State
     const [selectedShip, setSelectedShip] = useState<ShipType | null>(null);
@@ -275,10 +290,20 @@ export function ArcadeMode() {
                 {gameState === 'SELECT_PLANET' && (
                     <motion.div 
                         initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-                        className="flex-1 p-6 flex flex-col space-y-6"
+                        className="relative flex-1 p-6 flex flex-col space-y-6"
                         key="planet"
                     >
-                        <div className="text-center">
+                        <div className="absolute top-0 left-0 p-4 z-50">
+                            <button 
+                                onClick={() => setGameState('SELECT_SHIP')}
+                                className="flex items-center gap-1 text-slate-500 hover:text-white transition-colors"
+                            >
+                                <ChevronLeft size={16} />
+                                <span className="text-[10px] font-pixel">BACK</span>
+                            </button>
+                        </div>
+
+                        <div className="text-center mt-8">
                             <h2 className="text-lg font-pixel text-white mb-1">TARGET SECTOR</h2>
                             <p className="text-[10px] font-mono text-slate-400">Where are the monsters hiding?</p>
                         </div>
@@ -291,10 +316,22 @@ export function ArcadeMode() {
                                     type={planet.type}
                                     timeframe={planet.timeframe}
                                     isSelected={selectedPlanetIndex === planet.index}
-                                    onClick={() => planet.isAvailable && setSelectedPlanetIndex(planet.index)}
+                                    onClick={() => {
+                                        if (planet.isAvailable) {
+                                            setSelectedPlanetIndex(planet.index);
+                                            setSystemMessage(null);
+                                        } else {
+                                            setSystemMessage(`SECTOR ${planet.name} VOID: 0 TARGETS DETECTED`);
+                                            setTimeout(() => setSystemMessage(null), 3000);
+                                        }
+                                    }}
                                 />
                             ))}
                         </div>
+                        
+                        <AnimatePresence>
+                            {systemMessage && <SystemMessage message={systemMessage} onClear={() => setSystemMessage(null)} />}
+                        </AnimatePresence>
 
                         <div className="mt-auto">
                             <ArcadeButton 
@@ -313,10 +350,20 @@ export function ArcadeMode() {
                 {gameState === 'SELECT_WEAPON' && (
                     <motion.div 
                         initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-                        className="flex-1 p-6 flex flex-col space-y-8"
+                        className="relative flex-1 p-6 flex flex-col space-y-8"
                         key="weapon"
                     >
-                        <div className="text-center">
+                        <div className="absolute top-0 left-0 p-4 z-50">
+                            <button 
+                                onClick={() => setGameState('SELECT_PLANET')}
+                                className="flex items-center gap-1 text-slate-500 hover:text-white transition-colors"
+                            >
+                                <ChevronLeft size={16} />
+                                <span className="text-[10px] font-pixel">BACK</span>
+                            </button>
+                        </div>
+
+                        <div className="text-center mt-8">
                             <h2 className="text-lg font-pixel text-white">SELECT WEAPON</h2>
                             <p className="text-[10px] font-mono text-slate-400">Predict the market trajectory</p>
                         </div>
@@ -367,23 +414,62 @@ export function ArcadeMode() {
                 {gameState === 'ARM_WEAPON' && (
                     <motion.div 
                         initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                        className="flex-1 p-6 flex flex-col justify-center space-y-8 text-center"
+                        className="relative flex-1 p-6 flex flex-col justify-center space-y-8 text-center"
                         key="arm"
                     >
-                        <div className="space-y-2">
+                        <div className="absolute top-0 left-0 p-4 z-50">
+                            <button 
+                                onClick={() => setGameState('SELECT_WEAPON')}
+                                className="flex items-center gap-1 text-slate-500 hover:text-white transition-colors"
+                            >
+                                <ChevronLeft size={16} />
+                                <span className="text-[10px] font-pixel">BACK</span>
+                            </button>
+                        </div>
+
+                        <div className="space-y-2 mt-8">
                             <AlertTriangle className="w-8 h-8 text-yellow-400 mx-auto animate-pulse" />
                             <h2 className="text-xl font-pixel text-white">ARMING SEQUENCE</h2>
                         </div>
 
                         <div className="bg-slate-800 border-2 border-slate-600 p-6 rounded-2xl">
                             <label className="text-[10px] font-mono text-slate-400 mb-2 block uppercase">Payload Size (USDC)</label>
-                            <input 
-                                type="number" 
-                                value={inputAmount}
-                                onChange={(e) => setInputAmount(e.target.value)}
-                                className="w-full bg-black border-none text-center text-3xl font-pixel text-white py-2 focus:ring-0"
-                            />
+                            <div className="relative">
+                                <input 
+                                    type="number" 
+                                    value={inputAmount}
+                                    onChange={(e) => setInputAmount(e.target.value)}
+                                    className={`w-full bg-black border-none text-center text-3xl font-pixel py-2 focus:ring-0 ${
+                                        (() => {
+                                            const order = getTargetOrder();
+                                            const max = order ? calculateMaxSpend(order.rawOrder.order) : 0;
+                                            return Number(inputAmount) > max ? "text-red-500" : "text-white";
+                                        })()
+                                    }`}
+                                />
+                                {(() => {
+                                    const order = getTargetOrder();
+                                    const max = order ? calculateMaxSpend(order.rawOrder.order) : 0;
+                                    return (
+                                        <button 
+                                            onClick={() => setInputAmount(max.toFixed(2))}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded"
+                                        >
+                                            MAX: ${max.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                        </button>
+                                    );
+                                })()}
+                            </div>
                         </div>
+                        {(() => {
+                            const order = getTargetOrder();
+                            const max = order ? calculateMaxSpend(order.rawOrder.order) : 0;
+                            return Number(inputAmount) > max && (
+                                <div className="text-[10px] font-pixel text-red-500 animate-pulse">
+                                    ! EXCEEDS MAX PAYLOAD CAPACITY !
+                                </div>
+                            );
+                        })()}
 
                         {!isAuthenticated ? (
                             <div className="space-y-4">
@@ -392,20 +478,25 @@ export function ArcadeMode() {
                                 </div>
                                 <p className="text-[10px] font-mono text-slate-500">Log in via Header to initiate launch sequence.</p>
                             </div>
-                        ) : (
-                            <ArcadeButton 
-                                size="lg" 
-                                variant="danger" 
-                                onClick={handleLaunch}
-                                className="text-lg animate-pulse"
-                            >
-                                LAUNCH MISSION
-                            </ArcadeButton>
-                        )}
-                        
-                        <button onClick={() => setGameState('SELECT_WEAPON')} className="text-[10px] font-pixel text-slate-500 hover:text-white">
-                            ABORT SEQUENCE
-                        </button>
+                        ) : (() => {
+                                const order = getTargetOrder();
+                                const max = order ? calculateMaxSpend(order.rawOrder.order) : 0;
+                                return (
+                                    <ArcadeButton 
+                                        size="lg" 
+                                        variant="danger" 
+                                        onClick={handleLaunch}
+                                        disabled={Number(inputAmount) > max || Number(inputAmount) <= 0}
+                                        className={`text-lg animate-pulse ${
+                                            (Number(inputAmount) > max || Number(inputAmount) <= 0)
+                                                ? "opacity-50 grayscale cursor-not-allowed" 
+                                                : ""
+                                        }`}
+                                    >
+                                        LAUNCH MISSION
+                                    </ArcadeButton>
+                                );
+                        })()}
                     </motion.div>
                 )}
 
