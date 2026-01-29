@@ -4,12 +4,17 @@ import { useEffect, useState, useRef } from "react";
 import { usePathname } from "next/navigation";
 
 // Define log types for better type safety
-type LogType = 'log' | 'error' | 'warn' | 'info';
+type LogType = 'log' | 'error' | 'warn' | 'info' | 'api';
 
 interface LogEntry {
   timestamp: string;
   type: LogType;
   messages: string[];
+  // API-specific metadata
+  apiUrl?: string;
+  apiMethod?: string;
+  apiStatus?: number;
+  apiResponse?: unknown;
 }
 
 export default function DevConsoleViewer() {
@@ -30,6 +35,7 @@ export default function DevConsoleViewer() {
     const originalError = console.error;
     const originalWarn = console.warn;
     const originalInfo = console.info;
+    const originalFetch = window.fetch;
 
     const safeStringify = (arg: unknown) => {
         try {
@@ -46,7 +52,12 @@ export default function DevConsoleViewer() {
         }
     };
 
-    const addLog = (type: LogType, args: unknown[]) => {
+    const addLog = (type: LogType, args: unknown[], apiData?: {
+      url?: string;
+      method?: string;
+      status?: number;
+      response?: unknown;
+    }) => {
       const processedArgs = args.map(arg => {
          if (typeof arg === 'object' && arg !== null) {
              try {
@@ -64,6 +75,12 @@ export default function DevConsoleViewer() {
         timestamp: new Date().toISOString().split("T")[1].slice(0, -1),
         type,
         messages: processedArgs,
+        ...(apiData && {
+          apiUrl: apiData.url,
+          apiMethod: apiData.method,
+          apiStatus: apiData.status,
+          apiResponse: apiData.response,
+        }),
       };
 
       setTimeout(() => {
@@ -92,12 +109,58 @@ export default function DevConsoleViewer() {
       addLog("info", args);
     };
 
-    // Cleanup: Restore original console methods
+    // Override fetch to capture API calls
+    window.fetch = async (...args: Parameters<typeof fetch>) => {
+      const [resource, options] = args;
+      const url = typeof resource === 'string' ? resource : (resource instanceof Request ? resource.url : String(resource));
+      const method = options?.method || 'GET';
+
+      try {
+        const response = await originalFetch(...args);
+        
+        // Clone response to read body without consuming it
+        const clonedResponse = response.clone();
+        
+        let responseData;
+        try {
+          const contentType = clonedResponse.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            responseData = await clonedResponse.json();
+          } else {
+            responseData = await clonedResponse.text();
+          }
+        } catch {
+          responseData = '[Unable to parse response]';
+        }
+
+        // Log API call with response
+        addLog('api', [`${method} ${url}`], {
+          url,
+          method,
+          status: response.status,
+          response: responseData,
+        });
+
+        return response;
+      } catch (error) {
+        // Log failed API call
+        addLog('api', [`${method} ${url} - FAILED`], {
+          url,
+          method,
+          status: 0,
+          response: error instanceof Error ? error.message : 'Request failed',
+        });
+        throw error;
+      }
+    };
+
+    // Cleanup: Restore original console methods and fetch
     return () => {
       console.log = originalLog;
       console.error = originalError;
       console.warn = originalWarn;
       console.info = originalInfo;
+      window.fetch = originalFetch;
     };
   }, []);
 
@@ -141,17 +204,56 @@ export default function DevConsoleViewer() {
         {logs.length === 0 && (
             <div className="text-gray-600 italic text-center mt-10">No logs captured yet...</div>
         )}
-        {logs.map((log, index) => (
-            <div key={index} className={`mb-2 border-b border-gray-800/50 pb-1 ${
-                log.type === 'error' ? 'text-red-400' : 
-                log.type === 'warn' ? 'text-yellow-400' : 
-                'text-green-400'
-            }`}>
-                <span className="text-gray-500 mr-2">[{log.timestamp}]</span>
-                <span className="uppercase font-bold text-[10px] mr-2 opactiy-75">[{log.type}]</span>
-                <span>{log.messages.join(' ')}</span>
-            </div>
-        ))}
+        {logs.map((log, index) => {
+            const isApiLog = log.type === 'api';
+            
+            return (
+              <div key={index} className={`mb-2 border-b border-gray-800/50 pb-2 ${
+                  log.type === 'error' ? 'text-red-400' : 
+                  log.type === 'warn' ? 'text-yellow-400' : 
+                  log.type === 'api' ? 'text-cyan-400' :
+                  'text-green-400'
+              }`}>
+                  <div className="flex items-start gap-2">
+                      <span className="text-gray-500 mr-2">[{log.timestamp}]</span>
+                      <span className="uppercase font-bold text-[10px] mr-2 opacity-75">[{log.type}]</span>
+                      
+                      {isApiLog && log.apiStatus && (
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold mr-2 ${
+                              log.apiStatus >= 200 && log.apiStatus < 300 
+                                  ? 'bg-green-900/50 text-green-300' 
+                                  : log.apiStatus >= 400 
+                                  ? 'bg-red-900/50 text-red-300'
+                                  : 'bg-yellow-900/50 text-yellow-300'
+                          }`}>
+                              {log.apiStatus}
+                          </span>
+                      )}
+                      
+                      <span className="flex-1">{log.messages.join(' ')}</span>
+                  </div>
+                  
+                  {isApiLog && log.apiResponse !== undefined && log.apiResponse !== null && (
+                      <details className="mt-2 ml-4 border-l-2 border-cyan-700/50 pl-3">
+                          <summary className="cursor-pointer text-cyan-300/70 hover:text-cyan-300 text-[10px] font-semibold mb-1">
+                              📦 Response Data
+                          </summary>
+                          <pre className="text-[10px] text-cyan-200/80 bg-black/30 p-2 rounded mt-1 overflow-x-auto max-h-60 overflow-y-auto">
+                              {(() => {
+                                const response = log.apiResponse;
+                                if (typeof response === 'string') return response;
+                                try {
+                                  return JSON.stringify(response, null, 2);
+                                } catch {
+                                  return String(response);
+                                }
+                              })()}
+                          </pre>
+                      </details>
+                  )}
+              </div>
+            );
+        })}
         <div ref={logsEndRef} />
       </div>
     </div>
