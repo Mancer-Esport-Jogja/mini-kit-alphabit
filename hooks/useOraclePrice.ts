@@ -4,7 +4,7 @@ import { THETANUTS_CONTRACTS } from '@/config/thetanuts';
 
 export type ChartInterval = '1m' | '5m' | '15m' | '1h' | '4h' | '6h' | '12h' | '1d';
 
-interface PricePoint {
+export interface PricePoint {
     time: number;
     price: number;
 }
@@ -184,7 +184,7 @@ export function useOraclePrice({
 
             if (answer <= 0n) return null;
             return Number(answer) / 10 ** decimals;
-        } catch (err) {
+        } catch {
             return null;
         }
     }, [publicClient, symbol]);
