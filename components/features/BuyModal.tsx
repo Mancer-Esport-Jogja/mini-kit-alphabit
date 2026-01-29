@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, TrendingUp, TrendingDown, Loader2, ExternalLink, AlertCircle } from "lucide-react";
+import { TrendingUp, TrendingDown, Loader2, ExternalLink, AlertCircle } from "lucide-react";
 import { useFillOrder } from "@/hooks/useFillOrder";
 // import { parseStrike, parsePrice } from "@/utils/decimals";
 import type { ParsedOrder } from "@/types/orders";
@@ -127,7 +127,7 @@ export const BuyModal: React.FC<BuyModalProps> = ({ isOpen, onClose, order, targ
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm pt-16 sm:pt-0"
           onClick={handleClose}
         >
           <motion.div
@@ -135,35 +135,36 @@ export const BuyModal: React.FC<BuyModalProps> = ({ isOpen, onClose, order, targ
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md bg-slate-900 border-4 border-slate-700 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.5)] overflow-hidden"
+            className="w-[95%] md:w-full max-w-md bg-slate-900 border-4 border-slate-700 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-[90vh] sm:max-h-auto relative"
           >
-            {/* Header */}
-            <div className="bg-slate-800 px-4 py-3 flex items-center justify-between border-b-2 border-slate-700">
-              <div className="flex items-center gap-2">
+
+
+            {/* Content */}
+            <div className="p-6 space-y-4 pt-8 overflow-y-auto custom-scrollbar">
+              {/* Header (Integrated) */}
+              <div className="flex items-center justify-center gap-2 mb-2">
                 {target === "MOON" ? (
                   <TrendingUp className="w-5 h-5 text-bit-green" />
                 ) : (
                   <TrendingDown className="w-5 h-5 text-bit-coral" />
                 )}
-                <h2 className="font-pixel text-sm text-white uppercase">
+                <h2 className="font-pixel text-sm text-white uppercase tracking-widest">
                   Execute {target} Mission
                 </h2>
               </div>
-              <button
-                onClick={handleClose}
-                disabled={isPending || isConfirming}
-                className="p-1 hover:bg-slate-700 rounded transition-colors disabled:opacity-50"
-              >
-                <X className="w-5 h-5 text-slate-400" />
-              </button>
-            </div>
 
-            {/* Content */}
-            <div className="p-6 space-y-4">
               {/* Order Details */}
-              <div className="bg-slate-800 border border-slate-700 p-4 rounded">
-                <div className="text-[10px] font-mono text-slate-500 mb-2 uppercase">Order Details</div>
-                <div className="grid grid-cols-2 gap-4">
+              <div className="bg-slate-800 border border-slate-700 p-4 rounded relative overflow-hidden">
+                {/* Background Decor */}
+                <div className="absolute top-0 right-0 p-2 opacity-5">
+                    <TrendingUp size={100} />
+                </div>
+
+                <div className="text-[10px] font-mono text-slate-500 mb-2 uppercase flex justify-between">
+                    <span>Order Details</span>
+                    <span className="text-slate-400">{order.expiryFormatted ? order.expiryFormatted : order.expiry.toLocaleDateString()} EXPIRY</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4 relative z-10">
                   <div>
                     <div className="text-[9px] text-slate-500 mb-1">Target Strike</div>
                     <div className="font-pixel text-lg text-yellow-500">
