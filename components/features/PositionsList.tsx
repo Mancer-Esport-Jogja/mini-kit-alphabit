@@ -3,12 +3,14 @@
 import React from "react";
 import { useUserPositions } from "@/hooks/useUserPositions";
 import { Position } from "@/types/positions";
+
 import { parseStrike } from "@/utils/decimals";
-import { Loader2, History, ExternalLink, ShieldCheck } from "lucide-react";
+import { Loader2, History, ExternalLink, ShieldCheck, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Countdown } from "@/components/ui/Countdown";
 
 export const PositionsList = ({ onOpenHistory }: { onOpenHistory?: () => void }) => {
-  const { data: positions, isLoading, isError } = useUserPositions();
+  const { data: positions, isLoading, isError, refetch, isRefetching } = useUserPositions();
 
   // Debug: surface raw positions payload in console to diagnose NaN/missing fields in prod
   React.useEffect(() => {
@@ -60,8 +62,17 @@ export const PositionsList = ({ onOpenHistory }: { onOpenHistory?: () => void })
             MISSION LOGS
           </span>
         </div>
-        <div className="text-[8px] font-mono text-slate-500">
-          {openPositions.length} ACTIVE BATTLES
+        <div className="flex items-center gap-3">
+          <div className="text-[8px] font-mono text-slate-500">
+            {openPositions.length} ACTIVE BATTLES
+          </div>
+          <button 
+            onClick={() => refetch()} 
+            disabled={isRefetching}
+            className={`text-slate-500 hover:text-white transition-colors ${isRefetching ? 'animate-spin' : ''}`}
+          >
+            <RefreshCw size={10} />
+          </button>
         </div>
       </div>
 
@@ -149,12 +160,12 @@ export const PositionsList = ({ onOpenHistory }: { onOpenHistory?: () => void })
                         Expiry
                       </div>
                       <div className="text-[10px] font-pixel text-slate-400">
-                        {pos.expiryTimestamp
-                          ? new Date(pos.expiryTimestamp * 1000).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                          : "—"}
+                        {pos.expiryTimestamp ? (
+                          <Countdown 
+                            targetTimestamp={pos.expiryTimestamp} 
+                            onExpire={() => refetch()}
+                          />
+                        ) : "—"}
                       </div>
                     </div>
                   </div>
