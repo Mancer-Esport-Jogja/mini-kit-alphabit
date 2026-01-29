@@ -82,15 +82,7 @@ export const PositionsList = ({ onOpenHistory }: { onOpenHistory?: () => void })
             openPositions.map((pos: Position, idx) => {
               const isCall = pos.optionType === 1; // 1 for Call, 2 for Put spreads usually
 
-              const rawLower = pos.strikes?.[0];
-              const rawUpper = pos.strikes?.[1];
 
-              const lowerStrike = Number.isFinite(Number(rawLower))
-                ? parseStrike(rawLower)
-                : null;
-              const upperStrike = Number.isFinite(Number(rawUpper))
-                ? parseStrike(rawUpper)
-                : null;
 
 
 
@@ -137,13 +129,9 @@ export const PositionsList = ({ onOpenHistory }: { onOpenHistory?: () => void })
                         Goal Line
                       </div>
                       <div className="text-[10px] font-pixel text-yellow-500">
-                        {isCall
-                          ? lowerStrike !== null
-                            ? `$${lowerStrike.toLocaleString()}`
-                            : "—"
-                          : upperStrike !== null
-                            ? `$${upperStrike.toLocaleString()}`
-                            : "—"}
+                        {pos.strikes && pos.strikes.length > 0
+                          ? pos.strikes.map((s) => `$${parseStrike(s)}`).join(" / ")
+                          : "—"}
                       </div>
                     </div>
                     <div className="text-right">
