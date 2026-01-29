@@ -97,7 +97,7 @@ export const PortfolioView = ({ onBack }: PortfolioViewProps) => {
                     <div className="bg-slate-900 border-2 border-slate-800 p-4">
                       <div className="text-[10px] font-mono text-slate-500 mb-1 uppercase">TOTAL VOLUME</div>
                       <div className="text-lg font-pixel text-slate-300">
-                        {Number(summary.data?.totalVolume || 0).toLocaleString()} <span className="text-[10px] uppercase">USDC</span>
+                        {Number(summary.data?.totalVolume || 0).toFixed(2)} <span className="text-[10px] uppercase">USDC</span>
                       </div>
                     </div>
                     <div className="bg-slate-900 border-2 border-slate-800 p-4">
