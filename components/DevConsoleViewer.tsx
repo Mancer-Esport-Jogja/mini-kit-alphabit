@@ -173,7 +173,7 @@ export default function DevConsoleViewer() {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed top-0 right-0 w-8 h-8 opacity-100 bg-red-600 hover:bg-red-500 z-[9999] rounded-bl-lg flex items-center justify-center text-[8px] text-white font-bold shadow-lg border border-red-400"
+        className="fixed top-0 right-0 w-8 h-8 sm:w-10 sm:h-10 opacity-100 bg-red-600 hover:bg-red-500 active:bg-red-700 z-[9999] rounded-bl-lg flex items-center justify-center text-[8px] sm:text-[10px] text-white font-bold shadow-lg border border-red-400 touch-manipulation"
         aria-label="Open Dev Console"
       >
         BUG
@@ -182,27 +182,27 @@ export default function DevConsoleViewer() {
   }
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/95 text-green-400 font-mono text-xs flex flex-col p-4 animate-in fade-in zoom-in duration-200">
+    <div className="fixed inset-0 z-[9999] bg-black/95 text-green-400 font-mono text-xs flex flex-col p-2 sm:p-4 animate-in fade-in zoom-in duration-200">
       <div className="flex justify-between items-center mb-2 border-b border-green-800 pb-2">
-        <h2 className="font-bold text-lg">DEV CONSOLE</h2>
+        <h2 className="font-bold text-sm sm:text-lg">DEV CONSOLE</h2>
         <div className="flex gap-2">
             <button
                 onClick={() => setLogs([])}
-                className="px-3 py-1 border border-green-600 text-green-400 hover:bg-green-900/50 rounded transition-colors mr-2"
+                className="px-2 py-1 sm:px-3 border border-green-600 text-green-400 hover:bg-green-900/50 active:bg-green-900 rounded transition-colors mr-1 sm:mr-2 text-[10px] sm:text-xs touch-manipulation"
             >
                 Clear
             </button>
             <button
                 onClick={() => setIsOpen(false)}
-                className="px-3 py-1 border border-red-600 text-red-400 hover:bg-red-900/50 rounded transition-colors"
+                className="px-2 py-1 sm:px-3 border border-red-600 text-red-400 hover:bg-red-900/50 active:bg-red-900 rounded transition-colors text-[10px] sm:text-xs touch-manipulation"
             >
                 Close
             </button>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto whitespace-pre-wrap font-mono p-2 bg-black/50 rounded border border-green-900/30">
+      <div className="flex-1 overflow-y-auto whitespace-pre-wrap font-mono p-1 sm:p-2 bg-black/50 rounded border border-green-900/30">
         {logs.length === 0 && (
-            <div className="text-gray-600 italic text-center mt-10">No logs captured yet...</div>
+            <div className="text-gray-600 italic text-center mt-4 sm:mt-10 text-[10px] sm:text-xs">No logs captured yet...</div>
         )}
         {logs.map((log, index) => {
             const isApiLog = log.type === 'api';
@@ -214,12 +214,12 @@ export default function DevConsoleViewer() {
                   log.type === 'api' ? 'text-cyan-400' :
                   'text-green-400'
               }`}>
-                  <div className="flex items-start gap-2">
-                      <span className="text-gray-500 mr-2">[{log.timestamp}]</span>
-                      <span className="uppercase font-bold text-[10px] mr-2 opacity-75">[{log.type}]</span>
+                  <div className="flex items-start gap-1 sm:gap-2 text-[9px] sm:text-xs">
+                      <span className="text-gray-500 mr-1 sm:mr-2 text-[8px] sm:text-[10px]">[{log.timestamp}]</span>
+                      <span className="uppercase font-bold text-[8px] sm:text-[10px] mr-1 sm:mr-2 opacity-75">[{log.type}]</span>
                       
                       {isApiLog && log.apiStatus && (
-                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold mr-2 ${
+                          <span className={`px-1 sm:px-2 py-0.5 rounded text-[7px] sm:text-[9px] font-bold mr-1 sm:mr-2 ${
                               log.apiStatus >= 200 && log.apiStatus < 300 
                                   ? 'bg-green-900/50 text-green-300' 
                                   : log.apiStatus >= 400 
@@ -230,15 +230,15 @@ export default function DevConsoleViewer() {
                           </span>
                       )}
                       
-                      <span className="flex-1">{log.messages.join(' ')}</span>
+                      <span className="flex-1 break-words text-[9px] sm:text-xs">{log.messages.join(' ')}</span>
                   </div>
                   
                   {isApiLog && log.apiResponse !== undefined && log.apiResponse !== null && (
-                      <details className="mt-2 ml-4 border-l-2 border-cyan-700/50 pl-3">
-                          <summary className="cursor-pointer text-cyan-300/70 hover:text-cyan-300 text-[10px] font-semibold mb-1">
+                      <details className="mt-1 sm:mt-2 ml-2 sm:ml-4 border-l-2 border-cyan-700/50 pl-2 sm:pl-3">
+                          <summary className="cursor-pointer text-cyan-300/70 hover:text-cyan-300 active:text-cyan-200 text-[9px] sm:text-[10px] font-semibold mb-1 touch-manipulation">
                               📦 Response Data
                           </summary>
-                          <pre className="text-[10px] text-cyan-200/80 bg-black/30 p-2 rounded mt-1 overflow-x-auto max-h-60 overflow-y-auto">
+                          <pre className="text-[8px] sm:text-[10px] text-cyan-200/80 bg-black/30 p-1 sm:p-2 rounded mt-1 overflow-x-auto max-h-40 sm:max-h-60 overflow-y-auto">
                               {(() => {
                                 const response = log.apiResponse;
                                 if (typeof response === 'string') return response;
