@@ -80,7 +80,7 @@ export const PositionsList = ({ onOpenHistory }: { onOpenHistory?: () => void })
             </div>
           ) : (
             openPositions.map((pos: Position, idx) => {
-              const isCall = pos.optionType === 1 || pos.optionType === 256; // 1 or 256 for Call
+              const isCall = pos.optionType === 257; // 257 for Call (Moon), 256 for Put (Doom)
 
 
 

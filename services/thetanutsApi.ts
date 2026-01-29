@@ -179,6 +179,9 @@ export function filterHuntOrders(
     // Only include orders that are not expired
     if (o.order.orderExpiryTimestamp <= Date.now() / 1000) return false;
 
+    // Strict: Only BUY orders (isLong = true)
+    if (!o.order.isLong) return false;
+
     // Only vanilla options and spreads (1-2 strikes)
     if (o.order.strikes.length > 3) return false;
 
