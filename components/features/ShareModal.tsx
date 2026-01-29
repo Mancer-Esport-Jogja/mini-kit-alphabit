@@ -1,10 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { X, Share2, ChevronLeft, ChevronRight, TrendingUp, Target, Gamepad2, BarChart3, LucideIcon } from "lucide-react";
 import sdk from "@farcaster/miniapp-sdk";
 import { useAuth } from "@/context/AuthContext";
+
+interface PnLPoint {
+  date: string;
+  pnl: number;
+  cumulativePnL: number;
+}
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -14,6 +20,7 @@ interface ShareModalProps {
     winRate: number;
     totalTrades: number;
   } | undefined;
+  pnlHistory?: PnLPoint[];
 }
 
 type ShareCategory = 'pnl' | 'winrate' | 'missions' | 'performance';
@@ -66,11 +73,86 @@ const shareCards: ShareCard[] = [
     icon: BarChart3,
     color: 'text-orange-400',
     bgColor: 'bg-orange-400/10 border-orange-400/30',
-    getValue: () => 'View Graph',
+    getValue: (a) => {
+      const pnl = Number(a?.netPnL || 0);
+      return `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} USDC`;
+    },
   },
 ];
 
-export const ShareModal = ({ isOpen, onClose, analytics }: ShareModalProps) => {
+// Mini chart component for Performance card
+const MiniChart = ({ data }: { data: PnLPoint[] }) => {
+  const chartData = useMemo(() => {
+    if (!data || data.length < 2) return null;
+    
+    const height = 60;
+    const width = 200;
+    const margin = 5;
+    
+    const values = data.map(d => d.cumulativePnL);
+    const minVal = Math.min(...values, 0);
+    const maxVal = Math.max(...values, 1);
+    const range = maxVal - minVal || 1;
+    
+    const points = data.map((d, i) => {
+      const x = margin + (i / (data.length - 1)) * (width - margin * 2);
+      const y = margin + (height - margin * 2) - ((d.cumulativePnL - minVal) / range) * (height - margin * 2);
+      return `${x},${y}`;
+    }).join(' ');
+    
+    const lastValue = data[data.length - 1].cumulativePnL;
+    const isPositive = lastValue >= 0;
+    
+    return { points, lastValue, isPositive, width, height };
+  }, [data]);
+  
+  if (!chartData) {
+    return (
+      <div className="text-[10px] font-mono text-slate-500">No chart data</div>
+    );
+  }
+  
+  const color = chartData.isPositive ? '#4ade80' : '#fb7185';
+  
+  return (
+    <div className="w-full">
+      <svg 
+        viewBox={`0 0 ${chartData.width} ${chartData.height}`} 
+        className="w-full h-16"
+        preserveAspectRatio="none"
+      >
+        <defs>
+          <linearGradient id="miniChartGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.4" />
+            <stop offset="100%" stopColor={color} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        
+        {/* Fill Area */}
+        <polyline
+          fill="url(#miniChartGradient)"
+          points={`${chartData.points} ${chartData.width - 5},${chartData.height - 5} 5,${chartData.height - 5}`}
+        />
+        
+        {/* Line */}
+        <polyline
+          fill="none"
+          stroke={color}
+          strokeWidth="2"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          points={chartData.points}
+        />
+      </svg>
+      
+      <div className={`text-xl font-pixel text-center ${chartData.isPositive ? 'text-bit-green' : 'text-bit-coral'}`}>
+        {chartData.isPositive ? '+' : ''}{chartData.lastValue.toFixed(2)} USDC
+      </div>
+    </div>
+  );
+};
+
+export const ShareModal = ({ isOpen, onClose, analytics, pnlHistory }: ShareModalProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSharing, setIsSharing] = useState(false);
   const { user } = useAuth();
@@ -82,6 +164,14 @@ export const ShareModal = ({ isOpen, onClose, analytics }: ShareModalProps) => {
     } else if (info.offset.x < -threshold && currentIndex < shareCards.length - 1) {
       setCurrentIndex(currentIndex + 1);
     }
+  };
+
+  const goToPrev = () => {
+    if (currentIndex > 0) setCurrentIndex(currentIndex - 1);
+  };
+
+  const goToNext = () => {
+    if (currentIndex < shareCards.length - 1) setCurrentIndex(currentIndex + 1);
   };
 
   const handleShare = async () => {
@@ -136,6 +226,7 @@ export const ShareModal = ({ isOpen, onClose, analytics }: ShareModalProps) => {
   if (!isOpen) return null;
 
   const currentCard = shareCards[currentIndex];
+  const isPerformanceCard = currentCard.id === 'performance';
 
   return (
     <AnimatePresence>
@@ -168,60 +259,69 @@ export const ShareModal = ({ isOpen, onClose, analytics }: ShareModalProps) => {
           </div>
 
           {/* Carousel */}
-          <div className="relative p-4 overflow-hidden">
+          <div className="relative p-4">
             {/* Navigation Arrows */}
             <button
-              onClick={() => currentIndex > 0 && setCurrentIndex(currentIndex - 1)}
+              onClick={goToPrev}
               className={`absolute left-2 top-1/2 -translate-y-1/2 z-10 p-2 bg-slate-800/80 border border-slate-700 transition-opacity ${currentIndex === 0 ? 'opacity-30 cursor-not-allowed' : 'opacity-100 hover:bg-slate-700'}`}
               disabled={currentIndex === 0}
             >
               <ChevronLeft size={16} className="text-white" />
             </button>
             <button
-              onClick={() => currentIndex < shareCards.length - 1 && setCurrentIndex(currentIndex + 1)}
+              onClick={goToNext}
               className={`absolute right-2 top-1/2 -translate-y-1/2 z-10 p-2 bg-slate-800/80 border border-slate-700 transition-opacity ${currentIndex === shareCards.length - 1 ? 'opacity-30 cursor-not-allowed' : 'opacity-100 hover:bg-slate-700'}`}
               disabled={currentIndex === shareCards.length - 1}
             >
               <ChevronRight size={16} className="text-white" />
             </button>
 
-            {/* Cards Container */}
-            <motion.div
-              drag="x"
-              dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={0.2}
-              onDragEnd={handleDragEnd}
-              animate={{ x: -currentIndex * 100 + '%' }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="flex cursor-grab active:cursor-grabbing"
-              style={{ width: `${shareCards.length * 100}%` }}
-            >
-              {shareCards.map((card) => {
-                const IconComponent = card.icon;
-                return (
-                  <div
-                    key={card.id}
-                    className="w-full flex-shrink-0 px-8"
-                    style={{ width: `${100 / shareCards.length}%` }}
-                  >
-                    <div className={`border-2 ${card.bgColor} p-6 flex flex-col items-center`}>
-                      <div className={`w-16 h-16 flex items-center justify-center ${card.color} mb-4`}>
-                        <IconComponent size={40} />
+            {/* Card Display - Single card with animation */}
+            <div className="overflow-hidden mx-8">
+              <motion.div
+                key={currentIndex}
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.2}
+                onDragEnd={handleDragEnd}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="cursor-grab active:cursor-grabbing"
+              >
+                <div className={`border-2 ${currentCard.bgColor} p-6 flex flex-col items-center`}>
+                  {isPerformanceCard && pnlHistory && pnlHistory.length >= 2 ? (
+                    // Performance card with chart
+                    <>
+                      <h3 className={`text-lg font-pixel ${currentCard.color} uppercase mb-1`}>
+                        {currentCard.title}
+                      </h3>
+                      <p className="text-[10px] font-mono text-slate-500 uppercase mb-3">
+                        {currentCard.subtitle}
+                      </p>
+                      <MiniChart data={pnlHistory} />
+                    </>
+                  ) : (
+                    // Standard card layout
+                    <>
+                      <div className={`w-16 h-16 flex items-center justify-center ${currentCard.color} mb-4`}>
+                        <currentCard.icon size={40} />
                       </div>
-                      <h3 className={`text-lg font-pixel ${card.color} uppercase mb-1`}>
-                        {card.title}
+                      <h3 className={`text-lg font-pixel ${currentCard.color} uppercase mb-1`}>
+                        {currentCard.title}
                       </h3>
                       <p className="text-[10px] font-mono text-slate-500 uppercase mb-4">
-                        {card.subtitle}
+                        {currentCard.subtitle}
                       </p>
-                      <div className={`text-2xl font-pixel ${card.color}`}>
-                        {card.getValue(analytics)}
+                      <div className={`text-2xl font-pixel ${currentCard.color}`}>
+                        {currentCard.getValue(analytics)}
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </motion.div>
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            </div>
 
             {/* Dots Indicator */}
             <div className="flex justify-center gap-2 mt-4">
@@ -261,3 +361,4 @@ export const ShareModal = ({ isOpen, onClose, analytics }: ShareModalProps) => {
     </AnimatePresence>
   );
 };
+

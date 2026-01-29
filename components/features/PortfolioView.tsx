@@ -270,6 +270,7 @@ export const PortfolioView = ({ onBack }: PortfolioViewProps) => {
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
         analytics={summary.data}
+        pnlHistory={pnlHistory.data}
       />
     </div>
   );
