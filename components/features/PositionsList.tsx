@@ -19,16 +19,7 @@ export const PositionsList = ({ onOpenHistory }: { onOpenHistory?: () => void })
     }
   }, [positions]);
 
-  const getCollateralUsdc = (p: Position): number => {
-    const raw =
-      p.collateralAmount ??
-      (typeof p === "object" && p !== null && "collateral" in p
-        ? (p as { collateral?: string | number }).collateral
-        : undefined);
 
-    const num = Number(raw);
-    return Number.isFinite(num) ? num / 10 ** 6 : 0;
-  };
 
   if (isLoading) {
     return (
@@ -101,7 +92,7 @@ export const PositionsList = ({ onOpenHistory }: { onOpenHistory?: () => void })
                 ? parseStrike(rawUpper)
                 : null;
 
-              const collateral = getCollateralUsdc(pos);
+
 
               return (
                 <motion.div
@@ -134,10 +125,10 @@ export const PositionsList = ({ onOpenHistory }: { onOpenHistory?: () => void })
                   <div className="grid grid-cols-3 gap-2">
                     <div>
                       <div className="text-[7px] text-slate-500 font-mono uppercase">
-                        Collateral
+                        Trade Amount
                       </div>
                       <div className="text-[10px] font-pixel text-slate-300">
-                        {Number.isFinite(collateral) ? collateral : 0}{" "}
+                        {(Number(pos.entryPremium) / (10 ** (pos.collateralDecimals || 6))).toFixed(2)}{" "}
                         <span className="text-[8px]">USDC</span>
                       </div>
                     </div>
