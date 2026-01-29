@@ -172,6 +172,12 @@ export const BuyModal: React.FC<BuyModalProps> = ({ isOpen, onClose, order, targ
                     </div>
                   </div>
                   <div>
+                    <div className="text-[9px] text-slate-500 mb-1">Type</div>
+                    <div className={`font-pixel text-lg ${isCall ? 'text-bit-green' : 'text-bit-coral'}`}>
+                      {isCall ? 'LONG CALL' : 'SHORT PUT'}
+                    </div>
+                  </div>
+                  <div>
                     <div className="text-[9px] text-slate-500 mb-1">Max ROI</div>
                     <div className={`font-pixel text-lg ${roi === Infinity ? 'text-bit-green animate-pulse' : 'text-bit-green'}`}>
                       {roi === Infinity ? 'UNLIMITED' : `+${roi}%`}

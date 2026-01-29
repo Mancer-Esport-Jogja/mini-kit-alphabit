@@ -14,7 +14,7 @@ import { LevelBadge } from "@/components/gamification/LevelBadge"; // Import Bad
 import { useDroid } from "@/context/DroidContext";
 import { BuyModal } from "./BuyModal";
 import { OrderMatrix } from "./OrderMatrix";
-import { filterOrdersByDuration, getBestOrder, parseOrder } from "@/services/thetanutsApi";
+import { filterOrdersByDuration, getBestOrder, parseOrder, getDurationId } from "@/services/thetanutsApi";
 import { ParsedOrder } from "@/types/orders";
 // import { useTenderlyMint } from "@/hooks/useTenderlyMint";
 
@@ -232,14 +232,23 @@ export const HuntTerminal = () => {
         if (manualOrder) return manualOrder;
         if (!orderData?.orders) return null;
 
-        // Filter valid orders first (expiry check is already done in API service but good to be safe)
-        // Then filter by duration
-        const durationOrders = filterOrdersByDuration(orderData.orders, selectedDuration);
+        // 1. Strict Target Validation (Fixes Moon/Doom Bug)
+        // Ensure we only look at orders matching the current intent, regardless of API response mixing
+        let validOrders = orderData.orders;
         
-        // Find best price
+        if (selectedTarget === 'MOON') {
+             validOrders = validOrders.filter(o => o.order.isCall);
+        } else if (selectedTarget === 'DOOM') {
+             validOrders = validOrders.filter(o => !o.order.isCall);
+        }
+
+        // 2. Filter by duration
+        const durationOrders = filterOrdersByDuration(validOrders, selectedDuration);
+        
+        // 3. Find best price
         const best = getBestOrder(durationOrders);
         return best ? parseOrder(best) : null;
-    }, [orderData, selectedDuration, manualOrder]);
+    }, [orderData, selectedDuration, manualOrder, selectedTarget]);
 
 
 
@@ -875,6 +884,11 @@ export const HuntTerminal = () => {
                 currentTarget={selectedTarget}
                 onSelect={(order) => {
                     setManualOrder(order);
+                    // Auto-switch to the correct duration tab for this order
+                    if (order.expiry) {
+                        const durationId = getDurationId(order.expiry.getTime() / 1000);
+                        setSelectedDuration(durationId);
+                    }
                     setShowOrderMatrix(false);
                 }}
             />

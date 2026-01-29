@@ -297,6 +297,9 @@ export async function triggerSync(token?: string): Promise<{ status: string }> {
 /**
  * Filter orders by duration (BLITZ, RUSH, CORE, ORBIT)
  */
+/**
+ * Filter orders by duration (BLITZ, RUSH, CORE, ORBIT)
+ */
 export function filterOrdersByDuration(
   orders: SignedOrder[],
   duration: 'BLITZ' | 'RUSH' | 'CORE' | 'ORBIT'
@@ -304,20 +307,27 @@ export function filterOrdersByDuration(
   const now = Date.now() / 1000;
 
   return orders.filter(o => {
-    const timeToExpiry = o.order.expiry - now;
-    const hours = timeToExpiry / 3600;
-
-    switch (duration) {
-      case 'BLITZ': // Target 6H (2h - 9h range)
-        return hours >= 2 && hours <= 9;
-      case 'RUSH': // Target 12H (9h - 18h range)
-        return hours > 9 && hours <= 18;
-      case 'CORE': // Target 24H (18h - 36h range)
-        return hours > 18 && hours <= 36;
-      case 'ORBIT': // Target 7D (> 36h)
-        return hours > 36;
-      default:
-        return true;
-    }
+    // Check against helper
+    const calculated = getDurationId(o.order.expiry, now);
+    return calculated === duration;
   });
+}
+
+/**
+ * Helper: Determine Duration Category from Expiry
+ * @param expiryTimestamp Expiry in seconds
+ * @param currentTimestamp Optional "now" in seconds (defaults to Date.now()/1000)
+ */
+export function getDurationId(
+  expiryTimestamp: number,
+  currentTimestamp?: number
+): 'BLITZ' | 'RUSH' | 'CORE' | 'ORBIT' {
+  const now = currentTimestamp || (Date.now() / 1000);
+  const timeToExpiry = expiryTimestamp - now;
+  const hours = timeToExpiry / 3600;
+
+  if (hours >= 2 && hours <= 9) return 'BLITZ';
+  if (hours > 9 && hours <= 18) return 'RUSH';
+  if (hours > 18 && hours <= 36) return 'CORE';
+  return 'ORBIT'; // Default fallback for >36h or anything else not caught above (though <2h usually filtered out)
 }
