@@ -196,7 +196,13 @@ export const PortfolioView = ({ onBack }: PortfolioViewProps) => {
                 ) : (
                   history.map((pos: Position, i: number) => {
                     const isCall = pos.optionType === 1;
-                    const pnl = pos.settlement ? Number(pos.settlement.payoutBuyer) - Number(pos.entryPremium) : 0;
+                    
+                    // Calculate PNL with proper decimal normalization
+                    const decimals = pos.collateralDecimals || 6;
+                    const divisor = Math.pow(10, decimals);
+                    const premium = Number(pos.entryPremium) / divisor;
+                    const payout = pos.settlement ? Number(pos.settlement.payoutBuyer) / divisor : 0;
+                    const pnl = payout - premium;
                     const isWin = pnl > 0;
                     
                     return (
@@ -225,7 +231,7 @@ export const PortfolioView = ({ onBack }: PortfolioViewProps) => {
                           <div className="text-right">
                              <div className="text-[9px] font-mono text-slate-500 uppercase mb-0.5">PNL</div>
                              <div className={`text-xs font-pixel ${pnl > 0 ? 'text-bit-green' : pnl < 0 ? 'text-bit-coral' : 'text-slate-500'}`}>
-                               {pnl > 0 ? '+' : ''}{(pnl / 1e8).toFixed(2)} USDC
+                               {pnl > 0 ? '+' : ''}{pnl.toFixed(2)} USDC
                              </div>
                           </div>
                         </div>
