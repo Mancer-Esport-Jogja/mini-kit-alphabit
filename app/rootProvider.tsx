@@ -18,6 +18,13 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useEffect } from "react";
 
+// Launch date: February 1, 2026 00:00:00 GMT+7
+const LAUNCH_DATE = new Date('2026-02-01T00:00:00+07:00').getTime();
+
+function isLaunched(): boolean {
+  return Date.now() >= LAUNCH_DATE;
+}
+
 function UserStatusGuard({ children }: { children: ReactNode }) {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
@@ -27,7 +34,16 @@ function UserStatusGuard({ children }: { children: ReactNode }) {
     // Skip check if not authenticated yet
     if (!isAuthenticated || !user) return;
 
-    // Check status
+    // If launch date has passed, skip all coming-soon logic
+    if (isLaunched()) {
+      // If user is still on coming-soon page after launch, redirect to home
+      if (pathname === '/coming-soon') {
+        router.push('/');
+      }
+      return;
+    }
+
+    // Pre-launch: Check status
     // Skip redirect in development mode for easier testing
     if (user.status === 'INACTIVE' && process.env.NODE_ENV !== 'development') {
        if (pathname !== '/coming-soon') {
