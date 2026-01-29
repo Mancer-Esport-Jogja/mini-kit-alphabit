@@ -33,7 +33,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
     description: `${username} has completed ${missionsNum} trading missions on Alphabit!`,
     openGraph: {
       title: `${username}'s Trading Journey on Alphabit`,
-      description: `${missionsNum} missions completed - Trade options on Farcaster`,
+      description: `${missionsNum} missions completed - Let's Trade`,
       images: [{
         url: `${ROOT_URL}/api/og/share-missions?missions=${encodeURIComponent(missions)}&username=${encodeURIComponent(username)}`,
         width: 1200,

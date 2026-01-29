@@ -33,7 +33,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
     description: `Check out ${username}'s trading accuracy on Alphabit!`,
     openGraph: {
       title: `${username}'s Win Rate on Alphabit`,
-      description: `${winRateNum.toFixed(1)}% accuracy - Trade options on Farcaster`,
+      description: `${winRateNum.toFixed(1)}% accuracy - Let's Trade`,
       images: [{
         url: `${ROOT_URL}/api/og/share-winrate?winrate=${encodeURIComponent(winrate)}&username=${encodeURIComponent(username)}`,
         width: 1200,

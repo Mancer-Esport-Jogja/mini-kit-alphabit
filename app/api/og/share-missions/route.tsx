@@ -7,16 +7,16 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const missions = parseInt(searchParams.get('missions') || '0');
   const username = searchParams.get('username') || 'Trader';
-  
+
   // Determine rank based on missions
-  const getRank = (count: number) => {
-    if (count >= 100) return { title: 'LEGEND', emoji: '👑' };
-    if (count >= 50) return { title: 'VETERAN', emoji: '⭐' };
-    if (count >= 20) return { title: 'EXPERT', emoji: '🎖️' };
-    if (count >= 10) return { title: 'SKILLED', emoji: '💪' };
-    return { title: 'ROOKIE', emoji: '🚀' };
+  const getRank = (m: number) => {
+    if (m >= 100) return { title: 'LEGENDARY', color: '#fbbf24' };
+    if (m >= 50) return { title: 'VETERAN', color: '#a855f7' };
+    if (m >= 20) return { title: 'EXPERIENCED', color: '#60a5fa' };
+    if (m >= 5) return { title: 'ROOKIE', color: '#4ade80' };
+    return { title: 'CADET', color: '#94a3b8' };
   };
-  
+
   const rank = getRank(missions);
 
   return new ImageResponse(
@@ -29,116 +29,108 @@ export async function GET(request: NextRequest) {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#0a0a0a',
-          fontFamily: 'monospace',
+          backgroundColor: '#0f172a',
+          padding: '40px',
         }}
       >
-        {/* Background Pattern */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundImage: 'radial-gradient(circle at 25% 25%, #1e293b 2px, transparent 2px)',
-            backgroundSize: '40px 40px',
-            opacity: 0.3,
-          }}
-        />
-        
-        {/* Content Container */}
+        {/* Border Container */}
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            padding: '60px',
-            border: `4px solid #a855f7`,
-            backgroundColor: '#0f172a',
+            justifyContent: 'center',
+            padding: '60px 80px',
+            border: '4px solid #a855f7',
+            backgroundColor: '#1e293b',
           }}
         >
-          {/* Logo/Brand */}
+          {/* Logo */}
           <div
             style={{
-              fontSize: 32,
+              display: 'flex',
+              fontSize: 36,
               fontWeight: 'bold',
               color: '#4ade80',
-              marginBottom: 20,
+              marginBottom: 24,
               letterSpacing: '4px',
             }}
           >
-            🎮 ALPHABIT
+            ALPHABIT
           </div>
           
           {/* Username */}
           <div
             style={{
+              display: 'flex',
               fontSize: 24,
               color: '#94a3b8',
               marginBottom: 40,
               textTransform: 'uppercase',
             }}
           >
-            @{username}&apos;s Journey
+            @{username}
           </div>
           
-          {/* Missions Value */}
+          {/* Missions Label */}
           <div
             style={{
-              fontSize: 72,
-              fontWeight: 'bold',
-              color: '#a855f7',
-              marginBottom: 20,
-            }}
-          >
-            {missions}
-          </div>
-          
-          {/* Label */}
-          <div
-            style={{
-              fontSize: 28,
-              color: '#c4b5fd',
+              display: 'flex',
+              fontSize: 18,
+              color: '#64748b',
+              marginBottom: 16,
               textTransform: 'uppercase',
+              letterSpacing: '2px',
             }}
           >
             MISSIONS COMPLETED
           </div>
           
-          {/* Rank */}
+          {/* Missions Value */}
           <div
             style={{
-              marginTop: 40,
-              fontSize: 24,
-              color: '#fbbf24',
-              textTransform: 'uppercase',
-              letterSpacing: '2px',
+              display: 'flex',
+              fontSize: 80,
+              fontWeight: 'bold',
+              color: '#a855f7',
+              marginBottom: 16,
             }}
           >
-            {rank.emoji} {rank.title}
+            {missions}
+          </div>
+          
+          {/* Rank Badge */}
+          <div
+            style={{
+              display: 'flex',
+              fontSize: 24,
+              color: rank.color,
+              textTransform: 'uppercase',
+              padding: '8px 24px',
+              border: `2px solid ${rank.color}`,
+            }}
+          >
+            {rank.title}
           </div>
         </div>
         
         {/* Footer */}
         <div
           style={{
+            display: 'flex',
             position: 'absolute',
             bottom: 40,
-            fontSize: 16,
+            fontSize: 18,
             color: '#475569',
           }}
         >
-          Trade Options on Farcaster
+          Let&apos;s Trade
         </div>
       </div>
     ),
     {
       width: 1200,
-      height: 800,
-      headers: {
-        'Cache-Control': 'public, immutable, no-transform, max-age=300',
-      },
+      height: 630,
     }
   );
 }

@@ -6,9 +6,9 @@ export const runtime = 'edge';
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const pnl = parseFloat(searchParams.get('pnl') || '0');
-  const username = searchParams.get('username') || 'Trader';
   const winRate = parseFloat(searchParams.get('winrate') || '0');
   const missions = parseInt(searchParams.get('missions') || '0');
+  const username = searchParams.get('username') || 'Trader';
   
   const isProfit = pnl >= 0;
 
@@ -22,58 +22,47 @@ export async function GET(request: NextRequest) {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#0a0a0a',
-          fontFamily: 'monospace',
+          backgroundColor: '#0f172a',
+          padding: '40px',
         }}
       >
-        {/* Background Pattern */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundImage: 'radial-gradient(circle at 25% 25%, #1e293b 2px, transparent 2px)',
-            backgroundSize: '40px 40px',
-            opacity: 0.3,
-          }}
-        />
-        
-        {/* Content Container */}
+        {/* Border Container */}
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            padding: '60px 80px',
-            border: `4px solid #f97316`,
-            backgroundColor: '#0f172a',
+            justifyContent: 'center',
+            padding: '50px 60px',
+            border: '4px solid #fb923c',
+            backgroundColor: '#1e293b',
           }}
         >
-          {/* Logo/Brand */}
+          {/* Logo */}
           <div
             style={{
-              fontSize: 32,
+              display: 'flex',
+              fontSize: 36,
               fontWeight: 'bold',
               color: '#4ade80',
-              marginBottom: 20,
+              marginBottom: 16,
               letterSpacing: '4px',
             }}
           >
-            📈 ALPHABIT
+            ALPHABIT
           </div>
           
           {/* Username */}
           <div
             style={{
-              fontSize: 24,
+              display: 'flex',
+              fontSize: 22,
               color: '#94a3b8',
-              marginBottom: 40,
+              marginBottom: 30,
               textTransform: 'uppercase',
             }}
           >
-            @{username}&apos;s Performance
+            @{username} Performance
           </div>
           
           {/* Stats Grid */}
@@ -91,23 +80,25 @@ export async function GET(request: NextRequest) {
                 flexDirection: 'column',
                 alignItems: 'center',
                 padding: '20px 30px',
-                backgroundColor: '#1e293b',
-                border: '2px solid #334155',
+                backgroundColor: '#0f172a',
+                border: `2px solid ${isProfit ? '#4ade80' : '#fb7185'}`,
               }}
             >
               <div
                 style={{
+                  display: 'flex',
                   fontSize: 14,
                   color: '#64748b',
                   marginBottom: 8,
                   textTransform: 'uppercase',
                 }}
               >
-                Total PNL
+                TOTAL PNL
               </div>
               <div
                 style={{
-                  fontSize: 32,
+                  display: 'flex',
+                  fontSize: 36,
                   fontWeight: 'bold',
                   color: isProfit ? '#4ade80' : '#fb7185',
                 }}
@@ -116,8 +107,9 @@ export async function GET(request: NextRequest) {
               </div>
               <div
                 style={{
+                  display: 'flex',
                   fontSize: 14,
-                  color: '#475569',
+                  color: '#64748b',
                 }}
               >
                 USDC
@@ -131,23 +123,25 @@ export async function GET(request: NextRequest) {
                 flexDirection: 'column',
                 alignItems: 'center',
                 padding: '20px 30px',
-                backgroundColor: '#1e293b',
-                border: '2px solid #334155',
+                backgroundColor: '#0f172a',
+                border: '2px solid #60a5fa',
               }}
             >
               <div
                 style={{
+                  display: 'flex',
                   fontSize: 14,
                   color: '#64748b',
                   marginBottom: 8,
                   textTransform: 'uppercase',
                 }}
               >
-                Win Rate
+                WIN RATE
               </div>
               <div
                 style={{
-                  fontSize: 32,
+                  display: 'flex',
+                  fontSize: 36,
                   fontWeight: 'bold',
                   color: '#60a5fa',
                 }}
@@ -156,8 +150,9 @@ export async function GET(request: NextRequest) {
               </div>
               <div
                 style={{
+                  display: 'flex',
                   fontSize: 14,
-                  color: '#475569',
+                  color: '#64748b',
                 }}
               >
                 ACCURACY
@@ -171,23 +166,25 @@ export async function GET(request: NextRequest) {
                 flexDirection: 'column',
                 alignItems: 'center',
                 padding: '20px 30px',
-                backgroundColor: '#1e293b',
-                border: '2px solid #334155',
+                backgroundColor: '#0f172a',
+                border: '2px solid #a855f7',
               }}
             >
               <div
                 style={{
+                  display: 'flex',
                   fontSize: 14,
                   color: '#64748b',
                   marginBottom: 8,
                   textTransform: 'uppercase',
                 }}
               >
-                Missions
+                MISSIONS
               </div>
               <div
                 style={{
-                  fontSize: 32,
+                  display: 'flex',
+                  fontSize: 36,
                   fontWeight: 'bold',
                   color: '#a855f7',
                 }}
@@ -196,48 +193,34 @@ export async function GET(request: NextRequest) {
               </div>
               <div
                 style={{
+                  display: 'flex',
                   fontSize: 14,
-                  color: '#475569',
+                  color: '#64748b',
                 }}
               >
                 COMPLETED
               </div>
             </div>
           </div>
-          
-          {/* Label */}
-          <div
-            style={{
-              marginTop: 20,
-              fontSize: 18,
-              color: '#f97316',
-              textTransform: 'uppercase',
-              letterSpacing: '2px',
-            }}
-          >
-            Overall Performance
-          </div>
         </div>
         
         {/* Footer */}
         <div
           style={{
+            display: 'flex',
             position: 'absolute',
             bottom: 40,
-            fontSize: 16,
+            fontSize: 18,
             color: '#475569',
           }}
         >
-          Trade Options on Farcaster
+          Let&apos;s Trade
         </div>
       </div>
     ),
     {
       width: 1200,
-      height: 800,
-      headers: {
-        'Cache-Control': 'public, immutable, no-transform, max-age=300',
-      },
+      height: 630,
     }
   );
 }

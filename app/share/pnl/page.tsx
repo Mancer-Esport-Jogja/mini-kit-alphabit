@@ -36,7 +36,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
     description: `Check out ${username}'s trading performance on Alphabit!`,
     openGraph: {
       title: `${username}'s PNL on Alphabit`,
-      description: `${isProfit ? '+' : ''}${pnlNum.toFixed(2)} USDC - Trade options on Farcaster`,
+      description: `${isProfit ? '+' : ''}${pnlNum.toFixed(2)} USDC - Let's Trade`,
       images: [{
         url: `${ROOT_URL}/api/og/share-pnl?pnl=${encodeURIComponent(pnl)}&username=${encodeURIComponent(username)}`,
         width: 1200,

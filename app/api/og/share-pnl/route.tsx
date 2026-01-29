@@ -21,67 +21,71 @@ export async function GET(request: NextRequest) {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#0a0a0a',
-          fontFamily: 'monospace',
+          backgroundColor: '#0f172a',
+          padding: '40px',
         }}
       >
-        {/* Background Pattern */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundImage: 'radial-gradient(circle at 25% 25%, #1e293b 2px, transparent 2px)',
-            backgroundSize: '40px 40px',
-            opacity: 0.3,
-          }}
-        />
-        
-        {/* Content Container */}
+        {/* Border Container */}
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            padding: '60px',
+            justifyContent: 'center',
+            padding: '60px 80px',
             border: `4px solid ${isProfit ? '#4ade80' : '#fb7185'}`,
-            backgroundColor: '#0f172a',
+            backgroundColor: '#1e293b',
           }}
         >
-          {/* Logo/Brand */}
+          {/* Logo */}
           <div
             style={{
-              fontSize: 32,
+              display: 'flex',
+              fontSize: 36,
               fontWeight: 'bold',
               color: '#4ade80',
-              marginBottom: 20,
+              marginBottom: 24,
               letterSpacing: '4px',
             }}
           >
-            🚀 ALPHABIT
+            ALPHABIT
           </div>
           
           {/* Username */}
           <div
             style={{
+              display: 'flex',
               fontSize: 24,
               color: '#94a3b8',
               marginBottom: 40,
               textTransform: 'uppercase',
             }}
           >
-            @{username}&apos;s Performance
+            @{username}
+          </div>
+          
+          {/* PNL Label */}
+          <div
+            style={{
+              display: 'flex',
+              fontSize: 18,
+              color: '#64748b',
+              marginBottom: 16,
+              textTransform: 'uppercase',
+              letterSpacing: '2px',
+            }}
+          >
+            TOTAL PNL
           </div>
           
           {/* PNL Value */}
           <div
             style={{
-              fontSize: 72,
+              display: 'flex',
+              fontSize: 80,
               fontWeight: 'bold',
               color: isProfit ? '#4ade80' : '#fb7185',
-              marginBottom: 20,
+              marginBottom: 16,
             }}
           >
             {isProfit ? '+' : ''}{pnlNum.toFixed(2)}
@@ -90,47 +94,33 @@ export async function GET(request: NextRequest) {
           {/* Currency */}
           <div
             style={{
-              fontSize: 28,
+              display: 'flex',
+              fontSize: 32,
               color: '#64748b',
               textTransform: 'uppercase',
             }}
           >
             USDC
           </div>
-          
-          {/* Label */}
-          <div
-            style={{
-              marginTop: 40,
-              fontSize: 18,
-              color: '#475569',
-              textTransform: 'uppercase',
-              letterSpacing: '2px',
-            }}
-          >
-            Total PNL
-          </div>
         </div>
         
         {/* Footer */}
         <div
           style={{
+            display: 'flex',
             position: 'absolute',
             bottom: 40,
-            fontSize: 16,
+            fontSize: 18,
             color: '#475569',
           }}
         >
-          Trade Options on Farcaster
+          Let&apos;s Trade
         </div>
       </div>
     ),
     {
       width: 1200,
-      height: 800,
-      headers: {
-        'Cache-Control': 'public, immutable, no-transform, max-age=300',
-      },
+      height: 630,
     }
   );
 }
