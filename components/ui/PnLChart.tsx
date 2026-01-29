@@ -17,13 +17,12 @@ export const PnLChart = ({ data, height = 120, color = "#4ade80" }: PnLChartProp
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const { points, min, max, firstDate, lastDate, lastValue, chartData } = useMemo(() => {
+  const { points, min, max, firstDate, lastDate, lastValue, chartData, margin } = useMemo(() => {
     if (!data.length) return { points: "", min: 0, max: 0, firstDate: "", lastDate: "", lastValue: 0, chartData: [] };
 
     const margin = 20;
-    const marginX = 10; // Horizontal padding to prevent clipping
     const chartHeight = height - margin * 2;
-    const chartWidth = 300 - marginX * 2; 
+    const chartWidth = 300; 
 
     const values = data.map(d => d.cumulativePnL);
     const minVal = Math.min(...values, 0);
@@ -31,7 +30,7 @@ export const PnLChart = ({ data, height = 120, color = "#4ade80" }: PnLChartProp
     const range = maxVal - minVal;
 
     const mappedData = data.map((d, i) => {
-      const x = marginX + (i / (data.length - 1)) * chartWidth;
+      const x = (i / (data.length - 1)) * chartWidth;
       const y = margin + chartHeight - ((d.cumulativePnL - minVal) / range) * chartHeight;
       return { ...d, x, y };
     });
@@ -45,7 +44,8 @@ export const PnLChart = ({ data, height = 120, color = "#4ade80" }: PnLChartProp
       firstDate: data[0].date,
       lastDate: data[data.length - 1].date,
       lastValue: data[data.length - 1].cumulativePnL,
-      chartData: mappedData
+      chartData: mappedData,
+      margin // Return margin to use in render
     };
   }, [data, height]);
 
@@ -134,7 +134,7 @@ export const PnLChart = ({ data, height = 120, color = "#4ade80" }: PnLChartProp
             animate={{ opacity: 1 }}
             transition={{ duration: 1 }}
             fill="url(#chartGradient)"
-            points={`${points} 290,${height} 10,${height}`}
+            points={`${points} 300,${height - (margin || 20)} 0,${height - (margin || 20)}`}
           />
 
           {/* Line */}
