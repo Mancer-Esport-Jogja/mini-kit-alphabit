@@ -9,6 +9,7 @@ import {
   ArrowLeft, 
   Globe,
   Loader2,
+  Share2,
 } from "lucide-react";
 import Image from "next/image";
 import { useAnalytics } from "@/hooks/useAnalytics";
@@ -16,6 +17,7 @@ import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { useUserTransactions } from "@/hooks/useUserTransactions";
 import { parseStrike } from "@/utils/decimals";
 import { PnLChart } from "@/components/ui/PnLChart";
+import { ShareModal } from "@/components/features/ShareModal";
 import type { LeaderboardEntry } from "@/types/analytics";
 import { Position } from "@/types/positions";
 
@@ -25,6 +27,7 @@ interface PortfolioViewProps {
 
 export const PortfolioView = ({ onBack }: PortfolioViewProps) => {
   const [activeTab, setActiveTab] = useState<'analytics' | 'leaderboard' | 'history'>('analytics');
+  const [showShareModal, setShowShareModal] = useState(false);
   const { summary, pnlHistory, isLoading: isAnalyticsLoading } = useAnalytics();
   const { data: leaderboard, isLoading: isLeaderboardLoading } = useLeaderboard();
   const { data: history, isLoading: isHistoryLoading } = useUserTransactions();
@@ -46,6 +49,13 @@ export const PortfolioView = ({ onBack }: PortfolioViewProps) => {
           <ArrowLeft size={16} />
         </button>
         <h2 className="text-xl font-pixel text-white uppercase">Portfolio</h2>
+        <button 
+          onClick={() => setShowShareModal(true)}
+          className="ml-auto p-2 bg-bit-green/20 border-2 border-bit-green text-bit-green hover:bg-bit-green/30 transition-colors"
+          title="Share to Farcaster"
+        >
+          <Share2 size={16} />
+        </button>
       </div>
 
       {/* Tabs */}
@@ -254,6 +264,13 @@ export const PortfolioView = ({ onBack }: PortfolioViewProps) => {
           RETURN TO COMMAND
         </button>
       </div>
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        analytics={summary.data}
+      />
     </div>
   );
 };
