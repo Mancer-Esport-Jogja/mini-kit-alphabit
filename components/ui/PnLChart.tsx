@@ -21,8 +21,9 @@ export const PnLChart = ({ data, height = 120, color = "#4ade80" }: PnLChartProp
     if (!data.length) return { points: "", min: 0, max: 0, firstDate: "", lastDate: "", lastValue: 0, chartData: [] };
 
     const margin = 20;
+    const marginX = 10; // Horizontal padding to prevent clipping
     const chartHeight = height - margin * 2;
-    const chartWidth = 300; 
+    const chartWidth = 300 - marginX * 2; 
 
     const values = data.map(d => d.cumulativePnL);
     const minVal = Math.min(...values, 0);
@@ -30,7 +31,7 @@ export const PnLChart = ({ data, height = 120, color = "#4ade80" }: PnLChartProp
     const range = maxVal - minVal;
 
     const mappedData = data.map((d, i) => {
-      const x = (i / (data.length - 1)) * chartWidth;
+      const x = marginX + (i / (data.length - 1)) * chartWidth;
       const y = margin + chartHeight - ((d.cumulativePnL - minVal) / range) * chartHeight;
       return { ...d, x, y };
     });
@@ -133,7 +134,7 @@ export const PnLChart = ({ data, height = 120, color = "#4ade80" }: PnLChartProp
             animate={{ opacity: 1 }}
             transition={{ duration: 1 }}
             fill="url(#chartGradient)"
-            points={`${points} 300,${height} 0,${height}`}
+            points={`${points} 290,${height} 10,${height}`}
           />
 
           {/* Line */}
@@ -152,7 +153,7 @@ export const PnLChart = ({ data, height = 120, color = "#4ade80" }: PnLChartProp
           {/* Latest Point Indicator (Always visible if not hovering) */}
           {!activePoint && (
             <motion.circle
-              cx={300}
+              cx={chartData[chartData.length - 1].x}
               cy={chartData[chartData.length - 1].y}
               r="4"
               fill={color}
