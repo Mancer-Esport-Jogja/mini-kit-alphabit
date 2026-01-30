@@ -9,6 +9,7 @@ export interface User {
   updatedAt: string;
   lastActiveAt: string;
   streak: number;
+  currentWinStreak: number;
   status: 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
 }
 

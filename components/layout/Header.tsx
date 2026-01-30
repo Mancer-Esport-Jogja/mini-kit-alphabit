@@ -11,7 +11,7 @@ const formatAddress = (address: string | null) => {
 
 export const Header = () => {
     const { user, isAuthenticated, isLoading } = useAuth();
-    const streak = user?.streak || 0;
+    const streak = user?.currentWinStreak ?? user?.streak ?? 0;
     const { address, isConnected } = useAccount();
     const { connect, connectors } = useConnect();
     const { disconnect } = useDisconnect();

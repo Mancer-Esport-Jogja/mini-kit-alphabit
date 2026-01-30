@@ -19,6 +19,7 @@ interface User {
   updatedAt?: string;
   lastActiveAt?: string;
   streak?: number; // For gamification system
+  currentWinStreak?: number; 
   status?: 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
 }
 
@@ -130,7 +131,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setToken(authToken);
-      setUser(data.data.user);
+      // Map currentWinStreak if available, otherwise fallback or keep undefined
+      const userWithStreak = {
+        ...data.data.user,
+        streak: data.data.user.currentWinStreak ?? data.data.user.streak ?? 0
+      };
+      setUser(userWithStreak);
       setIsDevMode(IS_TESTNET);
 
       console.log("Auth: Successfully authenticated", {
@@ -138,6 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         username: data.data.user.username,
         isDevMode: IS_TESTNET,
         isNewUser: data.data.isNewUser,
+        winStreak: userWithStreak.streak
       });
 
       // Signal Farcaster that the app is ready
