@@ -18,7 +18,12 @@ export async function GET(request: NextRequest) {
   const pnl = parseFloat(searchParams.get('pnl') || '0');
   const username = searchParams.get('username') || 'Trader';
   const chartData = searchParams.get('chart') || '';
-  const themeColor = searchParams.get('color') || '#4ade80';
+  
+  // Handle color - ensure it starts with # (might be double-encoded or missing #)
+  let themeColor = searchParams.get('color') || '#4ade80';
+  if (!themeColor.startsWith('#')) {
+    themeColor = '#' + themeColor;
+  }
   
   const isProfit = pnl >= 0;
   

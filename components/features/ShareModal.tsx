@@ -86,6 +86,13 @@ export const ShareModal = ({ isOpen, onClose, analytics, pnlHistory }: ShareModa
   const [themeColor, setThemeColor] = useState('#4ade80');
   const { user } = useAuth();
   
+  // Reset sharing state when modal opens
+  React.useEffect(() => {
+    if (isOpen) {
+      setIsSharing(false);
+    }
+  }, [isOpen]);
+  
   const colors = [
     '#4ade80', // Green (Default)
     '#60a5fa', // Blue
