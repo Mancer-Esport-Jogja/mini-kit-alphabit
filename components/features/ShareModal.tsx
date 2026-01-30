@@ -142,7 +142,10 @@ export const ShareModal = ({ isOpen, onClose, analytics, pnlHistory }: ShareModa
       
       // For performance card, add simplified chart data and color
       if (card.id === 'performance') {
+        let chartPointsStr = '';
+        
         if (pnlHistory && pnlHistory.length >= 2) {
+           // Use actual history data
            const maxPoints = 12;
            const step = Math.max(1, Math.floor(pnlHistory.length / maxPoints));
            const sampledPoints = pnlHistory
@@ -150,8 +153,26 @@ export const ShareModal = ({ isOpen, onClose, analytics, pnlHistory }: ShareModa
              .slice(0, maxPoints)
              .map(p => p.cumulativePnL.toFixed(2));
            
-           shareUrl += `&chart=${encodeURIComponent(sampledPoints.join(','))}`;
+           chartPointsStr = sampledPoints.join(',');
+        } else {
+           // Fallback: Generate synthetic chart from PnL value
+           const pnlValue = Number(pnl) || 0;
+           const numPoints = 8;
+           const variation = Math.abs(pnlValue) * 0.15 || 10;
+           const chartPoints: number[] = [];
+           
+           for (let i = 0; i < numPoints; i++) {
+             const progress = i / (numPoints - 1);
+             const baseValue = pnlValue * progress;
+             const randomVariation = (Math.random() - 0.5) * variation;
+             chartPoints.push(Number((baseValue + randomVariation).toFixed(2)));
+           }
+           // Ensure last point matches actual PnL
+           chartPoints[chartPoints.length - 1] = pnlValue;
+           chartPointsStr = chartPoints.join(',');
         }
+        
+        shareUrl += `&chart=${encodeURIComponent(chartPointsStr)}`;
         shareUrl += `&color=${encodeURIComponent(themeColor)}`;
       }
       
@@ -179,9 +200,9 @@ export const ShareModal = ({ isOpen, onClose, analytics, pnlHistory }: ShareModa
       case 'winrate':
         return `🎯 My Win Rate: ${(a?.winRate || 0).toFixed(1)}%\n\nTrading smarter with @alphabit`;
       case 'missions':
-        return `🎮 Completed ${a?.totalTrades || 0} missions on @alphabit!\n\nJoin the trading adventure`;
+        return `🎮 Completed ${a?.totalTrades || 0} missions on @alphabit!\n\nJoin the adventure`;
       case 'performance':
-        return `📈 Check out my trading performance on @alphabit safe, scalable & smart!\n\n#DeFi #Options`;
+        return `📈 Check out my Alphabit performance on @alphabit safe, scalable & smart!\n\n`;
       default:
         return `Trading on @alphabit 🚀`;
     }
