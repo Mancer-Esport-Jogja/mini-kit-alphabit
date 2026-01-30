@@ -10,12 +10,19 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   const params = await searchParams;
   const winrate = (params.winrate as string) || '0';
   const username = (params.username as string) || 'Player';
+  const color = (params.color as string) || '#4ade80';
   
   const winRateNum = parseFloat(winrate);
   
+  // Build OG image URL with color
+  let ogImageUrl = `${ROOT_URL}/api/og/share-winrate?winrate=${encodeURIComponent(winrate)}&username=${encodeURIComponent(username)}`;
+  if (color) {
+    ogImageUrl += `&color=${encodeURIComponent(color)}`;
+  }
+  
   const embedData = {
     version: "1",
-    imageUrl: `${ROOT_URL}/api/og/share-winrate?winrate=${encodeURIComponent(winrate)}&username=${encodeURIComponent(username)}`,
+    imageUrl: ogImageUrl,
     button: {
       title: "🎯 Play Alphabit",
       action: {
@@ -35,9 +42,9 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
       title: `${username}'s Win Rate on Alphabit`,
       description: `${winRateNum.toFixed(1)}% accuracy - Let's Trade`,
       images: [{
-        url: `${ROOT_URL}/api/og/share-winrate?winrate=${encodeURIComponent(winrate)}&username=${encodeURIComponent(username)}`,
+        url: ogImageUrl,
         width: 1200,
-        height: 800,
+        height: 630,
       }],
     },
     other: {

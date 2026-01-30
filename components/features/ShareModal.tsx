@@ -37,6 +37,18 @@ interface ShareCard {
 
 const shareCards: ShareCard[] = [
   {
+    id: 'performance',
+    title: 'PERFORMANCE',
+    subtitle: 'Share your trading graph',
+    icon: BarChart3,
+    color: 'text-orange-400',
+    bgColor: 'bg-orange-400/10 border-orange-400/30',
+    getValue: (a) => {
+      const pnl = Number(a?.netPnL || 0);
+      return `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} USDC`;
+    },
+  },
+  {
     id: 'pnl',
     title: 'TOTAL PNL',
     subtitle: 'Share your profit/loss',
@@ -65,18 +77,6 @@ const shareCards: ShareCard[] = [
     color: 'text-purple-400',
     bgColor: 'bg-purple-400/10 border-purple-400/30',
     getValue: (a) => `${a?.totalTrades || 0} Missions`,
-  },
-  {
-    id: 'performance',
-    title: 'PERFORMANCE',
-    subtitle: 'Share your trading graph',
-    icon: BarChart3,
-    color: 'text-orange-400',
-    bgColor: 'bg-orange-400/10 border-orange-400/30',
-    getValue: (a) => {
-      const pnl = Number(a?.netPnL || 0);
-      return `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} USDC`;
-    },
   },
 ];
 
@@ -129,7 +129,7 @@ export const ShareModal = ({ isOpen, onClose, analytics, pnlHistory }: ShareModa
 
   const currentCard = shareCards[currentIndex];
   const isPerformanceCard = currentCard.id === 'performance';
-  const hasCustomTheme = isPerformanceCard || currentCard.id === 'missions';
+  const hasCustomTheme = ['performance', 'missions', 'winrate', 'pnl'].includes(currentCard.id);
   const activeColor = hasCustomTheme ? themeColor : Colors[currentCard.color.replace('text-', '') as keyof typeof Colors] || themeColor;
 
   const handleShare = async () => {
@@ -185,7 +185,7 @@ export const ShareModal = ({ isOpen, onClose, analytics, pnlHistory }: ShareModa
       }
       
       // For missions card, add color
-      if (card.id === 'missions') {
+      if (card.id === 'missions' || card.id === 'winrate' || card.id === 'pnl') {
         shareUrl += `&color=${encodeURIComponent(themeColor)}`;
       }
       
@@ -455,6 +455,91 @@ export const ShareModal = ({ isOpen, onClose, analytics, pnlHistory }: ShareModa
                       <div className="absolute inset-0 pointer-events-none mix-blend-screen"
                            style={{ background: `radial-gradient(circle at 50% 30%, ${themeColor}20, transparent 60%)` }}></div>
                    </div>
+                ) : currentCard.id === 'winrate' ? (
+                  /* --- PREMIUM WIN RATE CARD --- */
+                   <div className="w-[300px] h-[200px] relative group select-none overflow-hidden rounded-lg bg-[#070a13] shadow-2xl border border-slate-800">
+                      <div 
+                        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+                        style={{ 
+                          backgroundImage: `linear-gradient(${themeColor} 1px, transparent 1px), linear-gradient(90deg, ${themeColor} 1px, transparent 1px)`, 
+                          backgroundSize: '20px 20px' 
+                        }}
+                      />
+                      <div className="relative h-full flex flex-col items-center justify-between py-4 px-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-10 h-10 border-2 rounded-lg overflow-hidden" style={{ borderColor: themeColor }}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src="/hero.png" alt="Alphabit" className="w-full h-full object-cover" />
+                            </div>
+                            <span className="text-sm font-bold text-white uppercase tracking-tight">
+                              ALPHA<span style={{ color: themeColor }}>BIT</span>
+                            </span>
+                          </div>
+                          
+                          <div className="text-center">
+                            <h3 className="text-sm font-bold tracking-[0.15em] leading-none mb-1 font-pixel" style={{ color: themeColor }}>WIN RATE</h3>
+                            <p className="text-slate-500 text-[7px] tracking-wider font-bold uppercase">@{user?.username || 'TRADER'}&apos;S EFFICIENCY</p>
+                          </div>
+
+                          <div className="flex items-center justify-center" style={{ color: themeColor }}>
+                            <Target size={36} />
+                          </div>
+
+                          <div className="text-center">
+                            <div className="text-2xl font-black leading-none tracking-tight flex items-baseline justify-center gap-2 font-pixel">
+                               <span className="text-white">{(analytics?.winRate || 0).toFixed(1)}</span>
+                               <span className="text-xs opacity-80" style={{ color: themeColor }}>%</span>
+                            </div>
+                          </div>
+                      </div>
+                      <div className="absolute top-2 left-2 w-4 h-4 border-t border-l border-slate-700/50 rounded-tl"></div>
+                      <div className="absolute bottom-2 right-2 w-4 h-4 border-b border-r border-slate-700/50 rounded-br"></div>
+                      <div className="absolute inset-0 pointer-events-none mix-blend-screen"
+                           style={{ background: `radial-gradient(circle at 50% 30%, ${themeColor}20, transparent 60%)` }}></div>
+                   </div>
+                ) : currentCard.id === 'pnl' ? (
+                  /* --- PREMIUM PNL CARD --- */
+                   <div className="w-[300px] h-[200px] relative group select-none overflow-hidden rounded-lg bg-[#070a13] shadow-2xl border border-slate-800">
+                      <div 
+                        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+                        style={{ 
+                          backgroundImage: `linear-gradient(${themeColor} 1px, transparent 1px), linear-gradient(90deg, ${themeColor} 1px, transparent 1px)`, 
+                          backgroundSize: '20px 20px' 
+                        }}
+                      />
+                      <div className="relative h-full flex flex-col items-center justify-between py-4 px-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-10 h-10 border-2 rounded-lg overflow-hidden" style={{ borderColor: themeColor }}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src="/hero.png" alt="Alphabit" className="w-full h-full object-cover" />
+                            </div>
+                            <span className="text-sm font-bold text-white uppercase tracking-tight">
+                              ALPHA<span style={{ color: themeColor }}>BIT</span>
+                            </span>
+                          </div>
+                          
+                          <div className="text-center">
+                            <h3 className="text-sm font-bold tracking-[0.15em] leading-none mb-1 font-pixel" style={{ color: themeColor }}>TOTAL PNL</h3>
+                            <p className="text-slate-500 text-[7px] tracking-wider font-bold uppercase">@{user?.username || 'TRADER'}&apos;S PROFIT</p>
+                          </div>
+
+                          <div className="flex items-center justify-center" style={{ color: themeColor }}>
+                            <TrendingUp size={36} />
+                          </div>
+
+                          <div className="text-center">
+                            <div className="text-2xl font-black leading-none tracking-tight flex items-baseline justify-center gap-2 font-pixel">
+                               <span style={{ color: themeColor }}>{Number(analytics?.netPnL || 0) >= 0 ? '+' : ''}</span>
+                               <span className="text-white">{Math.abs(Number(analytics?.netPnL || 0)).toFixed(2)}</span>
+                               <span className="text-xs opacity-80" style={{ color: themeColor }}>USDC</span>
+                            </div>
+                          </div>
+                      </div>
+                      <div className="absolute top-2 left-2 w-4 h-4 border-t border-l border-slate-700/50 rounded-tl"></div>
+                      <div className="absolute bottom-2 right-2 w-4 h-4 border-b border-r border-slate-700/50 rounded-br"></div>
+                      <div className="absolute inset-0 pointer-events-none mix-blend-screen"
+                           style={{ background: `radial-gradient(circle at 50% 30%, ${themeColor}20, transparent 60%)` }}></div>
+                   </div>
                 ) : (
                   /* --- STANDARD CARD --- */
                   <div className={`w-[280px] aspect-square border-2 ${currentCard.bgColor} p-6 flex flex-col items-center justify-center rounded-xl`}>
@@ -489,7 +574,7 @@ export const ShareModal = ({ isOpen, onClose, analytics, pnlHistory }: ShareModa
 
           {/* Color Picker (Only for Performance & Missions Cards) */}
           <AnimatePresence>
-            {(isPerformanceCard || currentCard.id === 'missions') && (
+            {(hasCustomTheme) && (
               <motion.div 
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}

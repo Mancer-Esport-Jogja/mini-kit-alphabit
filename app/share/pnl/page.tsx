@@ -10,15 +10,20 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   const params = await searchParams;
   const pnl = (params.pnl as string) || '0';
   const username = (params.username as string) || 'Player';
-  const _winrate = (params.winrate as string) || '0';
-  const _missions = (params.missions as string) || '0';
+  const color = (params.color as string) || '#4ade80';
   
   const pnlNum = parseFloat(pnl);
   const isProfit = pnlNum >= 0;
   
+  // Build OG image URL with color
+  let ogImageUrl = `${ROOT_URL}/api/og/share-pnl?pnl=${encodeURIComponent(pnl)}&username=${encodeURIComponent(username)}`;
+  if (color) {
+    ogImageUrl += `&color=${encodeURIComponent(color)}`;
+  }
+  
   const embedData = {
     version: "1",
-    imageUrl: `${ROOT_URL}/api/og/share-pnl?pnl=${encodeURIComponent(pnl)}&username=${encodeURIComponent(username)}`,
+    imageUrl: ogImageUrl,
     button: {
       title: "🚀 Play Alphabit",
       action: {
@@ -38,14 +43,13 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
       title: `${username}'s PNL on Alphabit`,
       description: `${isProfit ? '+' : ''}${pnlNum.toFixed(2)} USDC - Let's Trade`,
       images: [{
-        url: `${ROOT_URL}/api/og/share-pnl?pnl=${encodeURIComponent(pnl)}&username=${encodeURIComponent(username)}`,
+        url: ogImageUrl,
         width: 1200,
-        height: 800,
+        height: 630,
       }],
     },
     other: {
       "fc:miniapp": JSON.stringify(embedData),
-      // For backward compatibility
       "fc:frame": JSON.stringify({
         ...embedData,
         button: {
