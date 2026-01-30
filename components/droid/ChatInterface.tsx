@@ -6,6 +6,7 @@ import { useDroid } from '@/context/DroidContext';
 import { motion } from 'framer-motion';
 import { TradeRecommendation, PsychologyProfile, RiskAnswer } from '@/utils/riskEngine';
 import { TradeRecommendationCard } from './TradeRecommendationCard';
+import ReactMarkdown from 'react-markdown';
 
 type TacticalRecommendation = TradeRecommendation & { 
     target: 'MOON' | 'DOOM';
@@ -186,7 +187,26 @@ export const ChatInterface = () => {
                                     <Cpu size={8} /> TACTICAL DROID
                                 </div>
                             )}
-                            {msg.content}
+                            {msg.role === 'assistant' ? (
+                                <ReactMarkdown 
+                                    components={{
+                                        p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
+                                        ul: ({node, ...props}) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
+                                        ol: ({node, ...props}) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
+                                        li: ({node, ...props}) => <li className="pl-1" {...props} />,
+                                        h1: ({node, ...props}) => <h1 className="text-sm font-bold text-green-400 mt-3 mb-2 uppercase tracking-wide border-b border-green-500/30 pb-1" {...props} />,
+                                        h2: ({node, ...props}) => <h2 className="text-xs font-bold text-green-400 mt-2 mb-1 uppercase" {...props} />,
+                                        h3: ({node, ...props}) => <h3 className="text-xs font-bold text-green-500/80 mt-2 mb-1" {...props} />,
+                                        strong: ({node, ...props}) => <strong className="text-green-300 font-bold" {...props} />,
+                                        code: ({node, ...props}) => <code className="bg-green-900/30 px-1 py-0.5 rounded text-[10px] font-mono border border-green-500/20" {...props} />,
+                                        blockquote: ({node, ...props}) => <blockquote className="border-l-2 border-green-500/50 pl-2 italic text-green-500/70 my-2" {...props} />,
+                                    }}
+                                >
+                                    {msg.content}
+                                </ReactMarkdown>
+                            ) : (
+                                msg.content
+                            )}
                         </div>
                     </motion.div>
                 ))}
