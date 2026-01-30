@@ -1,7 +1,8 @@
 import React from 'react';
-import { Cpu, Flame } from 'lucide-react';
+import { Cpu } from 'lucide-react';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { useAuth } from '@/context/AuthContext';
+import { StreakFlame } from '@/components/ui/StreakFlame';
 import Image from 'next/image';
 
 const formatAddress = (address: string | null) => {
@@ -76,10 +77,7 @@ export const Header = () => {
                             </div>
                         </div>
                     ) : (
-                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-black border border-orange-500/50">
-                            <Flame className={`w-3 h-3 ${streak > 3 ? 'text-orange-500 fill-orange-500' : 'text-slate-500'}`} />
-                            <span className={`font-bold ${streak > 3 ? 'text-orange-500' : 'text-slate-400'} text-xs font-pixel`}>x{streak}</span>
-                        </div>
+                        <StreakFlame streak={streak} size="sm" />
                     )}
                 </div>
 
