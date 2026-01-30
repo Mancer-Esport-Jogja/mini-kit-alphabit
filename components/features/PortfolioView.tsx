@@ -161,7 +161,6 @@ export const PortfolioView = ({ onBack }: PortfolioViewProps) => {
                     {leaderboard?.map((entry: LeaderboardEntry, i: number) => {
                       // Determine rank styling
                       let rankStyles = "border-2 border-slate-700";
-                      let rankGlow = "";
                       
                       if (i === 0) { // 1st Place - Gold
                         rankStyles = "border-4 border-double border-yellow-400 text-yellow-400";
