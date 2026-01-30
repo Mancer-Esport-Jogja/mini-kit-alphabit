@@ -9,7 +9,7 @@ type Props = {
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const params = await searchParams;
   const pnl = (params.pnl as string) || '0';
-  const username = (params.username as string) || 'Trader';
+  const username = (params.username as string) || 'Player';
   const winrate = (params.winrate as string) || '0';
   const missions = (params.missions as string) || '0';
   
@@ -20,7 +20,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
     version: "1",
     imageUrl: `${ROOT_URL}/api/og/share-performance?pnl=${encodeURIComponent(pnl)}&username=${encodeURIComponent(username)}&winrate=${encodeURIComponent(winrate)}&missions=${encodeURIComponent(missions)}`,
     button: {
-      title: "📈 Trade on Alphabit",
+      title: "📈 Play Alphabit",
       action: {
         type: "launch_miniapp",
         name: "Alphabit",
