@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   const winRate = parseFloat(searchParams.get('winrate') || '0');
   const username = searchParams.get('username') || 'Trader';
   
-  const isGood = winRate >= 50;
+  const iconColor = '#60a5fa'; // blue-400
 
   return new ImageResponse(
     (
@@ -24,52 +24,53 @@ export async function GET(request: NextRequest) {
           padding: '40px',
         }}
       >
-        {/* Border Container */}
+        {/* Main Card - Matching popup style */}
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '60px 80px',
-            border: '4px solid #60a5fa',
-            backgroundColor: '#1e293b',
+            padding: '60px 100px',
+            border: '4px solid rgba(96, 165, 250, 0.3)',
+            backgroundColor: 'rgba(96, 165, 250, 0.1)',
           }}
         >
-          {/* Logo */}
+          {/* Icon - Target */}
           <div
             style={{
               display: 'flex',
-              fontSize: 36,
+              width: '100px',
+              height: '100px',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '24px',
+            }}
+          >
+            <svg
+              width="80"
+              height="80"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke={iconColor}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <circle cx="12" cy="12" r="6" />
+              <circle cx="12" cy="12" r="2" />
+            </svg>
+          </div>
+          
+          {/* Title */}
+          <div
+            style={{
+              display: 'flex',
+              fontSize: 32,
               fontWeight: 'bold',
-              color: '#4ade80',
-              marginBottom: 24,
-              letterSpacing: '4px',
-            }}
-          >
-            ALPHABIT
-          </div>
-          
-          {/* Username */}
-          <div
-            style={{
-              display: 'flex',
-              fontSize: 24,
-              color: '#94a3b8',
-              marginBottom: 40,
-              textTransform: 'uppercase',
-            }}
-          >
-            @{username}
-          </div>
-          
-          {/* Win Rate Label */}
-          <div
-            style={{
-              display: 'flex',
-              fontSize: 18,
-              color: '#64748b',
-              marginBottom: 16,
+              color: iconColor,
+              marginBottom: 8,
               textTransform: 'uppercase',
               letterSpacing: '2px',
             }}
@@ -77,43 +78,54 @@ export async function GET(request: NextRequest) {
             WIN RATE
           </div>
           
-          {/* Win Rate Value */}
+          {/* Subtitle */}
           <div
             style={{
               display: 'flex',
-              fontSize: 80,
+              fontSize: 14,
+              color: '#64748b',
+              marginBottom: 24,
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+            }}
+          >
+            @{username}&apos;s accuracy
+          </div>
+          
+          {/* Value */}
+          <div
+            style={{
+              display: 'flex',
+              fontSize: 64,
               fontWeight: 'bold',
-              color: '#60a5fa',
-              marginBottom: 16,
+              color: iconColor,
             }}
           >
             {winRate.toFixed(1)}%
           </div>
-          
-          {/* Status */}
-          <div
-            style={{
-              display: 'flex',
-              fontSize: 24,
-              color: isGood ? '#4ade80' : '#fbbf24',
-              textTransform: 'uppercase',
-            }}
-          >
-            {isGood ? 'SHARP SHOOTER' : 'IMPROVING'}
-          </div>
         </div>
         
-        {/* Footer */}
+        {/* Footer - Alphabit Branding */}
         <div
           style={{
             display: 'flex',
             position: 'absolute',
             bottom: 40,
-            fontSize: 18,
-            color: '#475569',
+            alignItems: 'center',
+            gap: '12px',
           }}
         >
-          Let&apos;s Trade
+          <div
+            style={{
+              display: 'flex',
+              fontSize: 24,
+              fontWeight: 'bold',
+              color: '#4ade80',
+              letterSpacing: '4px',
+            }}
+          >
+            ALPHABIT
+          </div>
         </div>
       </div>
     ),

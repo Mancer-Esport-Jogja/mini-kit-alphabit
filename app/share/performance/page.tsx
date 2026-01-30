@@ -12,13 +12,24 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   const username = (params.username as string) || 'Player';
   const winrate = (params.winrate as string) || '0';
   const missions = (params.missions as string) || '0';
+  const chart = (params.chart as string) || '';
+  const color = (params.color as string) || '#4ade80';
   
   const pnlNum = parseFloat(pnl);
   const isProfit = pnlNum >= 0;
   
+  // Build OG image URL with chart data and color if available
+  let ogImageUrl = `${ROOT_URL}/api/og/share-performance?pnl=${encodeURIComponent(pnl)}&username=${encodeURIComponent(username)}&winrate=${encodeURIComponent(winrate)}&missions=${encodeURIComponent(missions)}`;
+  if (chart) {
+    ogImageUrl += `&chart=${encodeURIComponent(chart)}`;
+  }
+  if (color) {
+    ogImageUrl += `&color=${encodeURIComponent(color)}`;
+  }
+  
   const embedData = {
     version: "1",
-    imageUrl: `${ROOT_URL}/api/og/share-performance?pnl=${encodeURIComponent(pnl)}&username=${encodeURIComponent(username)}&winrate=${encodeURIComponent(winrate)}&missions=${encodeURIComponent(missions)}`,
+    imageUrl: ogImageUrl,
     button: {
       title: "📈 Play Alphabit",
       action: {
@@ -38,9 +49,9 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
       title: `${username}'s Trading Performance on Alphabit`,
       description: `Check out the full trading stats on Farcaster`,
       images: [{
-        url: `${ROOT_URL}/api/og/share-performance?pnl=${encodeURIComponent(pnl)}&username=${encodeURIComponent(username)}&winrate=${encodeURIComponent(winrate)}&missions=${encodeURIComponent(missions)}`,
+        url: ogImageUrl,
         width: 1200,
-        height: 800,
+        height: 630, // Updated to match new OG dimensions
       }],
     },
     other: {
