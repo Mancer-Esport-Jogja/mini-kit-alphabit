@@ -10,12 +10,19 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   const params = await searchParams;
   const missions = (params.missions as string) || '0';
   const username = (params.username as string) || 'Player';
+  const color = (params.color as string) || '#4ade80';
   
   const missionsNum = parseInt(missions);
   
+  // Build OG image URL with color
+  let ogImageUrl = `${ROOT_URL}/api/og/share-missions?missions=${encodeURIComponent(missions)}&username=${encodeURIComponent(username)}`;
+  if (color) {
+    ogImageUrl += `&color=${encodeURIComponent(color)}`;
+  }
+  
   const embedData = {
     version: "1",
-    imageUrl: `${ROOT_URL}/api/og/share-missions?missions=${encodeURIComponent(missions)}&username=${encodeURIComponent(username)}`,
+    imageUrl: ogImageUrl,
     button: {
       title: "🎮 Play on Alphabit",
       action: {
@@ -35,9 +42,9 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
       title: `${username}'s Trading Journey on Alphabit`,
       description: `${missionsNum} missions completed - Let's Play`,
       images: [{
-        url: `${ROOT_URL}/api/og/share-missions?missions=${encodeURIComponent(missions)}&username=${encodeURIComponent(username)}`,
+        url: ogImageUrl,
         width: 1200,
-        height: 800,
+        height: 630,
       }],
     },
     other: {
