@@ -10,6 +10,7 @@ import {
   Globe,
   Loader2,
   Share2,
+  Crown,
 } from "lucide-react";
 import Image from "next/image";
 import { useAnalytics } from "@/hooks/useAnalytics";
@@ -157,15 +158,36 @@ export const PortfolioView = ({ onBack }: PortfolioViewProps) => {
                   </div>
                 ) : (
                   <div className="divide-y divide-slate-800">
-                    {leaderboard?.map((entry: LeaderboardEntry, i: number) => (
+                    {leaderboard?.map((entry: LeaderboardEntry, i: number) => {
+                      // Determine rank styling
+                      let rankStyles = "border-2 border-slate-700";
+                      let rankGlow = "";
+                      
+                      if (i === 0) { // 1st Place - Gold
+                        rankStyles = "border-4 border-double border-yellow-400 text-yellow-400";
+                      } else if (i === 1) { // 2nd Place - Silver
+                        rankStyles = "border-2 border-slate-300";
+                      } else if (i === 2) { // 3rd Place - Bronze
+                        rankStyles = "border-2 border-amber-700";
+                      }
+                      
+                      return (
                       <div key={entry.userId || i} className="p-3 flex items-center gap-3 hover:bg-white/5 transition-colors">
-                        <div className="w-6 text-center font-pixel text-[10px] text-slate-500">#{i + 1}</div>
-                        <div className="w-8 h-8 bg-black border-2 border-slate-700 overflow-hidden shrink-0">
-                          {entry.pfpUrl ? (
-                            <Image src={entry.pfpUrl} alt={entry.username} width={32} height={32} unoptimized className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-[10px] font-pixel text-slate-800">?</div>
+                        <div className={`w-6 text-center font-pixel text-[10px] ${i === 0 ? "text-yellow-400" : i === 1 ? "text-slate-300" : i === 2 ? "text-amber-700" : "text-slate-500"}`}>#{i + 1}</div>
+                        
+                        <div className="relative shrink-0">
+                          {i === 0 && (
+                            <div className="absolute -top-2.5 -left-1.5 z-10 transform -rotate-12">
+                              <Crown size={14} className="text-yellow-400 fill-yellow-400/20 drop-shadow-md" strokeWidth={2.5} />
+                            </div>
                           )}
+                          <div className={`w-8 h-8 bg-black ${rankStyles} overflow-hidden`}>
+                            {entry.pfpUrl ? (
+                              <Image src={entry.pfpUrl} alt={entry.username} width={32} height={32} unoptimized className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[10px] font-pixel text-slate-800">?</div>
+                            )}
+                          </div>
                         </div>
                         <div className="flex-grow min-w-0">
                           <div className="text-xs font-pixel text-white truncate uppercase mb-0.5">{entry.username || `USER:${entry.userId?.slice(0, 4)}`}</div>
@@ -182,7 +204,8 @@ export const PortfolioView = ({ onBack }: PortfolioViewProps) => {
                           <div className="text-[8px] font-pixel text-slate-500 opacity-80 uppercase leading-none">USDC</div>
                         </div>
                       </div>
-                    ))}
+                    );
+                    })}
                   </div>
                 )}
               </div>

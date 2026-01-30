@@ -46,8 +46,8 @@ const config: Config = {
                     '80%': { transform: 'translate(2px, -2px)' },
                 },
                 pulseNeon: {
-                    '0%, 100%': { boxShadow: '0 0 5px currentColor, 0 0 10px currentColor, 0 0 20px currentColor' },
-                    '50%': { boxShadow: '0 0 10px currentColor, 0 0 20px currentColor, 0 0 40px currentColor' },
+                    '0%, 100%': { boxShadow: 'inset 0 0 2px currentColor, 0 0 2px currentColor' },
+                    '50%': { boxShadow: 'inset 0 0 4px currentColor, 0 0 4px currentColor' },
                 },
                 float: {
                     '0%, 100%': { transform: 'translateY(0)' },
