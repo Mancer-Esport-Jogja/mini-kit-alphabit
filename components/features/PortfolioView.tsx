@@ -147,7 +147,7 @@ export const PortfolioView = ({ onBack }: PortfolioViewProps) => {
                      <Globe size={14} className="text-bit-green" />
                      <span className="text-[10px] font-pixel text-white uppercase">GLOBAL RANKINGS</span>
                    </div>
-                   <div className="text-[8px] font-mono text-slate-500 uppercase">TOP AGENTS</div>
+                   <div className="text-[8px] font-mono text-slate-500 uppercase">TOP PNL</div>
                 </div>
 
                 {isLeaderboardLoading ? (
@@ -175,7 +175,11 @@ export const PortfolioView = ({ onBack }: PortfolioViewProps) => {
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-[10px] font-pixel text-bit-green">+{(entry.stats?.totalPnl || 0).toFixed(0)}</div>
+                          <div className={`text-[10px] font-pixel leading-none mb-0.5 ${(entry.stats?.totalPnl || 0) >= 0 ? "text-bit-green" : "text-bit-coral"}`}>
+                            {(entry.stats?.totalPnl || 0) >= 0 ? "+" : ""}
+                            {(entry.stats?.totalPnl || 0).toFixed(2)}
+                          </div>
+                          <div className="text-[8px] font-pixel text-slate-500 opacity-80 uppercase leading-none">USDC</div>
                         </div>
                       </div>
                     ))}
