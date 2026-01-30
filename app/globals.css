@@ -210,3 +210,15 @@ body {
     top: 100%;
   }
 }
+
+/* Color shift animation - smooth color transition */
+@keyframes colorShift {
+  0%, 100% {
+    background-color: #10b981; /* emerald-500 */
+    color: #000000; /* black text */
+  }
+  50% {
+    background-color: #0f172a; /* dark slate */
+    color: #ffffff; /* white text */
+  }
+}

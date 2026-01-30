@@ -27,7 +27,7 @@ export const PlanetCard = ({ name, timeframe, type, isSelected, isAvailable = tr
       whileTap={isAvailable ? { scale: 0.95 } : {}}
       whileHover={isAvailable ? { scale: 1.02 } : {}}
       animate={isSelected ? { scale: 1.05, borderColor: "#10b981" } : { scale: 1, borderColor: "rgba(255,255,255,0.1)" }}
-      className={`relative flex flex-col items-center justify-center p-4 border-2 rounded-xl backdrop-blur-sm transition-all duration-300 cursor-pointer group overflow-hidden ${
+      className={`relative flex flex-col items-center justify-center p-4 border-2 rounded-xl backdrop-blur-sm transition-all duration-300 cursor-pointer group ${
         !isAvailable ? "opacity-60 border-slate-800 bg-slate-900/40" :
         isSelected ? "bg-emerald-900/20 shadow-[0_0_20px_rgba(16,185,129,0.3)] border-emerald-500" : 
         "bg-black/40 hover:bg-white/5 border-slate-700"
