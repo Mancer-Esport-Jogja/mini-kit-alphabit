@@ -68,9 +68,22 @@ export function ArcadeMode() {
     const [inputAmount, setInputAmount] = useState<string>('50');
 
     // Data Hooks
-    const { data: orderData } = useThetanutsOrders();
+    const { data: orderData, refetch: refetchOrders } = useThetanutsOrders();
     // const { data: history } = useUserTransactions(); // Deprecated for active check
-    const { data: activePositions } = useUserPositions(); 
+    const { data: activePositions, refetch: refetchPositions } = useUserPositions(); 
+
+    // Effect: Refetch on mount (Tab Click)
+    useEffect(() => {
+        refetchOrders();
+        refetchPositions();
+    }, [refetchOrders, refetchPositions]);
+
+    // Effect: If active positions found, ensure we show the battle (INTRO state)
+    useEffect(() => {
+        if (activePositions && activePositions.length > 0) {
+            setGameState('INTRO');
+        }
+    }, [activePositions]); 
     const { currentPrice: ethSpot } = useOraclePrice({ symbol: 'ETHUSDT', interval: '1m', limit: 20 });
     const { currentPrice: btcSpot } = useOraclePrice({ symbol: 'BTCUSDT', interval: '1m', limit: 20 });
     
@@ -228,7 +241,7 @@ export function ArcadeMode() {
     
     // INTRO SCREEN
     const renderIntro = () => (
-        <div className="min-h-[600px] md:h-full flex flex-col items-center justify-center space-y-8 p-8 relative overflow-hidden">
+        <div className="min-h-[600px] md:h-full flex flex-col items-center justify-center space-y-8 p-8 pt-0 relative overflow-hidden">
             <div className="absolute inset-0 bg-[url('/assets/grid-bg.png')] opacity-20 animate-[pulse_4s_infinite]"></div>
             
             {/* Decorative HUD Lines */}
