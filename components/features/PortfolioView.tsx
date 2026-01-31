@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   BarChart3, 
@@ -32,6 +32,12 @@ export const PortfolioView = ({ onBack }: PortfolioViewProps) => {
   const { summary, pnlHistory, isLoading: isAnalyticsLoading } = useAnalytics();
   const { data: leaderboard, isLoading: isLeaderboardLoading } = useLeaderboard();
   const { data: history, isLoading: isHistoryLoading } = useUserTransactions();
+
+  // Keep history in latest-first order for display
+  const sortedHistory = useMemo(() => {
+    if (!history) return [];
+    return [...history].sort((a, b) => b.entryTimestamp - a.entryTimestamp);
+  }, [history]);
 
   const tabs = [
     { id: 'analytics', label: 'ANALYTICS', icon: BarChart3 },
@@ -230,7 +236,7 @@ export const PortfolioView = ({ onBack }: PortfolioViewProps) => {
                       <p className="text-[8px] font-mono text-slate-700 uppercase">Complete your first mission to view history</p>
                     </div>
                 ) : (
-                  history.map((pos: Position, i: number) => {
+                  sortedHistory.map((pos: Position, i: number) => {
                     const isCall = pos.optionType === 256;
                     
                     // Calculate PNL with proper decimal normalization
