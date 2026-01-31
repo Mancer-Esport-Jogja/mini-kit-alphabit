@@ -70,18 +70,18 @@ Purpose: bridge chat → trade action without forcing users to learn options.
 ## Data/Intent Flow
 ```mermaid
 graph TD
-    U[User: "Scan ETH & give a play"] --> Chat[ChatInterface]
-    Chat --> API[/api/ai/analyze<br/>Groq/compound/]
+    U[User Input] --> Chat[ChatInterface]
+    Chat --> API[AI Analyze API]
     API --> Chat
     Chat --> RecCard[TradeRecommendationCard]
-    RecCard -->|triggerTrade(intent)| DroidCtx[Droid Context]
+    RecCard --> DroidCtx[Droid Context]
     DroidCtx --> Terminal[HuntTerminal]
-    Terminal --> Matcher[Execution Matcher<br/>useThetanutsOrders]
-    Matcher --> Best[Best Order + Strike Match]
+    Terminal --> Matcher[Execution Matcher]
+    Matcher --> Best[Best Order]
     Best --> BuyModal[Buy Modal]
-    BuyModal --> Chain[Thetanuts RFQ / Settlement]
-    Terminal --> DroidCtx
-    DroidCtx --> API
+    BuyModal --> Chain[Settlement]
+    Terminal -.-> DroidCtx
+    DroidCtx -.-> API
 ```
 
 ## Quick Extensions
