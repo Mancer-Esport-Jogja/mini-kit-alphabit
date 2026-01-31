@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { Position } from '@/types/positions';
@@ -60,6 +60,31 @@ export const BattleScene = ({ position, isActive }: BattleSceneProps) => {
     const [isShooting, setIsShooting] = useState(false);
     const [isHit, setIsHit] = useState(false);
 
+    // Manual Laser Shots (allow rapid taps)
+    const [laserShots, setLaserShots] = useState<Array<{ id: number; offset: number }>>([]);
+    const laserShotId = useRef(0);
+
+    const handleFire = () => {
+        if (!isActive) return;
+
+        // Randomize Y position (Spread within ship height)
+        const offset = Math.floor(Math.random() * 40) - 20;
+        const id = laserShotId.current++;
+
+        setLaserShots((prev) => [...prev, { id, offset }]);
+
+        // Impact Delay (Travel time)
+        setTimeout(() => {
+            setIsHit(true);
+            setTimeout(() => setIsHit(false), 300);
+        }, 500); // 0.5s travel time
+
+        // Clear this shot after travel finishes
+        setTimeout(() => {
+            setLaserShots((prev) => prev.filter((shot) => shot.id !== id));
+        }, 500);
+    };
+
     // Auto-fire loop only when active
     useEffect(() => {
         if (!isActive) return;
@@ -82,9 +107,60 @@ export const BattleScene = ({ position, isActive }: BattleSceneProps) => {
     if (!isActive) return null;
 
     return (
-        <div className="w-full h-64 relative flex items-center justify-between px-4 sm:px-6 overflow-hidden bg-black/20 border-b border-white/10">
+        <div 
+            onClick={handleFire}
+            className="w-full h-64 relative flex items-center justify-between px-4 sm:px-6 overflow-hidden bg-black/20 border-b border-white/10 cursor-pointer active:scale-[0.98] transition-all select-none"
+        >
             {/* Background Effects */}
             <div className="absolute inset-0 bg-[url('/assets/grid-bg.png')] opacity-10 animate-[pulse_10s_infinite]" />
+            
+            {/* --- LASER BEAM (Manual Fire) --- */}
+            <AnimatePresence>
+                {laserShots.map((shot) => (
+                    <motion.div
+                        key={`laser-${shot.id}`}
+                        initial={{ left: '80px', opacity: 1, scale: 1 }}
+                        animate={{ left: 'calc(100% - 8.5rem)', opacity: 1, scale: 1 }} // End near planet
+                        exit={{ opacity: 0, scale: 1 }} // Fade only
+                        transition={{ duration: 0.5, ease: "linear" }}
+                        style={{ marginTop: shot.offset }} // Random Y Position
+                        className="absolute top-1/2 -translate-y-1/2 w-8 h-8 z-25 pointer-events-none drop-shadow-[0_0_6px_rgba(229,231,235,0.7)]"
+                    >
+                        {/* Laser SVG (Rotated 90deg to travel right) */}
+                        <svg
+                            viewBox="0 0 16 16"
+                            xmlns="http://www.w3.org/2000/svg"
+                            shapeRendering="crispEdges"
+                            className="w-full h-full rotate-90 origin-center"
+                        >
+                            <rect x="7" y="2" width="1" height="12" fill="#e5e7eb">
+                                <animate attributeName="height" values="12;14;12" dur="0.2s" repeatCount="indefinite" />
+                            </rect>
+                            <rect x="9" y="2" width="1" height="12" fill="#e5e7eb">
+                                <animate attributeName="height" values="12;14;12" dur="0.2s" repeatCount="indefinite" />
+                            </rect>
+                            <rect x="8" y="0" width="1" height="16" fill="#e5e7eb" opacity="0.3">
+                                <animate attributeName="opacity" values="0.6;0.9;0.6" dur="0.2s" repeatCount="indefinite" />
+                            </rect>
+                        </svg>
+                    </motion.div>
+                ))}
+            </AnimatePresence>
+            
+            {/* Separate Muzzle Flash (Static at Ship) */}
+            <AnimatePresence>
+                {laserShots.map((shot) => (
+                    <motion.div 
+                        key={`muzzle-${shot.id}`}
+                        initial={{ opacity: 1, scale: 0.5 }}
+                        animate={{ opacity: 0, scale: 1.5 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                        style={{ marginTop: shot.offset }} // Sync with Laser Y
+                        className="absolute left-[84px] top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full blur-[4px] z-25 pointer-events-none"
+                    />
+                ))}
+            </AnimatePresence>
             
             {/* --- SHIP (LEFT) --- */}
             <motion.div 
@@ -272,3 +348,4 @@ export const BattleScene = ({ position, isActive }: BattleSceneProps) => {
         </div>
     );
 };
+    
