@@ -238,7 +238,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await response.json();
       if (result.success) {
         // Update local user state
-        setUser(prev => prev ? { ...prev, primaryEthAddress: address } : null);
+        // Refetch full user profile to ensure everything is in sync
+        await authenticate();
         setNeedsBinding(false);
         console.log("Auth: Wallet bound successfully");
       }
