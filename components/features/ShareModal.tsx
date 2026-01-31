@@ -186,12 +186,12 @@ export const ShareModal = ({ isOpen, onClose, analytics, pnlHistory }: ShareModa
         }
         
         shareUrl += `&chart=${encodeURIComponent(chartPointsStr)}`;
-        shareUrl += `&color=${encodeURIComponent(themeColor)}`;
+        shareUrl += `&color=${encodeURIComponent(themeColor.replace('#', ''))}`;
       }
       
       // For missions card, add color
       if (card.id === 'missions' || card.id === 'winrate' || card.id === 'pnl') {
-        shareUrl += `&color=${encodeURIComponent(themeColor)}`;
+        shareUrl += `&color=${encodeURIComponent(themeColor.replace('#', ''))}`;
       }
       
       // Get cast text based on category
@@ -371,7 +371,7 @@ export const ShareModal = ({ isOpen, onClose, analytics, pnlHistory }: ShareModa
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src="/hero.png" alt="Alphabit" className="w-full h-full object-cover" />
                             </div>
-                            <span className="text-sm font-bold text-white uppercase tracking-tight">
+                            <span className="text-sm font-bold font-pixel text-white uppercase tracking-tight">
                               ALPHA<span style={{ color: themeColor }}>BIT</span>
                             </span>
                           </div>
@@ -427,7 +427,7 @@ export const ShareModal = ({ isOpen, onClose, analytics, pnlHistory }: ShareModa
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src="/hero.png" alt="Alphabit" className="w-full h-full object-cover" />
                             </div>
-                            <span className="text-sm font-bold text-white uppercase tracking-tight">
+                            <span className="text-sm font-bold font-pixel text-white uppercase tracking-tight">
                               ALPHA<span style={{ color: themeColor }}>BIT</span>
                             </span>
                           </div>
@@ -476,7 +476,7 @@ export const ShareModal = ({ isOpen, onClose, analytics, pnlHistory }: ShareModa
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src="/hero.png" alt="Alphabit" className="w-full h-full object-cover" />
                             </div>
-                            <span className="text-sm font-bold text-white uppercase tracking-tight">
+                            <span className="text-sm font-bold font-pixel text-white uppercase tracking-tight">
                               ALPHA<span style={{ color: themeColor }}>BIT</span>
                             </span>
                           </div>
@@ -518,7 +518,7 @@ export const ShareModal = ({ isOpen, onClose, analytics, pnlHistory }: ShareModa
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src="/hero.png" alt="Alphabit" className="w-full h-full object-cover" />
                             </div>
-                            <span className="text-sm font-bold text-white uppercase tracking-tight">
+                            <span className="text-sm font-bold font-pixel text-white uppercase tracking-tight">
                               ALPHA<span style={{ color: themeColor }}>BIT</span>
                             </span>
                           </div>
