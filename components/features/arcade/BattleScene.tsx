@@ -329,7 +329,7 @@ export const BattleScene = ({ position, isActive, currentPrice, onToggleDetails 
                 </div>
 
                 {/* Pilot Info - Tactical Data (Moved to follow ship) */}
-                <div className="mt-[-6px] z-20"> {/* Negative margin to pull it closer to ship if needed */}
+                <div className="z-20"> {/* Negative margin to pull it closer to ship if needed */}
                     <div className="text-[10px] font-pixel text-slate-300 bg-black/60 px-2 py-0.5 rounded border border-white/10 text-center backdrop-blur-sm whitespace-nowrap">
                         <div>{position.underlyingAsset} {isCall ? 'STRIKER' : 'BOMBER'}</div>
                         <div className="text-[8px] text-slate-500 font-mono">TARGET: ${strikePrice?.toLocaleString()}</div>

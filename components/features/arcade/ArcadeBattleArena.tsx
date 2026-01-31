@@ -116,7 +116,7 @@ export const ArcadeBattleArena = () => {
                     ACTIVE WARZONES: {activePositions.length}
                 </div>
                 <div className="text-[9px] font-pixel text-yellow-500 bg-black/50 px-2 rounded">
-                    SECTOR {currentIndex + 1} / {activePositions.length}
+                    SECTOR <br></br> {currentIndex + 1} / {activePositions.length}
                 </div>
             </div>
 
