@@ -3,6 +3,7 @@
 import React, { Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { Gamepad2, Github, Twitter, ExternalLink } from 'lucide-react';
+import Image from 'next/image';
 import { PixelButton } from '@/components/ui/PixelButton';
 import { GlitchText } from '@/components/ui/GlitchText';
 import { PowerUpCard } from '@/components/ui/PowerUpCard';
@@ -137,7 +138,7 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
             <div className="crt-overlay opacity-30"></div>
 
             {/* ==================== SECTION 1: HERO ==================== */}
-            <section className="min-h-screen relative flex flex-col items-center justify-center p-4">
+            <section className="min-h-screen relative flex flex-col items-center justify-center p-4 pb-24">
                 {/* Background Grid */}
                 <div className="absolute inset-0 retro-grid opacity-30"></div>
 
@@ -166,10 +167,32 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
                     variants={staggerContainer}
                     className="text-center mb-8"
                 >
-                    <motion.div variants={fadeInUp}>
-                        <span className="text-[10px] font-mono text-neon-red tracking-[0.3em] mb-2 block">
-                            POWERED BY BASE & THETANUTS
+                    <motion.div variants={fadeInUp} className="flex flex-col items-center gap-3 mb-6">
+                        <span className="text-[10px] font-mono text-neon-red tracking-[0.3em]">
+                            POWERED BY
                         </span>
+                        <div className="flex items-center gap-6 bg-slate-900/50 p-3 rounded-lg border border-slate-800 backdrop-blur-sm">
+                            <div className="flex items-center gap-2">
+                                <Image 
+                                    src="/Base_square_blue.svg" 
+                                    alt="Base" 
+                                    width={24} 
+                                    height={24} 
+                                    className="rounded-sm"
+                                />
+                                <span className="text-sm font-bold text-white tracking-widest hidden md:block">BASE</span>
+                            </div>
+                            <div className="w-px h-6 bg-slate-700"></div>
+                            <div className="flex items-center gap-2">
+                                <Image 
+                                    src="/Thetanuts Finance - Icon - Green - SVG.svg" 
+                                    alt="Thetanuts" 
+                                    width={24} 
+                                    height={24} 
+                                />
+                                <span className="text-sm font-bold text-white tracking-widest hidden md:block">THETANUTS</span>
+                            </div>
+                        </div>
                     </motion.div>
 
                     <motion.h1
@@ -212,11 +235,11 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 1.2 }}
-                    className="absolute bottom-8 left-1/2 -translate-x-1/2"
+                    className="absolute bottom-4 left-1/2 -translate-x-1/2"
                 >
                     <div className="flex flex-col items-center gap-2">
-                        <span className="text-[8px] font-mono text-slate-600">SCROLL DOWN</span>
-                        <div className="w-px h-8 bg-gradient-to-b from-neon-red to-transparent animate-pulse"></div>
+                        <span className="text-[10px] font-pixel text-slate-300 animate-bounce">SCROLL DOWN</span>
+                        <div className="w-px h-8 bg-gradient-to-b from-neon-red to-transparent"></div>
                     </div>
                 </motion.div>
             </section>
@@ -450,7 +473,7 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
                     {/* Links */}
                     <div className="flex justify-center gap-4 mb-8">
                         <a
-                            href="https://github.com"
+                            href="https://github.com/Mancer-Esport-Jogja"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="w-10 h-10 bg-slate-900 border border-slate-700 flex items-center justify-center hover:border-neon-yellow hover:text-neon-yellow transition-colors"
@@ -458,7 +481,7 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
                             <Github size={18} />
                         </a>
                         <a
-                            href="https://twitter.com"
+                            href="https://x.com/itskindalab"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="w-10 h-10 bg-slate-900 border border-slate-700 flex items-center justify-center hover:border-neon-red hover:text-neon-red transition-colors"
@@ -466,7 +489,7 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
                             <Twitter size={18} />
                         </a>
                         <a
-                            href="https://warpcast.com"
+                            href="https://alphabit-mancer.gitbook.io/alphabit-mancer-docs"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="w-10 h-10 bg-slate-900 border border-slate-700 flex items-center justify-center hover:border-neon-red hover:text-neon-red transition-colors"
