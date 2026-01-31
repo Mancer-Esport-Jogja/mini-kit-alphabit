@@ -3,7 +3,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
-import { useUserTransactions } from '@/hooks/useUserTransactions';
+import { useUserPositions } from '@/hooks/useUserPositions';
+import { useOraclePrice } from '@/hooks/useOraclePrice';
 import { BattleScene } from './BattleScene';
 import { Position } from '@/types/positions';
 
@@ -31,20 +32,37 @@ export const MOCK_POSITIONS: Position[] = [
     }
 ];
 
+// Env check for dev mode
+const IS_DEV_MODE = process.env.NEXT_PUBLIC_ENABLE_TESTNET === 'true';
+
 export const ArcadeBattleArena = () => {
-    const { data: history } = useUserTransactions();
+    // Use direct positions hook (filtered by 'open' status automatically)
+    const { data: positions } = useUserPositions();
+
+    // Price Feeds for Battle Logic
+    const { currentPrice: ethPrice } = useOraclePrice({ symbol: 'ETHUSDT', interval: '1m' });
+    const { currentPrice: btcPrice } = useOraclePrice({ symbol: 'BTCUSDT', interval: '1m' });
     
     // Filter for Active positions (Open status)
     // We treat 'open' orders as active battles.
     const activePositions = useMemo(() => {
-        // TEMPORARY: Use mock data if no history found, just to show the user
-        if (!history || history.length === 0) return MOCK_POSITIONS;
-        
-        const realActive = history.filter(p => p.status === 'open');
-        return realActive.length > 0 ? realActive : MOCK_POSITIONS;
-    }, [history]);
+        // If we have real positions, use them
+        if (positions && positions.length > 0) {
+            return positions;
+        }
+
+        // Only fallback to MOCK if in DEV MODE
+        if (IS_DEV_MODE) {
+            return MOCK_POSITIONS;
+        }
+
+        // Otherwise return empty (no battle scene)
+        return [];
+    }, [positions]);
 
     const [currentIndex, setCurrentIndex] = useState(0);
+
+    const [isPaused, setIsPaused] = useState(false);
 
     const handleNext = () => {
         setCurrentIndex((prev) => (prev + 1) % activePositions.length);
@@ -54,7 +72,7 @@ export const ArcadeBattleArena = () => {
         setCurrentIndex((prev) => (prev - 1 + activePositions.length) % activePositions.length);
     };
 
-    const onDragEnd = (event: any, info: PanInfo) => {
+    const onDragEnd = (event: unknown, info: PanInfo) => {
         const threshold = 50;
         if (info.offset.x < -threshold) {
             handleNext();
@@ -65,14 +83,14 @@ export const ArcadeBattleArena = () => {
 
     // Auto-cycle through multiple active battles
     useEffect(() => {
-        if (activePositions.length <= 1) return;
+        if (activePositions.length <= 1 || isPaused) return;
 
         const interval = setInterval(() => {
             setCurrentIndex(prev => (prev + 1) % activePositions.length);
         }, 10000); // Swap every 10 seconds
 
         return () => clearInterval(interval);
-    }, [activePositions.length, currentIndex]); // Restart timer on any change (manual or auto)
+    }, [activePositions.length, currentIndex, isPaused]); // Restart timer on any change (manual or auto)
 
     // Reset index if list changes drastically
     useEffect(() => {
@@ -83,7 +101,12 @@ export const ArcadeBattleArena = () => {
 
     if (activePositions.length === 0) return null;
 
+
+
     const currentPosition = activePositions[currentIndex];
+    
+    // Determine relevant price for the current scene
+    const activePrice = currentPosition.underlyingAsset === 'ETH' ? ethPrice : btcPrice;
 
     return (
         <div className="w-full bg-slate-900 border-b border-white/10 relative overflow-hidden group">
@@ -112,7 +135,9 @@ export const ArcadeBattleArena = () => {
                 >
                     <BattleScene 
                         position={currentPosition} 
-                        isActive={true} 
+                        isActive={true}
+                        currentPrice={activePrice}
+                        onToggleDetails={setIsPaused}
                     />
                 </motion.div>
             </AnimatePresence>
@@ -135,7 +160,7 @@ export const ArcadeBattleArena = () => {
 
                     {/* Pagination Dots */}
                     <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-20">
-                        {activePositions.map((_, idx) => (
+                        {activePositions.map((_: Position, idx: number) => (
                             <button 
                                 key={idx}
                                 onClick={() => setCurrentIndex(idx)}

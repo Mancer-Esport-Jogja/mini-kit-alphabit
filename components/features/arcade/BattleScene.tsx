@@ -4,10 +4,15 @@ import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { Position } from '@/types/positions';
+import { parseStrike } from '@/utils/decimals';
+
+import { Info, X } from 'lucide-react';
 
 interface BattleSceneProps {
     position: Position;
     isActive: boolean;
+    currentPrice?: number | null;
+    onToggleDetails?: (isOpen: boolean) => void;
 }
 
 // --- ASSET MAPPING ---
@@ -26,34 +31,83 @@ const getPlanetType = (durationHours: number) => {
     return 'TERRA';
 };
 
-export const BattleScene = ({ position, isActive }: BattleSceneProps) => {
+const formatCountdown = (ms: number) => {
+    if (ms <= 0) return "00:00:00";
+    const seconds = Math.floor((ms / 1000) % 60);
+    const minutes = Math.floor((ms / 1000 / 60) % 60);
+    const hours = Math.floor((ms / 1000 / 60 / 60));
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+};
+
+export const BattleScene = ({ position, isActive, currentPrice, onToggleDetails }: BattleSceneProps) => {
     const isCall = position.optionType === 256; // 256 usually standard for CALL in many protocols, verifying with Portfolio logic
     const isEth = position.underlyingAsset === 'ETH';
     
-    // Calculate Duration & Progress
+    // Data Calculation
+    const strikePrice = parseStrike(position.strikes[0]);
+    // Fix: Ensure we fallback correctly if price is 0/null to avoid false "Win" or "Loss"
+    const safeCurrentPrice = currentPrice || strikePrice; 
+
     const durationSeconds = position.expiryTimestamp - position.entryTimestamp;
     const durationHours = durationSeconds / 3600;
     const planetType = getPlanetType(durationHours);
     
+    const [timeLeftStr, setTimeLeftStr] = useState("00:00:00");
     const [hpPercent, setHpPercent] = useState(100);
+    const [showDetails, setShowDetails] = useState(false);
 
-    // Update HP based on time remaining
+    // Toggle Handler
+    const handleToggleDetails = (e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent firing click (which might be used for shooting if we didn't guard it)
+        const newState = !showDetails;
+        setShowDetails(newState);
+        if (onToggleDetails) onToggleDetails(newState);
+    };
+
+    // Update Timer & HP Logic
     useEffect(() => {
-        const updateHp = () => {
-            const now = Math.floor(Date.now() / 1000);
-            const timeRemaining = Math.max(0, position.expiryTimestamp - now);
-            const percent = (timeRemaining / durationSeconds) * 100;
-            setHpPercent(Math.min(100, Math.max(0, percent)));
+        const updateState = () => {
+            const now = Date.now();
+            const expiry = position.expiryTimestamp * 1000;
+            const diff = expiry - now;
+            setTimeLeftStr(formatCountdown(diff));
+
+            // HP LOGIC (Option B: Win/Loss Status)
+            if (currentPrice && strikePrice) {
+                const isWinning = isCall 
+                    ? currentPrice > strikePrice 
+                    : currentPrice < strikePrice;
+                
+                if (isWinning) {
+                    // Calculate "Damage" based on Moneyness (Distance ITM)
+                    const dist = Math.abs(currentPrice - strikePrice);
+                    const distPct = dist / strikePrice;
+                    
+                    // 2% ITM = 100% Damage (Dead Planet)
+                    // 0% ITM = 0% Damage (Full HP)
+                    const damage = Math.min(100, (distPct / 0.02) * 100);
+                    setHpPercent(Math.max(0, 100 - damage));
+                } else {
+                    // OTM = Planet Regenerates / Stays Full
+                    setHpPercent(100);
+                }
+            } else {
+                // Fallback to Time Decay if no price feed (e.g. initial load)
+                const nowSec = Math.floor(Date.now() / 1000);
+                const timeRemaining = Math.max(0, position.expiryTimestamp - nowSec);
+                const percent = (timeRemaining / durationSeconds) * 100;
+                setHpPercent(Math.min(100, Math.max(0, percent)));
+            }
         };
 
-        updateHp();
-        const interval = setInterval(updateHp, 1000);
+        updateState();
+        const interval = setInterval(updateState, 1000);
         return () => clearInterval(interval);
-    }, [position.expiryTimestamp, position.entryTimestamp, durationSeconds]);
+    }, [position.expiryTimestamp, position.entryTimestamp, durationSeconds, currentPrice, strikePrice, isCall]);
 
     // Assets
     const shipAsset = isEth ? "/assets/fighter-moon.svg" : "/assets/bomber-doom.svg";
-    const missileAsset = isCall ? "/assets/missile-moon.svg" : "/assets/missile-doom.svg";
+    const missileAsset = isCall ? "/assets/missile-moon.svg" : "/assets/bomber-doom.svg";
     const planetAsset = PLANET_ASSETS[planetType];
 
     // Animation States
@@ -65,7 +119,7 @@ export const BattleScene = ({ position, isActive }: BattleSceneProps) => {
     const laserShotId = useRef(0);
 
     const handleFire = () => {
-        if (!isActive) return;
+        if (!isActive || showDetails) return; // Disable shooting if details open
 
         // Randomize Y position (Spread within ship height)
         const offset = Math.floor(Math.random() * 40) - 20;
@@ -90,6 +144,8 @@ export const BattleScene = ({ position, isActive }: BattleSceneProps) => {
         if (!isActive) return;
 
         const shootLoop = setInterval(() => {
+            if (showDetails) return; // Pause auto-fire visual if details open
+
             setIsShooting(true);
             
             // Trigger impact 600ms later (flight time)
@@ -102,17 +158,71 @@ export const BattleScene = ({ position, isActive }: BattleSceneProps) => {
         }, 2000); // Shoot every 2 seconds
 
         return () => clearInterval(shootLoop);
-    }, [isActive]);
+    }, [isActive, showDetails]);
 
     if (!isActive) return null;
 
     return (
         <div 
             onClick={handleFire}
-            className="w-full h-64 relative flex items-center justify-between px-4 sm:px-6 overflow-hidden bg-black/20 border-b border-white/10 cursor-pointer active:scale-[0.98] transition-all select-none"
+            className="w-full h-[280px] relative flex items-center justify-between px-2 sm:px-4 overflow-hidden bg-black/20 border-b border-white/10 cursor-pointer active:scale-[0.98] transition-all select-none group/scene"
         >
             {/* Background Effects */}
             <div className="absolute inset-0 bg-[url('/assets/grid-bg.png')] opacity-10 animate-[pulse_10s_infinite]" />
+            
+            {/* --- DETAILS OVERLAY --- */}
+            <AnimatePresence>
+                {showDetails && (
+                    <motion.div 
+                        initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
+                        animate={{ opacity: 1, backdropFilter: "blur(4px)" }}
+                        exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
+                        className="absolute inset-0 z-50 bg-black/60 flex items-center justify-center p-8 cursor-default"
+                        onClick={(e) => e.stopPropagation()} 
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.9, y: 10 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 10 }}
+                            className="w-full max-w-sm bg-slate-900 border-2 border-slate-600 rounded-xl p-4 shadow-[0_0_30px_rgba(0,0,0,0.8)]"
+                        >
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 className="text-sm font-pixel text-white uppercase">Mission Intel</h3>
+                                    <div className="text-[10px] font-mono text-slate-400">{position.underlyingAsset} {'//'} {isCall ? 'CALL' : 'PUT'}</div>
+                                </div>
+                                <button 
+                                    onClick={handleToggleDetails}
+                                    className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white"
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+
+                            <div className="space-y-3 font-mono text-xs">
+                                <div className="flex justify-between border-b border-slate-800 pb-2">
+                                    <span className="text-slate-500">STRIKE PRICE</span>
+                                    <span className="text-white font-bold">${strikePrice.toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-800 pb-2">
+                                    <span className="text-slate-500">MARK PRICE</span>
+                                    <span className={`${isCall ? (safeCurrentPrice > strikePrice ? 'text-emerald-400' : 'text-rose-400') : (safeCurrentPrice < strikePrice ? 'text-emerald-400' : 'text-rose-400')}`}>
+                                        ${currentPrice?.toLocaleString() || "---"}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-800 pb-2">
+                                    <span className="text-slate-500">EXPIRY</span>
+                                    <span className="text-white">{new Date(position.expiryTimestamp * 1000).toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between pt-1">
+                                    <span className="text-slate-500">STATUS</span>
+                                    <span className="text-yellow-400 font-pixel">IN PROGRESS</span>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
             
             {/* --- LASER BEAM (Manual Fire) --- */}
             <AnimatePresence>
@@ -170,7 +280,7 @@ export const BattleScene = ({ position, isActive }: BattleSceneProps) => {
                     x: { duration: 0.5 },
                     y: { repeat: Infinity, duration: 4, ease: "easeInOut" }
                 }}
-                className="relative z-10"
+                className="relative z-10 flex flex-col items-center" // Flex col to stack ship and tag
             >
                 <div className="w-20 h-20 relative">
                     <Image 
@@ -218,10 +328,11 @@ export const BattleScene = ({ position, isActive }: BattleSceneProps) => {
                     </div>
                 </div>
 
-                {/* Pilot Info */}
-                <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-center w-32">
-                    <div className="text-[10px] font-pixel text-white bg-black/50 px-2 py-0.5 rounded border border-white/10 whitespace-nowrap">
-                        {position.underlyingAsset} {isCall ? 'STRIKER' : 'BOMBER'}
+                {/* Pilot Info - Tactical Data (Moved to follow ship) */}
+                <div className="mt-[-6px] z-20"> {/* Negative margin to pull it closer to ship if needed */}
+                    <div className="text-[10px] font-pixel text-slate-300 bg-black/60 px-2 py-0.5 rounded border border-white/10 text-center backdrop-blur-sm whitespace-nowrap">
+                        <div>{position.underlyingAsset} {isCall ? 'STRIKER' : 'BOMBER'}</div>
+                        <div className="text-[8px] text-slate-500 font-mono">TARGET: ${strikePrice?.toLocaleString()}</div>
                     </div>
                 </div>
             </motion.div>
@@ -345,7 +456,28 @@ export const BattleScene = ({ position, isActive }: BattleSceneProps) => {
                     </div>
                 </div>
             </motion.div>
+
+            {/* --- HUD FOOTER (ABSOLUTE BOTTOM of FRAME) --- */}
+            {/* Added pointer-events-auto for buttons */}
+            <div className="absolute bottom-0 left-0 right-0 z-40 flex items-end justify-between px-4 pb-2 bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
+                 {/* Left: Spacer (was Ship Tag) */}
+                 <div className="w-20"></div>
+
+                {/* Center: Countdown Timer */}
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 pb-1">
+                    <div className="text-xl font-mono font-bold text-white bg-slate-900/90 px-4 py-1 rounded-t-xl border-t border-x border-white/20 shadow-[0_0_15px_rgba(0,0,0,0.8)]">
+                        {timeLeftStr}
+                    </div>
+                </div>
+
+                {/* Right: Info Button (Replaces Mark Price) */}
+                <button 
+                    onClick={handleToggleDetails}
+                    className="p-2 bg-slate-800/80 border border-white/20 rounded hover:bg-slate-700 hover:text-white text-emerald-400 transition-all pointer-events-auto shadow-lg active:scale-95"
+                >
+                    <Info size={16} />
+                </button>
+            </div>
         </div>
     );
 };
-    
