@@ -1,5 +1,7 @@
 import { Metadata } from "next";
 
+export const dynamic = 'force-dynamic';
+
 const ROOT_URL = process.env.NEXT_PUBLIC_URL || "https://mini-kit-alphabit.vercel.app";
 
 type Props = {
