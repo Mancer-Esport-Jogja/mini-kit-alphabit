@@ -1,49 +1,91 @@
 # Alphabit Abstraction Layer
 
 ## Overview
-Alphabit gamifies complex DeFi Options Trading by abstracting "The Greeks" and Order Book mechanics into a simple "Arcade" interface. This document explains the translation layer between Game Logic and Financial Logic.
+Alphabit turns complex DeFi options into an arcade-style experience. Core abstractions:
+- **Game-first terms** (Moon/Doom, Blitz/Core) replace options jargon.
+- **Intent-based execution** auto-picks the best order from Thetanuts RFQ.
+- **Tactical Droid (R.O.B.B.I.E. 9000)** is the AI copilot that converts chat into structured trade intent.
+- **Optimistic UX** keeps interactions instant even while on-chain settlement confirms.
 
-## The Translation Pattern
+## Core Abstractions
+- **Direction & Asset**  
+  - Moon = Call, Doom = Put.  
+  - Asset switcher limited to `ETH`/`BTC` to keep RFQ stable.
+- **Duration → Expiry Bucket**  
+  - Blitz = 2–9h, Rush = 9–18h, Core = 18–36h, Orbit = >36h.  
+  - `filterOrdersByDuration` maps buckets to the nearest expiry.
+- **Greeks → Game Stats**
 
-### 1. Greeks -> Game Stats
-We map complex risk metrics (Greeks) into understandable RPG-style stats.
-
-| Financial Metric | Game Stat | Description |
+| Financial Metric | Game Stat | Explanation |
 | :--- | :--- | :--- |
-| **Delta** | **Power Level** | Probability of ITM. Higher delta = "Stronger" signal. |
-| **Theta** | **Decay Timer** | Time value decay, authorized as a countdown clock. |
-| **Gamma** | **Volatility** | "Critical Hit" chance. |
-| **Strike Price** | **Target** | The specific price level to hit. |
-| **Premium** | **Entry Cost** | The cost to play the round. |
+| Delta | Power Level | ITM probability surfaced as “signal strength.” |
+| Theta | Decay Timer | Time decay shown as a countdown. |
+| Gamma | Volatility | “Critical hit” / spike likelihood. |
+| Strike | Target | Price level to hit. |
+| Premium | Entry Cost | Cost to join the round. |
 
-### 2. Execution Matcher (The Logic Mapper)
-Instead of asking users to pick a specific Strike Price from an Option Chain, we use an intent-based matcher.
+- **Collateral → Shields**  
+  Collateral slider = USDC committed per mission. Gamification (Missions/XP) does not alter payoff; UX only.
+- **Auto-Best vs Manual**  
+  - Auto-Best uses the matcher’s best order.  
+  - Manual Matrix opens `OrderMatrix` to pick a specific strike without leaving the “game.”
 
-**User Input:**
-- Direction: UP (Call) or DOWN (Put)
-- Duration: Blitz (6h), Rush (12h), Core (24h)
+## Execution Matcher
+Logic lives in `hooks/useThetanutsOrders.ts` and is consumed in `HuntTerminal`.
+1) **Query RFQ**: fetch all orders via backend proxy.  
+2) **Intent filter**: target (Moon/Doom), asset, and duration bucket.  
+3) **Best Fit**: `getBestOrder` favors lowest premium / best ROI.  
+4) **Trade Intent Injection**: when AI emits `tradeIntent`, terminal:
+   - Sync asset/duration/target.
+   - If provided, match nearest strike.
+   - Fallback to best order and open `BuyModal`.
+- **Arcade Picker (Simplified)**: still uses Thetanuts RFQ, but auto-picks the cheapest strike that is near-ATM and OTM relative to spot (Calls: strike ≥ spot, Puts: strike ≤ spot). It scores candidates by a weighted mix of premium (65%) and strike distance to spot (35%), then falls back to the closest strike if no OTM/ATM liquidity exists.
 
-**Matcher Logic:**
-The `bestOrder` selector (`useThetanutsOrders.ts`) scans the order book for the "Best Fit":
-1.  **Filter**: Matches Asset (ETH/BTC) and Type (Call/Put).
-2.  **Duration Match**: Finds expiry closest to the user's selected duration (e.g., closest to 6h).
-3.  **Liquidity Check**: Ensures the option has enough liquidity for the "Max Trade Size".
-4.  **Optimality**: Selects the strike that offers the best balance of Probability (Delta ~0.3-0.5) and Payout (ROI).
+## Optimistic Settlement (Blitz Mode)
+- “Trade Active” state appears once TX hash exists while polling for confirmation.  
+- Reduces perceived lag without sacrificing on-chain accuracy.
 
-### 3. Blitz Mode (Optimistic UI)
-DeFi settlement times (1-2 mins) kill the "Arcade" vibe.
-- **Problem**: Users want instant feedback.
-- **Solution**: "Blitz Mode" updates the UI state *optimistically* upon transaction submission.
-- **Implementation**: The UI shows "Trade Active" as soon as the hash is generated, while a background poller waits for on-chain confirmation to solidify the state (or revert if failed).
+## Tactical Droid (AI Copilot)
+Purpose: bridge chat → trade action without forcing users to learn options.
 
-## Architecture
+- **State & Profiling** (`context/DroidContext.tsx`)
+  - RiskProfile (SAFE/DEGEN) & Timeline (SHORT/LONG) saved to `localStorage`.
+  - Market snapshot (price, change, sentiment) synced from `useOraclePrice` via `updateMarketData`.
+  - TradeIntent drives modal activation in the terminal.
+
+- **Brain & Persona**
+  - System prompt: `lib/groq.ts` (R.O.B.B.I.E. 9000 persona).  
+  - API route: `app/api/ai/analyze/route.ts` forwards chat + marketData to Groq.  
+  - Model is instructed to append JSON `{"REC_DATA": {...}}` at the end when a clear recommendation exists.
+
+- **Conversation Layer** (`components/droid/ChatInterface.tsx`)
+  - Renders markdown + 3-question micro-survey (loss aversion, time preference, goal) → `riskEngine`.
+  - Parses recommendation JSON into `TradeRecommendationCard`; “INITIATE SEQUENCE” triggers `triggerTrade`.
+  - Quick chips (“Scan ETH”, “Market Sentiment”) keep the arcade loop fast.
+
+- **HUD Bubble** (`components/features/TacticalDroid.tsx`)
+  - `useTacticalBrain` produces short dialog based on Call/Put volume & spread.  
+  - Tutorial mode swaps market chatter with step-by-step onboarding.
+
+## Data/Intent Flow
 ```mermaid
 graph TD
-    User[User: "I think ETH goes UP"] --> UI[Pro Terminal]
-    UI --> Matcher[Execution Matcher]
-    Matcher --> API[Thetanuts v3/v4 API]
-    API --> Chain[Option Chain]
-    Chain --> BestOption[Strike: $3200, Exp: 6H]
-    BestOption --> UI
-    UI --> User[Display: "TARGET MOON / ROI +50%"]
+    U[User: "Scan ETH & give a play"] --> Chat[ChatInterface]
+    Chat --> API[/api/ai/analyze<br/>Groq/compound/]
+    API --> Chat
+    Chat --> RecCard[TradeRecommendationCard]
+    RecCard -->|triggerTrade(intent)| DroidCtx[Droid Context]
+    DroidCtx --> Terminal[HuntTerminal]
+    Terminal --> Matcher[Execution Matcher<br/>useThetanutsOrders]
+    Matcher --> Best[Best Order + Strike Match]
+    Best --> BuyModal[Buy Modal]
+    BuyModal --> Chain[Thetanuts RFQ / Settlement]
+    Terminal --> DroidCtx
+    DroidCtx --> API
 ```
+
+## Quick Extensions
+- Add a new asset: update `useThetanutsOrders`, `HuntTerminal` selector, and sentiment/price feed mapping.  
+- Add a new duration bucket: update the table above and `filterOrdersByDuration`.  
+- Adjust persona/safety tone: edit `DROID_SYSTEM_PROMPT` to reiterate “not financial advice.”  
+- No-AI mode: skip `DroidProvider` in `app/rootProvider.tsx` if a minimal static build is needed.

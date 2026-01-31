@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, CheckCircle2, ChevronLeft } from 'lucide-react';
 import Image from 'next/image';
@@ -12,6 +12,7 @@ import { filterOrdersByDuration, filterHuntOrders, parseOrder } from '@/services
 import { useAuth } from '@/context/AuthContext';
 import { useGamification } from '@/context/GamificationContext';
 import type { ParsedOrder } from '@/types/orders';
+import { useOraclePrice } from '@/hooks/useOraclePrice';
 
 import { ArcadeButton } from './arcade/ArcadeButton';
 import { StoryScroll } from './arcade/StoryScroll';
@@ -66,6 +67,8 @@ export function ArcadeMode() {
 
     // Data Hooks
     const { data: orderData } = useThetanutsOrders();
+    const { currentPrice: ethSpot } = useOraclePrice({ symbol: 'ETHUSDT', interval: '1m', limit: 20 });
+    const { currentPrice: btcSpot } = useOraclePrice({ symbol: 'BTCUSDT', interval: '1m', limit: 20 });
     
     // Strict Safety Filter: Ensure we only show orders where User can BUY (isLong: false)
     // This mirrors the logic in HuntTerminal
@@ -78,6 +81,15 @@ export function ArcadeMode() {
     
     // Result State
     const [lastSuccessOrder, setLastSuccessOrder] = useState<ParsedOrder | null>(null);
+
+    // Reset selections whenever player returns to ship selection
+    useEffect(() => {
+        if (gameState === 'SELECT_SHIP') {
+            setSelectedShip(null);
+            setSelectedPlanetIndex(null);
+            setSelectedWeapon(null);
+        }
+    }, [gameState]);
 
     // --- HELPER LOGIC ---
     
@@ -105,27 +117,60 @@ export function ArcadeMode() {
     // Filter orders for the selected configuration
     const getTargetOrder = (): ParsedOrder | null => {
         if (!selectedShip || selectedPlanetIndex === null || !selectedWeapon) return null;
-        
+
         const asset = selectedShip === 'FIGHTER' ? 'ETH' : 'BTC';
         const isCall = selectedWeapon === 'LASER';
         const planet = PLANETS[selectedPlanetIndex];
-        
+
         const shipOrders = orders.filter(o => o.asset === asset && (o.direction === 'CALL') === isCall);
-        
-        // Find best order matching criteria (Asset + Direction + Duration)
+
+        // Filter by duration bucket (raw orders)
         const durationOrders = filterOrdersByDuration(
-            shipOrders.map(o => o.rawOrder), 
+            shipOrders.map(o => o.rawOrder),
             planet.name as 'BLITZ' | 'RUSH' | 'CORE' | 'ORBIT'
         );
-
         if (durationOrders.length === 0) return null;
 
-        // Find the one in our parsed list to return ParsedOrder type
-        const bestRaw = durationOrders.reduce((best, curr) => 
-            Number(curr.order.price) < Number(best.order.price) ? curr : best
+        // Map back to parsed orders for scoring
+        const durationParsed = shipOrders.filter(o =>
+            durationOrders.some(d => d.order.ticker === o.rawOrder.order.ticker)
+        );
+        if (durationParsed.length === 0) return null;
+
+        const spot = asset === 'ETH' ? ethSpot : asset === 'BTC' ? btcSpot : null;
+        // If spot is unavailable, fall back to cheapest premium to keep Arcade usable
+        if (!spot) {
+            return durationParsed.reduce((best, curr) =>
+                curr.premium < best.premium ? curr : best
+            );
+        }
+
+        // Preferred set: OTM/ATM only (calls: strike >= spot, puts: strike <= spot)
+        const otmOrAtm = durationParsed.filter(o => {
+            const strike = o.strikes[0];
+            return isCall ? strike >= spot : strike <= spot;
+        });
+        const candidateSet = otmOrAtm.length > 0 ? otmOrAtm : durationParsed;
+
+        // Prepare normalization factors
+        const maxPremium = Math.max(...candidateSet.map(o => o.premium));
+        const maxDist = Math.max(
+            ...candidateSet.map(o => Math.abs(o.strikes[0] - spot) / spot)
         );
 
-        return orders.find(o => o.rawOrder.order.ticker === bestRaw.order.ticker) ?? null;
+        const scoreOrder = (o: ParsedOrder) => {
+            const distPct = Math.abs(o.strikes[0] - spot) / spot;
+            const premiumNorm = maxPremium === 0 ? 0 : o.premium / maxPremium;
+            const distNorm = maxDist === 0 ? 0 : distPct / maxDist;
+            // Weight cheaper premium more heavily, then proximity to spot
+            return 0.65 * premiumNorm + 0.35 * distNorm;
+        };
+
+        const best = candidateSet.reduce((best, curr) =>
+            scoreOrder(curr) < scoreOrder(best) ? curr : best
+        );
+
+        return best;
     };
 
     const handleLaunch = async () => {
