@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { headers } from "next/headers";
 
 export const dynamic = 'force-dynamic';
 
@@ -18,11 +19,18 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   const color = (params.color as string) || '#4ade80';
   const t = (params.t as string) || '';
   
+  // Resolve dynamic host to ensure OG image is fetched from the correct environment
+  const headersList = await headers();
+  const host = headersList.get('host') || 'mini-kit-alphabit.vercel.app';
+  const protocol = headersList.get('x-forwarded-proto') || 'https';
+  const dynamicRootUrl = `${protocol}://${host}`;
+
   const pnlNum = parseFloat(pnl);
   const isProfit = pnlNum >= 0;
   
   // Build OG image URL with chart data and color if available
-  let ogImageUrl = `${ROOT_URL}/api/og/share-performance?pnl=${encodeURIComponent(pnl)}&username=${encodeURIComponent(username)}&winrate=${encodeURIComponent(winrate)}&missions=${encodeURIComponent(missions)}`;
+  // Use dynamicRootUrl for the image source so it points to the current deployment/tunnel
+  let ogImageUrl = `${dynamicRootUrl}/api/og/share-performance?pnl=${encodeURIComponent(pnl)}&username=${encodeURIComponent(username)}&winrate=${encodeURIComponent(winrate)}&missions=${encodeURIComponent(missions)}`;
   if (chart) {
     ogImageUrl += `&chart=${encodeURIComponent(chart)}`;
   }
@@ -41,7 +49,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
       action: {
         type: "launch_miniapp",
         name: "Alphabit",
-        url: ROOT_URL,
+        url: ROOT_URL, // Keep this as the canonical Main App URL
         splashImageUrl: `${ROOT_URL}/logo-alphabit.png`,
         splashBackgroundColor: "#000000",
       },

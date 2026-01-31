@@ -151,9 +151,14 @@ export const ShareModal = ({ isOpen, onClose, analytics, pnlHistory }: ShareModa
       const missions = analytics.totalTrades || 0;
       
       // Build share URL with query params
-      let shareUrl = `${ROOT_URL}/share/${card.id}?pnl=${encodeURIComponent(pnl)}&username=${encodeURIComponent(username)}&winrate=${winRate}&missions=${missions}&t=${Date.now()}`;
+      // Build base share URL
+      let shareUrl = `${ROOT_URL}/share/${card.id}?pnl=${encodeURIComponent(pnl)}&username=${encodeURIComponent(username)}&winrate=${winRate}&missions=${missions}`;
       
-      // For performance card, add simplified chart data and color
+      // Add timestamp and color (High priority params)
+      shareUrl += `&t=${Date.now()}`;
+      shareUrl += `&color=${encodeURIComponent(themeColor.replace('#', ''))}`;
+
+      // For performance card, add simplified chart data (potentially long, so add last)
       if (card.id === 'performance') {
         let chartPointsStr = '';
         
@@ -186,12 +191,6 @@ export const ShareModal = ({ isOpen, onClose, analytics, pnlHistory }: ShareModa
         }
         
         shareUrl += `&chart=${encodeURIComponent(chartPointsStr)}`;
-        shareUrl += `&color=${encodeURIComponent(themeColor.replace('#', ''))}`;
-      }
-      
-      // For missions card, add color
-      if (card.id === 'missions' || card.id === 'winrate' || card.id === 'pnl') {
-        shareUrl += `&color=${encodeURIComponent(themeColor.replace('#', ''))}`;
       }
       
       // Get cast text based on category
