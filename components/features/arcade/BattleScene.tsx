@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { Position } from '@/types/positions';
 import { parseStrike } from '@/utils/decimals';
 
-import { Info, X } from 'lucide-react';
+import { Info, X, Hand } from 'lucide-react';
 
 interface BattleSceneProps {
     position: Position;
@@ -118,8 +118,21 @@ export const BattleScene = ({ position, isActive, currentPrice, onToggleDetails 
     const [laserShots, setLaserShots] = useState<Array<{ id: number; offset: number }>>([]);
     const laserShotId = useRef(0);
 
+    const [showHint, setShowHint] = useState(true);
+
+    // Auto-hide hint after 6 seconds
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setShowHint(false);
+        }, 6000);
+        return () => clearTimeout(timer);
+    }, []);
+
     const handleFire = () => {
         if (!isActive || showDetails) return; // Disable shooting if details open
+        
+        // Hide hint on first interaction
+        if (showHint) setShowHint(false);
 
         // Randomize Y position (Spread within ship height)
         // Spread shots across upper/lower ship body
@@ -283,6 +296,23 @@ export const BattleScene = ({ position, isActive, currentPrice, onToggleDetails 
                 }}
                 className="relative z-10 flex flex-col items-center" // Flex col to stack ship and tag
             >
+                {/* Interaction Indicator */}
+                <AnimatePresence>
+                    {showHint && (
+                        <motion.div 
+                            initial={{ opacity: 0 }} 
+                            animate={{ opacity: 1 }} 
+                            exit={{ opacity: 0 }}
+                            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none flex flex-col items-center"
+                        >
+                            <div className="relative">
+                                <div className="w-16 h-16 bg-white/20 rounded-full animate-ping" />
+                                <Hand size={24} className="text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-bounce rotate-[-15deg]" />
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
                 <div className="w-20 h-20 relative">
                     <Image 
                         src={shipAsset} 
@@ -386,6 +416,23 @@ export const BattleScene = ({ position, isActive, currentPrice, onToggleDetails 
                 // Translate Y to center the PLANET body with the missiles (compensating for HP bar)
                 className="relative z-30 flex flex-col items-center gap-2 translate-y-4"
             >
+                {/* Interaction Indicator */}
+                <AnimatePresence>
+                    {showHint && (
+                        <motion.div 
+                            initial={{ opacity: 0 }} 
+                            animate={{ opacity: 1 }} 
+                            exit={{ opacity: 0 }}
+                            className="absolute top-10 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none flex flex-col items-center"
+                        >
+                            <div className="relative">
+                                <div className="w-20 h-20 bg-white/20 rounded-full animate-ping" />
+                                <Hand size={24} className="text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-bounce rotate-[-15deg]" />
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
                 <div className="relative w-24 h-24">
                     <motion.div 
                         animate={{ rotate: 360 }}
