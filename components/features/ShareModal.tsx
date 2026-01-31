@@ -197,16 +197,19 @@ export const ShareModal = ({ isOpen, onClose, analytics, pnlHistory }: ShareModa
       // Get cast text based on category
       const castText = getCastText(card.id, analytics, username);
       
-      await sdk.actions.composeCast({
+      // Close modal immediately to return to app state
+      onClose();
+
+      // Trigger Farcaster composer (Fire and forget)
+      sdk.actions.composeCast({
         text: castText,
         embeds: [shareUrl],
       });
       
-      onClose();
     } catch (error) {
       console.error("Failed to compose cast:", error);
-    } finally {
-      setIsSharing(false);
+      // If closing failed or something else happened, we ensure it's closed
+      onClose();
     }
   };
 
