@@ -85,7 +85,7 @@ export default function RootLayout({
           <div className="z-[100] relative">
             <DroidDrawer />
           </div>
-          <DevConsoleViewer />
+          {process.env.ENV !== "production" && <DevConsoleViewer />}
         </RootProvider>
       </body>
     </html>
