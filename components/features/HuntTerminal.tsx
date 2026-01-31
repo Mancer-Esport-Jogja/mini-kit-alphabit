@@ -15,6 +15,7 @@ import { useDroid } from "@/context/DroidContext";
 import { BuyModal } from "./BuyModal";
 import { OrderMatrix } from "./OrderMatrix";
 import { filterOrdersByDuration, getBestOrder, parseOrder, getDurationId } from "@/services/thetanutsApi";
+import { useFillOrder } from "@/hooks/useFillOrder";
 import { ParsedOrder } from "@/types/orders";
 // import { useTenderlyMint } from "@/hooks/useTenderlyMint";
 
@@ -44,6 +45,12 @@ export const HuntTerminal = () => {
     const [showBuyModal, setShowBuyModal] = useState(false);
     const [showOrderMatrix, setShowOrderMatrix] = useState(false);
     const [manualOrder, setManualOrder] = useState<ParsedOrder | null>(null);
+
+    // Wallet Balance Hook
+    const { usdcBalance } = useFillOrder();
+    const formattedBalance = usdcBalance 
+        ? (Number(usdcBalance) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 })
+        : '...';
 
 
 
@@ -707,7 +714,10 @@ export const HuntTerminal = () => {
                 {/* Collateral Throttle (Step 3) */}
                 <div className="mb-6">
                     <div className="flex justify-between items-end mb-2">
-                        <label className="text-[10px] font-pixel text-slate-400">3. COMMIT COLLATERAL</label>
+                        <div className="flex items-center gap-2">
+                            <label className="text-[10px] font-pixel text-slate-400">3. COMMIT COLLATERAL</label>
+                            <span className="text-[9px] font-mono text-emerald-400 bg-emerald-900/30 px-1.5 py-0.5 rounded">{`BAL: $${formattedBalance}`}</span>
+                        </div>
                         {isEditingCollateral ? (
                             <div className="flex items-end gap-2">
                                 <input

@@ -77,7 +77,12 @@ export function ArcadeMode() {
         const safeRawOrders = filterHuntOrders(orderData.orders);
         return safeRawOrders.map(parseOrder);
     }, [orderData?.orders]);
-    const { executeFillOrder, isPending, isConfirming, isSuccess, error: txError, hash, reset: resetTx } = useFillOrder();
+    const { executeFillOrder, isPending, isConfirming, isSuccess, error: txError, hash, reset: resetTx, usdcBalance } = useFillOrder();
+    
+    // Format USDC balance for display (6 decimals)
+    const formattedCredits = usdcBalance 
+        ? (Number(usdcBalance) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 })
+        : '...';
     
     // Result State
     const [lastSuccessOrder, setLastSuccessOrder] = useState<ParsedOrder | null>(null);
@@ -277,7 +282,7 @@ export function ArcadeMode() {
                         {address ? `PILOT: ${address.slice(0, 4)}...${address.slice(-4)}` : 'OFFLINE'}
                     </span>
                 </div>
-                <div className="text-[10px] font-pixel text-yellow-400">CREDITS: ∞</div>
+                <div className="text-[10px] font-pixel text-yellow-400">{`CREDITS: $${formattedCredits}`}</div>
             </div>
 
             <AnimatePresence mode="wait">
