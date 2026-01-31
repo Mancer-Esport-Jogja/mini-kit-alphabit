@@ -52,7 +52,11 @@ const SystemMessage = ({ message, onClear }: { message: string, onClear: () => v
     </motion.div>
 );
 
-export function ArcadeMode() {
+interface ArcadeModeProps {
+    onViewAnalytics?: () => void;
+}
+
+export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
     const { address } = useAccount();
     const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
     const { completeMission, addXp } = useGamification();
@@ -301,6 +305,15 @@ export function ArcadeMode() {
                     <span className="text-[8px] font-pixel text-slate-500">v2.2.0-ARCADE</span>
                     <span className="text-[8px] font-pixel text-slate-500">BETA_PILOT_ACCESS</span>
                 </div>
+                <ArcadeButton
+                    size="sm"
+                    variant="outline"
+                    onClick={onViewAnalytics}
+                    disabled={!onViewAnalytics}
+                    className={!onViewAnalytics ? "opacity-60 grayscale cursor-not-allowed" : ""}
+                >
+                    VIEW ANALYTICS & HISTORY
+                </ArcadeButton>
             </div>
         </div>
     );

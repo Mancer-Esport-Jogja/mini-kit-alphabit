@@ -119,7 +119,7 @@ export default function App() {
                   </div>
 
                   {mode === "ARCADE" ? (
-                    <ArcadeMode />
+                    <ArcadeMode onViewAnalytics={() => setView("portfolio")} />
                   ) : (
                     <>
                       <HuntTerminal />
