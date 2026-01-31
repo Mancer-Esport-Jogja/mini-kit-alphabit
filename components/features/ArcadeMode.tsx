@@ -6,7 +6,7 @@ import { AlertTriangle, CheckCircle2, ChevronLeft } from 'lucide-react';
 import Image from 'next/image';
 
 import { useThetanutsOrders } from '@/hooks/useThetanutsOrders';
-import { useUserTransactions } from '@/hooks/useUserTransactions';
+import { useUserPositions } from '@/hooks/useUserPositions';
 import { useFillOrder, calculateMaxSpend } from '@/hooks/useFillOrder';
 import { useAccount } from 'wagmi';
 import { filterOrdersByDuration, filterHuntOrders, parseOrder } from '@/services/thetanutsApi';
@@ -69,19 +69,25 @@ export function ArcadeMode() {
 
     // Data Hooks
     const { data: orderData } = useThetanutsOrders();
-    const { data: history } = useUserTransactions();
+    // const { data: history } = useUserTransactions(); // Deprecated for active check
+    const { data: activePositions } = useUserPositions(); 
     const { currentPrice: ethSpot } = useOraclePrice({ symbol: 'ETHUSDT', interval: '1m', limit: 20 });
     const { currentPrice: btcSpot } = useOraclePrice({ symbol: 'BTCUSDT', interval: '1m', limit: 20 });
     
-    // Check for active battles (including Mocks for dev if history empty)
+    // Check for active battles (including Mocks for dev if env set)
     const hasActiveBattles = React.useMemo(() => {
-        // MATCHING LOGIC WITH ArcadeBattleArena:
-        // If history is empty/null, we fallback to Mocks -> return true
-        if (!history || history.length === 0) return true; 
+        const IS_DEV_MODE = process.env.NEXT_PUBLIC_ENABLE_TESTNET === 'true';
         
-        // Otherwise check for real 'open' positions
-        return history.some(p => p.status === 'open');
-    }, [history]);
+        // If we have real active positions, show them
+        if (activePositions && activePositions.length > 0) return true;
+
+        // If in DEV MODE, we might show mocks (delegated to ArcadeBattleArena to decide, but we need to mount it)
+        // ArcadeBattleArena logic: if IS_DEV_MODE, it returns mocks.
+        // So if IS_DEV_MODE is true, we should return true here to allow it to mount.
+        if (IS_DEV_MODE) return true;
+
+        return false;
+    }, [activePositions]);
     
     // Strict Safety Filter: Ensure we only show orders where User can BUY (isLong: false)
     // This mirrors the logic in HuntTerminal
