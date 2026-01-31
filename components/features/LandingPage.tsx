@@ -167,7 +167,7 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
                     variants={staggerContainer}
                     className="text-center mb-8"
                 >
-                    <motion.div variants={fadeInUp} className="flex flex-col items-center gap-3 mb-6">
+                    <motion.div variants={fadeInUp} className="flex flex-col items-center gap-3 mb-4">
                         <span className="text-[10px] font-mono text-neon-red tracking-[0.3em]">
                             POWERED BY
                         </span>
