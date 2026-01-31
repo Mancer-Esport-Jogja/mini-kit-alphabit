@@ -6,6 +6,7 @@ import { AlertTriangle, CheckCircle2, ChevronLeft } from 'lucide-react';
 import Image from 'next/image';
 
 import { useThetanutsOrders } from '@/hooks/useThetanutsOrders';
+import { useUserTransactions } from '@/hooks/useUserTransactions';
 import { useFillOrder, calculateMaxSpend } from '@/hooks/useFillOrder';
 import { useAccount } from 'wagmi';
 import { filterOrdersByDuration, filterHuntOrders, parseOrder } from '@/services/thetanutsApi';
@@ -17,6 +18,7 @@ import { useOraclePrice } from '@/hooks/useOraclePrice';
 import { ArcadeButton } from './arcade/ArcadeButton';
 import { StoryScroll } from './arcade/StoryScroll';
 import { PlanetCard } from './arcade/PlanetCard';
+import { ArcadeBattleArena } from './arcade/ArcadeBattleArena';
 
 // --- GAME TYPES ---
 type GameState = 'INTRO' | 'STORY' | 'SELECT_SHIP' | 'SELECT_PLANET' | 'SELECT_WEAPON' | 'ARM_WEAPON' | 'LAUNCH' | 'RESULT';
@@ -67,8 +69,19 @@ export function ArcadeMode() {
 
     // Data Hooks
     const { data: orderData } = useThetanutsOrders();
+    const { data: history } = useUserTransactions();
     const { currentPrice: ethSpot } = useOraclePrice({ symbol: 'ETHUSDT', interval: '1m', limit: 20 });
     const { currentPrice: btcSpot } = useOraclePrice({ symbol: 'BTCUSDT', interval: '1m', limit: 20 });
+    
+    // Check for active battles (including Mocks for dev if history empty)
+    const hasActiveBattles = React.useMemo(() => {
+        // MATCHING LOGIC WITH ArcadeBattleArena:
+        // If history is empty/null, we fallback to Mocks -> return true
+        if (!history || history.length === 0) return true; 
+        
+        // Otherwise check for real 'open' positions
+        return history.some(p => p.status === 'open');
+    }, [history]);
     
     // Strict Safety Filter: Ensure we only show orders where User can BUY (isLong: false)
     // This mirrors the logic in HuntTerminal
@@ -77,7 +90,7 @@ export function ArcadeMode() {
         const safeRawOrders = filterHuntOrders(orderData.orders);
         return safeRawOrders.map(parseOrder);
     }, [orderData?.orders]);
-    const { executeFillOrder, isPending, isConfirming, isSuccess, error: txError, hash, reset: resetTx } = useFillOrder();
+    const { executeFillOrder: _executeFillOrder, isPending, isConfirming, isSuccess: _isSuccess, error: txError, hash, reset: resetTx } = useFillOrder();
     
     // Result State
     const [lastSuccessOrder, setLastSuccessOrder] = useState<ParsedOrder | null>(null);
@@ -200,33 +213,38 @@ export function ArcadeMode() {
         resetTx();
     };
 
-    // --- RENDERERS ---
+    // --- RENDER CONTENT ---
+    
+    // INTRO SCREEN
+    const renderIntro = () => (
+        <div className="min-h-[600px] md:h-full flex flex-col items-center justify-center space-y-8 p-8 relative overflow-hidden">
+            <div className="absolute inset-0 bg-[url('/assets/grid-bg.png')] opacity-20 animate-[pulse_4s_infinite]"></div>
+            
+            {/* Decorative HUD Lines */}
+            <div className="absolute top-1/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent" />
+            <div className="absolute bottom-1/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
 
-    if (gameState === 'INTRO') {
-        return (
-            <div className="h-full flex flex-col items-center justify-center space-y-8 p-8 relative overflow-hidden">
-                <div className="absolute inset-0 bg-[url('/assets/grid-bg.png')] opacity-20 animate-[pulse_4s_infinite]"></div>
-                
-                {/* Decorative HUD Lines */}
-                <div className="absolute top-1/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent" />
-                <div className="absolute bottom-1/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
+            <div className="text-center space-y-2 z-10">
+                <motion.h1 
+                    initial={{ y: -20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    className="text-5xl font-black font-pixel text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 via-orange-400 to-orange-600 drop-shadow-[0_0_15px_rgba(234,179,8,0.4)]"
+                >
+                    ALPHA WAR
+                </motion.h1>
+                <p className="text-[10px] font-mono text-emerald-400 tracking-[0.3em] animate-pulse">
+                    ACCESS TERMINAL :: INSERT COIN
+                </p>
+            </div>
 
-                <div className="text-center space-y-2 z-10">
-                    <motion.h1 
-                        initial={{ y: -20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        className="text-5xl font-black font-pixel text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 via-orange-400 to-orange-600 drop-shadow-[0_0_15px_rgba(234,179,8,0.4)]"
-                    >
-                        ALPHA WAR
-                    </motion.h1>
-                    <p className="text-[10px] font-mono text-emerald-400 tracking-[0.3em] animate-pulse">
-                        ACCESS TERMINAL :: INSERT COIN
-                    </p>
-                </div>
-
-                {/* Fleet Preview Area */}
-                <div className="relative w-full h-48 flex items-center justify-center z-10">
-                    {/* Ships Formation */}
+            {/* Fleet Preview Area OR Active Battle Arena */}
+            <div className="relative w-full flex items-center justify-center z-10 min-h-[12rem]">
+                {hasActiveBattles ? (
+                    <div className="w-full max-w-2xl mx-auto rounded-xl overflow-hidden border border-white/10 shadow-2xl">
+                        <ArcadeBattleArena />
+                    </div>
+                ) : (
+                    /* Static Ships Formation */
                     <div className="flex items-center gap-8">
                         <motion.div 
                             initial={{ x: -50, opacity: 0 }}
@@ -248,27 +266,24 @@ export function ArcadeMode() {
                             <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-[8px] font-pixel text-orange-400 opacity-60">BOMBER</div>
                         </motion.div>
                     </div>
-                </div>
+                )}
+            </div>
 
-                <div className="space-y-4 w-full max-w-xs z-10">
-                    <ArcadeButton size="lg" onClick={() => setGameState('STORY')} className="animate-pulse">
-                        START MISSION
-                    </ArcadeButton>
-                    <div className="flex justify-between px-2">
-                        <span className="text-[8px] font-pixel text-slate-500">v2.2.0-ARCADE</span>
-                        <span className="text-[8px] font-pixel text-slate-500">BETA_PILOT_ACCESS</span>
-                    </div>
+            <div className="space-y-4 w-full max-w-xs z-10">
+                <ArcadeButton size="lg" onClick={() => setGameState('STORY')} className="animate-pulse">
+                    START MISSION
+                </ArcadeButton>
+                <div className="flex justify-between px-2">
+                    <span className="text-[8px] font-pixel text-slate-500">v2.2.0-ARCADE</span>
+                    <span className="text-[8px] font-pixel text-slate-500">BETA_PILOT_ACCESS</span>
                 </div>
             </div>
-        );
-    }
+        </div>
+    );
 
-    if (gameState === 'STORY') {
-        return <StoryScroll onComplete={() => setGameState('SELECT_SHIP')} />;
-    }
-
-    return (
-        <div className="h-full flex flex-col relative overflow-hidden">
+    // MAIN GAME SCREEN (SELECTIONS -> RESULT)
+    const renderGame = () => (
+        <div className="min-h-[600px] md:h-full flex flex-col relative overflow-hidden">
             {/* Header / HUD */}
             <div className="flex justify-between items-center p-4 bg-black/40 border-b border-white/10 z-20">
                 <div className="flex items-center gap-2">
@@ -658,6 +673,18 @@ export function ArcadeMode() {
                 )}
 
             </AnimatePresence>
+        </div>
+    );
+    
+    // FINAL COMPOSITION WITH BATTLE ARENA
+    return (
+        <div className="flex flex-col h-full overflow-y-auto no-scrollbar scroll-smooth">
+            {/* 1. Main Game Flow */}
+            <div className="flex-grow min-h-0">
+                {gameState === 'INTRO' && renderIntro()}
+                {gameState === 'STORY' && <StoryScroll onComplete={() => setGameState('SELECT_SHIP')} />}
+                {!['INTRO', 'STORY'].includes(gameState) && renderGame()}
+            </div>
         </div>
     );
 }
