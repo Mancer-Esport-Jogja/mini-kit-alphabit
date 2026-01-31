@@ -196,7 +196,7 @@ export const BattleScene = ({ position, isActive }: BattleSceneProps) => {
                     default: { duration: 0.5 }
                 }}
                 // Translate Y to center the PLANET body with the missiles (compensating for HP bar)
-                className="relative z-10 flex flex-col items-center gap-2 translate-y-4"
+                className="relative z-30 flex flex-col items-center gap-2 translate-y-4"
             >
                 <div className="relative w-24 h-24">
                     <motion.div 
@@ -214,30 +214,43 @@ export const BattleScene = ({ position, isActive }: BattleSceneProps) => {
                     
                     {/* IMPACT EXPLOSION ACROSS PLANET */}
                     <AnimatePresence>
-                        {isShooting && (
-                            <>
-                                {/* Central Flash */}
-                                <motion.div 
-                                    initial={{ opacity: 0, scale: 0 }}
-                                    animate={{ opacity: [0, 1, 0], scale: [0.5, 1.5, 2] }}
-                                    transition={{ delay: 0.6, duration: 0.3, ease: "easeOut" }}
-                                    className="absolute inset-0 bg-yellow-200/80 rounded-full mix-blend-screen blur-[2px]"
-                                />
-                                {/* Expanding Shockwave */}
-                                <motion.div 
-                                    initial={{ opacity: 0, scale: 0.5, borderWidth: "10px" }}
-                                    animate={{ opacity: [0, 1, 0], scale: 1.8, borderWidth: "0px" }}
-                                    transition={{ delay: 0.6, duration: 0.4, ease: "easeOut" }}
-                                    className="absolute inset-0 border-white rounded-full mix-blend-overlay"
-                                />
-                                {/* Orange Core Boom */}
-                                <motion.div 
-                                    initial={{ opacity: 0, scale: 0 }}
-                                    animate={{ opacity: [0, 1, 0], scale: 1.2 }}
-                                    transition={{ delay: 0.65, duration: 0.2 }}
-                                    className="absolute inset-0 bg-orange-500/50 rounded-full mix-blend-color-dodge"
-                                />
-                            </>
+                        {isHit && (
+                            <svg viewBox="0 0 16 16" className="absolute inset-0 w-full h-full z-20 pointer-events-none overflow-visible">
+                                {[
+                                    // Core
+                                    {x: 7, y: 7}, {x: 8, y: 7}, {x: 7, y: 8}, {x: 8, y: 8},
+                                    // Ring 1
+                                    {x: 6, y: 7}, {x: 9, y: 7}, {x: 7, y: 6}, {x: 7, y: 9},
+                                    {x: 6, y: 8}, {x: 9, y: 8}, {x: 8, y: 6}, {x: 8, y: 9},
+                                    // Outer Debris
+                                    {x: 5, y: 5}, {x: 10, y: 5}, {x: 5, y: 10}, {x: 10, y: 10},
+                                    {x: 4, y: 7}, {x: 11, y: 7}, {x: 7, y: 4}, {x: 7, y: 11},
+                                    {x: 8, y: 3}, {x: 3, y: 8}, {x: 12, y: 8}, {x: 8, y: 12}
+                                ].map((p, i) => (
+                                    <motion.rect
+                                        key={i}
+                                        x={p.x}
+                                        y={p.y}
+                                        width="1"
+                                        height="1"
+                                        initial={{ scale: 0, opacity: 0 }}
+                                        animate={{
+                                            scale: [0, 1, 1, 1, 1.5],
+                                            opacity: [0, 1, 1, 1, 0],
+                                            fill: ["#ffffff", "#ffffff", "#ffff00", "#ff6600", "#444444"]
+                                        }}
+                                        transition={{
+                                            duration: 0.6,
+                                            times: [0, 0.1, 0.3, 0.6, 1],
+                                            delay: (Math.random() * 0.15), // Remove base delay if using isHit (triggered on impact)
+                                            ease: "easeOut"
+                                        }}
+                                        style={{ 
+                                            transformOrigin: `${p.x + 0.5}px ${p.y + 0.5}px` 
+                                        }}
+                                    />
+                                ))}
+                            </svg>
                         )}
                     </AnimatePresence>
                 </div>
