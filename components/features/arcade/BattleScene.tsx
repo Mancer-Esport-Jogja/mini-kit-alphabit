@@ -122,7 +122,8 @@ export const BattleScene = ({ position, isActive, currentPrice, onToggleDetails 
         if (!isActive || showDetails) return; // Disable shooting if details open
 
         // Randomize Y position (Spread within ship height)
-        const offset = Math.floor(Math.random() * 40) - 20;
+        // Spread shots across upper/lower ship body
+        const offset = Math.floor(Math.random() * 20) - 35;
         const id = laserShotId.current++;
 
         setLaserShots((prev) => [...prev, { id, offset }]);
