@@ -108,14 +108,14 @@ export async function GET(request: NextRequest) {
                 />
             </div>
             {/* Logo Text */}
-            <div style={{ display: 'flex', fontSize: 20, fontWeight: 400, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div style={{ display: 'flex', fontSize: 36, fontWeight: 400, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               ALPHA<span style={{ color: themeColor }}>BIT</span>
             </div>
           </div>
 
           {/* Header Missions */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '24px' }}>
-            <div style={{ display: 'flex', fontSize: 28, color: themeColor, letterSpacing: '0.25em', lineHeight: 1, marginBottom: '8px' }}>
+            <div style={{ display: 'flex', fontSize: 48, color: themeColor, letterSpacing: '0.25em', lineHeight: 1, marginBottom: '8px' }}>
               TOTAL MISSIONS
             </div>
             <div style={{ display: 'flex', fontSize: 10, color: '#64748b', letterSpacing: '0.2em', opacity: 0.7, textTransform: 'uppercase' }}>
