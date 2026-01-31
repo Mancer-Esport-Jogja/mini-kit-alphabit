@@ -90,7 +90,6 @@ export function ArcadeMode() {
         const safeRawOrders = filterHuntOrders(orderData.orders);
         return safeRawOrders.map(parseOrder);
     }, [orderData?.orders]);
-    const { executeFillOrder: _executeFillOrder, isPending, isConfirming, isSuccess: _isSuccess, error: txError, hash, reset: resetTx } = useFillOrder();
     const { executeFillOrder, isPending, isConfirming, isSuccess, error: txError, hash, reset: resetTx, usdcBalance } = useFillOrder();
     
     // Format USDC balance for display (6 decimals)
