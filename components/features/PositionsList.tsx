@@ -8,9 +8,11 @@ import { parseStrike } from "@/utils/decimals";
 import { Loader2, History, ExternalLink, ShieldCheck, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Countdown } from "@/components/ui/Countdown";
+import { MissionDetailPopup } from "./arcade/MissionDetailPopup";
 
 export const PositionsList = ({ onOpenHistory }: { onOpenHistory?: () => void }) => {
   const { data: positions, isLoading, isError, refetch, isRefetching } = useUserPositions();
+  const [selectedPosition, setSelectedPosition] = React.useState<Position | null>(null);
 
   // Debug: surface raw positions payload in console to diagnose NaN/missing fields in prod
   React.useEffect(() => {
@@ -67,6 +69,7 @@ export const PositionsList = ({ onOpenHistory }: { onOpenHistory?: () => void })
         </div>
       </div>
 
+
       <div className="max-h-60 overflow-y-auto custom-scrollbar">
         <AnimatePresence mode="popLayout">
           {openPositions.length === 0 ? (
@@ -82,16 +85,13 @@ export const PositionsList = ({ onOpenHistory }: { onOpenHistory?: () => void })
             openPositions.map((pos: Position, idx) => {
               const isCall = pos.optionType === 256; // 256 for Call (Moon), 257 for Put (Doom)
 
-
-
-
-
               return (
                 <motion.div
                   key={pos.entryTxHash + idx}
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="p-3 border-b border-slate-800 hover:bg-white/5 transition-colors group"
+                  onClick={() => setSelectedPosition(pos)}
+                  className="p-3 border-b border-slate-800 hover:bg-white/5 transition-colors group cursor-pointer"
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center gap-2">
@@ -102,15 +102,9 @@ export const PositionsList = ({ onOpenHistory }: { onOpenHistory?: () => void })
                         {pos.underlyingAsset} {isCall ? "MOON" : "DOOM"}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <a
-                        href={`https://basescan.org/tx/${pos.entryTxHash}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-slate-600 hover:text-white transition-colors"
-                      >
+                    {/* Removed individual link to prevent double click actions, moved to popup */}
+                    <div className="text-slate-600 group-hover:text-white transition-colors">
                         <ExternalLink size={10} />
-                      </a>
                     </div>
                   </div>
 
@@ -167,6 +161,17 @@ export const PositionsList = ({ onOpenHistory }: { onOpenHistory?: () => void })
           <ShieldCheck size={12} /> View Analytics & History
         </button>
       </div>
+
+        {/* Mission Detail Popup */}
+        <AnimatePresence>
+            {selectedPosition && (
+                <MissionDetailPopup 
+                    position={selectedPosition} 
+                    onClose={() => setSelectedPosition(null)} 
+                />
+            )}
+        </AnimatePresence>
     </div>
   );
 };
+

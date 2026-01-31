@@ -305,15 +305,17 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                     <span className="text-[8px] font-pixel text-slate-500">v2.2.0-ARCADE</span>
                     <span className="text-[8px] font-pixel text-slate-500">BETA_PILOT_ACCESS</span>
                 </div>
-                <ArcadeButton
-                    size="sm"
-                    variant="outline"
-                    onClick={onViewAnalytics}
-                    disabled={!onViewAnalytics}
-                    className={!onViewAnalytics ? "opacity-60 grayscale cursor-not-allowed" : ""}
-                >
-                    VIEW ANALYTICS & HISTORY
-                </ArcadeButton>
+                <div className="flex justify-center">
+                    <ArcadeButton
+                        size="sm"
+                        variant="outline"
+                        onClick={onViewAnalytics}
+                        disabled={!onViewAnalytics}
+                        className={!onViewAnalytics ? "opacity-60 grayscale cursor-not-allowed" : ""}
+                    >
+                        VIEW ANALYTICS & HISTORY
+                    </ArcadeButton>
+                </div>
             </div>
         </div>
     );
