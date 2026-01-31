@@ -150,7 +150,7 @@ export const ChatInterface = () => {
                 <div className="px-3 pb-2 flex gap-2">
                     <button
                         onClick={closeDrawer}
-                        className="p-1.5 bg-slate-900/50 hover:bg-slate-800 border border-green-500/30 rounded text-green-500/80 hover:text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.3)] hover:shadow-[0_0_15px_rgba(34,197,94,0.5)] transition-all"
+                        className="p-1.5 bg-slate-900/50 hover:bg-slate-800 border border-red-500/30 rounded text-red-500/80 hover:text-red-400 shadow-[0_0_10px_rgba(239,68,68,0.3)] hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] transition-all"
                         title="Close System"
                     >
                         <X size={14} />

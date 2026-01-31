@@ -80,6 +80,13 @@ const shareCards: ShareCard[] = [
   },
 ];
 
+const Colors: Record<string, string> = {
+  'bit-green': '#4ade80',
+  'blue-400': '#60a5fa',
+  'purple-400': '#a855f7',
+  'orange-400': '#fb923c',
+};
+
 export const ShareModal = ({ isOpen, onClose, analytics, pnlHistory }: ShareModalProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSharing, setIsSharing] = useState(false);
@@ -90,8 +97,14 @@ export const ShareModal = ({ isOpen, onClose, analytics, pnlHistory }: ShareModa
   React.useEffect(() => {
     if (isOpen) {
       setIsSharing(false);
+      // Set initial theme color based on current card
+      const card = shareCards[currentIndex];
+      const colorKey = card.color.replace('text-', '');
+      if (Colors[colorKey]) {
+        setThemeColor(Colors[colorKey]);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, currentIndex]);
   
   const colors = [
     '#4ade80', // Green (Default)
@@ -101,14 +114,6 @@ export const ShareModal = ({ isOpen, onClose, analytics, pnlHistory }: ShareModa
     '#f472b6', // Pink
     '#ef4444', // Red
   ];
-
-  // Colors map for standard cards to fallback
-  const Colors: Record<string, string> = {
-    'bit-green': '#4ade80',
-    'blue-400': '#60a5fa',
-    'purple-400': '#a855f7',
-    'orange-400': '#fb923c',
-  };
 
   const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const threshold = 50;
