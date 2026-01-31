@@ -138,7 +138,7 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
             <div className="crt-overlay opacity-30"></div>
 
             {/* ==================== SECTION 1: HERO ==================== */}
-            <section className="min-h-screen relative flex flex-col items-center justify-center p-4 pb-24">
+            <section className="min-h-screen relative flex flex-col items-center pt-0 justify-center p-4 pb-24">
                 {/* Background Grid */}
                 <div className="absolute inset-0 retro-grid opacity-30"></div>
 
@@ -147,7 +147,7 @@ export const LandingPage = ({ onStart }: LandingPageProps) => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 1.2, ease: "easeOut" }}
-                    className="w-full max-w-sm mb-4"
+                    className="w-full max-w-sm mb-0"
                 >
                     <Suspense fallback={
                         <div className="w-full h-64 flex items-center justify-center">
