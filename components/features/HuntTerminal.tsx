@@ -713,45 +713,52 @@ export const HuntTerminal = () => {
 
                 {/* Collateral Throttle (Step 3) */}
                 <div className="mb-6">
-                    <div className="flex justify-between items-end mb-2">
-                        <div className="flex items-center gap-2">
-                            <label className="text-[10px] font-pixel text-slate-400">3. COMMIT COLLATERAL</label>
-                            <span className="text-[9px] font-mono text-emerald-400 bg-emerald-900/30 px-1.5 py-0.5 rounded">{`BAL: $${formattedBalance}`}</span>
-                        </div>
-                        {isEditingCollateral ? (
-                            <div className="flex items-end gap-2">
-                                <input
-                                    type="text"
-                                    inputMode="decimal"
-                                    value={collateralText}
-                                    onChange={(e) => setCollateralText(e.target.value)}
-                                    onBlur={commitCollateral}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') commitCollateral();
-                                        if (e.key === 'Escape') cancelCollateralEdit();
+                    <div className="flex items-end justify-between mb-2">
+                        <label className="text-[10px] font-pixel text-slate-400 py-1">3. COMMIT COLLATERAL</label>
+                        
+                        <div className="flex justify-end">
+                            {isEditingCollateral ? (
+                                <div className="flex items-end gap-2">
+                                    <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={collateralText}
+                                        onChange={(e) => setCollateralText(e.target.value)}
+                                        onBlur={commitCollateral}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') commitCollateral();
+                                            if (e.key === 'Escape') cancelCollateralEdit();
+                                        }}
+                                        autoFocus
+                                        aria-label="Collateral amount in USDC"
+                                        className="w-24 font-mono tabular-nums text-xl text-white tracking-normal text-right bg-black border-b border-bit-green px-0 py-0 focus:outline-none"
+                                    />
+                                    <span className="text-xs text-slate-500 font-mono">USDC</span>
+                                </div>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setCollateralText(String(collateral));
+                                        setIsEditingCollateral(true);
                                     }}
-                                    autoFocus
-                                    aria-label="Collateral amount in USDC"
-                                    className="w-28 font-mono tabular-nums text-xl text-white tracking-normal text-right bg-black border border-slate-700 px-2 py-1 focus:outline-none focus:border-bit-green"
-                                />
-                                <span className="text-xs text-slate-500 font-mono">USDC</span>
-                            </div>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setCollateralText(String(collateral));
-                                    setIsEditingCollateral(true);
-                                }}
-                                className="font-mono text-xl text-white tracking-widest hover:text-bit-green transition-colors"
-                                aria-label="Edit collateral amount"
-                            >
-                                {collateral} <span className="text-xs text-slate-500">USDC</span>
-                            </button>
-                        )}
+                                    className="flex items-center gap-2 group transition-colors"
+                                    aria-label="Edit collateral amount"
+                                >
+                                    <span className="font-mono text-xl text-white tabular-nums group-hover:text-bit-green transition-colors">{collateral}</span>
+                                    <span className="text-xs text-slate-500 font-mono group-hover:text-slate-400">USDC</span>
+                                    <div className="p-1 rounded-full bg-slate-800 text-slate-500 group-hover:text-bit-green transition-all scale-75">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                                        </svg>
+                                    </div>
+                                </button>
+                            )}
+                        </div>
                     </div>
 
-                    <div className="relative h-12 bg-slate-900 border-2 border-slate-700 flex items-center px-4">
+                    {/* Slider */}
+                    <div className="relative h-12 bg-slate-900 border-2 border-slate-700 flex items-center px-4 mb-2">
                         {/* Custom Slider Track */}
                         <input
                             type="range"
@@ -773,6 +780,12 @@ export const HuntTerminal = () => {
                                 <div key={i} className="h-full w-px bg-slate-800"></div>
                             ))}
                         </div>
+                    </div>
+
+                    {/* Bottom Row: Balance (Right Aligned) */}
+                    <div className="flex items-center justify-end">
+                         {/* Balance Display */}
+                         <span className="text-[10px] font-mono text-slate-500">BAL: <span className="text-emerald-400">{`$${formattedBalance}`}</span></span>
                     </div>
                 </div>
 

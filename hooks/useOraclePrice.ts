@@ -60,22 +60,32 @@ export function useOraclePrice({
     const fetchKlines = useCallback(async () => {
         try {
             setIsLoading(true);
+            const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+            if (!backendUrl) throw new Error('Backend URL not configured');
+
             const response = await fetch(
-                `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`
+                `${backendUrl}/market/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`
             );
 
             if (!response.ok) {
                 throw new Error('Failed to fetch klines');
             }
 
-            const data = await response.json();
+            const jsonResponse = await response.json();
+
+            if (!jsonResponse.success || !Array.isArray(jsonResponse.data)) {
+                throw new Error('Invalid klines format from backend');
+            }
 
             // Parse klines data
             // [openTime, open, high, low, close, volume, ...]
-            const history: PricePoint[] = data.map((kline: unknown[]) => ({
-                time: Number(kline[0]),
-                price: parseFloat(String(kline[4])), // close price
-            }));
+            const history: PricePoint[] = (jsonResponse.data as unknown[]).map((kline: unknown) => {
+                const data = kline as (string | number)[];
+                return {
+                    time: Number(data[0]),
+                    price: parseFloat(String(data[4])), // close price
+                };
+            });
 
             setPriceHistory(history);
             lastHistoryPriceRef.current = history.length > 0 ? history[history.length - 1].price : null;
@@ -213,17 +223,25 @@ export function useOraclePrice({
                 }
             }
 
-            // Chart + final fallback: Binance ticker
+            // Chart + final fallback: Binance ticker (via Backend Proxy)
             try {
-                const binanceTickerUrl = `https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`;
+                const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+                if (!backendUrl) throw new Error('Backend URL not configured');
+
+                const binanceTickerUrl = `${backendUrl}/market/ticker?symbol=${symbol}`;
                 const response = await fetch(binanceTickerUrl);
 
                 if (!response.ok) {
                     throw new Error(`Failed to fetch current price (${response.status})`);
                 }
 
-                const data = await response.json();
-                const price = Number(data?.price);
+                const jsonResponse = await response.json();
+
+                if (!jsonResponse.success || !jsonResponse.data) {
+                    throw new Error('Invalid ticker format from backend');
+                }
+
+                const price = Number(jsonResponse.data.price);
                 if (Number.isFinite(price)) {
                     updatePrice(price);
                     if (oraclePrice === null) {

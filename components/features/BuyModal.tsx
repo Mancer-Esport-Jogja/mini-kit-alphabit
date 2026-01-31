@@ -204,8 +204,8 @@ export const BuyModal: React.FC<BuyModalProps> = ({ isOpen, onClose, order, targ
                   <label className="text-[10px] font-pixel text-slate-400 uppercase">
                     Spend Amount (USDC)
                   </label>
-                  <span className="text-[9px] font-mono text-slate-500">
-                    Balance: {balanceUSDC} USDC
+                  <span className="text-xs font-mono text-slate-500">
+                    BAL: <span className="text-emerald-400">${balanceUSDC}</span>
                   </span>
                 </div>
                 <input
