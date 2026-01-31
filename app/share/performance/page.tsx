@@ -16,6 +16,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   const missions = (params.missions as string) || '0';
   const chart = (params.chart as string) || '';
   const color = (params.color as string) || '#4ade80';
+  const t = (params.t as string) || '';
   
   const pnlNum = parseFloat(pnl);
   const isProfit = pnlNum >= 0;
@@ -27,6 +28,9 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   }
   if (color) {
     ogImageUrl += `&color=${encodeURIComponent(color)}`;
+  }
+  if (t) {
+    ogImageUrl += `&t=${encodeURIComponent(t)}`;
   }
   
   const embedData = {

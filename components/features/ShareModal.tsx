@@ -151,7 +151,7 @@ export const ShareModal = ({ isOpen, onClose, analytics, pnlHistory }: ShareModa
       const missions = analytics.totalTrades || 0;
       
       // Build share URL with query params
-      let shareUrl = `${ROOT_URL}/share/${card.id}?pnl=${encodeURIComponent(pnl)}&username=${encodeURIComponent(username)}&winrate=${winRate}&missions=${missions}`;
+      let shareUrl = `${ROOT_URL}/share/${card.id}?pnl=${encodeURIComponent(pnl)}&username=${encodeURIComponent(username)}&winrate=${winRate}&missions=${missions}&t=${Date.now()}`;
       
       // For performance card, add simplified chart data and color
       if (card.id === 'performance') {
