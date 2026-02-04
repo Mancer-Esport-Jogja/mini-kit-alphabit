@@ -156,6 +156,7 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
     };
 
     // Filter orders for the selected configuration
+    // Simplified: pick the closest OTM strike to spot price
     const getTargetOrder = (): ParsedOrder | null => {
         if (!selectedShip || selectedPlanetIndex === null || !selectedWeapon) return null;
 
@@ -172,44 +173,33 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
         );
         if (durationOrders.length === 0) return null;
 
-        // Map back to parsed orders for scoring
+        // Map back to parsed orders
         const durationParsed = shipOrders.filter(o =>
             durationOrders.some(d => d.order.ticker === o.rawOrder.order.ticker)
         );
         if (durationParsed.length === 0) return null;
 
         const spot = asset === 'ETH' ? ethSpot : asset === 'BTC' ? btcSpot : null;
-        // If spot is unavailable, fall back to cheapest premium to keep Arcade usable
+        // If spot is unavailable, fall back to first available order
         if (!spot) {
-            return durationParsed.reduce((best, curr) =>
-                curr.premium < best.premium ? curr : best
-            );
+            return durationParsed[0];
         }
 
-        // Preferred set: OTM/ATM only (calls: strike >= spot, puts: strike <= spot)
-        const otmOrAtm = durationParsed.filter(o => {
+        // Filter OTM/ATM (calls: strike >= spot, puts: strike <= spot)
+        const otmOnly = durationParsed.filter(o => {
             const strike = o.strikes[0];
             return isCall ? strike >= spot : strike <= spot;
         });
-        const candidateSet = otmOrAtm.length > 0 ? otmOrAtm : durationParsed;
 
-        // Prepare normalization factors
-        const maxPremium = Math.max(...candidateSet.map(o => o.premium));
-        const maxDist = Math.max(
-            ...candidateSet.map(o => Math.abs(o.strikes[0] - spot) / spot)
-        );
+        // If no OTM available, fall back to all duration orders
+        const candidateSet = otmOnly.length > 0 ? otmOnly : durationParsed;
 
-        const scoreOrder = (o: ParsedOrder) => {
-            const distPct = Math.abs(o.strikes[0] - spot) / spot;
-            const premiumNorm = maxPremium === 0 ? 0 : o.premium / maxPremium;
-            const distNorm = maxDist === 0 ? 0 : distPct / maxDist;
-            // Weight cheaper premium more heavily, then proximity to spot
-            return 0.65 * premiumNorm + 0.35 * distNorm;
-        };
-
-        const best = candidateSet.reduce((best, curr) =>
-            scoreOrder(curr) < scoreOrder(best) ? curr : best
-        );
+        // Find the closest strike to spot price
+        const best = candidateSet.reduce((closest, curr) => {
+            const closestDist = Math.abs(closest.strikes[0] - spot);
+            const currDist = Math.abs(curr.strikes[0] - spot);
+            return currDist < closestDist ? curr : closest;
+        });
 
         return best;
     };

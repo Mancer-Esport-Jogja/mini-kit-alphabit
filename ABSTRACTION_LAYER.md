@@ -39,7 +39,7 @@ Logic lives in `hooks/useThetanutsOrders.ts` and is consumed in `HuntTerminal`.
    - Sync asset/duration/target.
    - If provided, match nearest strike.
    - Fallback to best order and open `BuyModal`.
-- **Arcade Picker (Simplified)**: still uses Thetanuts RFQ, but auto-picks the cheapest strike that is near-ATM and OTM relative to spot (Calls: strike ≥ spot, Puts: strike ≤ spot). It scores candidates by a weighted mix of premium (65%) and strike distance to spot (35%), then falls back to the closest strike if no OTM/ATM liquidity exists.
+- **Arcade Picker (Simplified)**: uses Thetanuts RFQ and auto-picks the closest OTM/ATM strike to spot price (Calls: strike ≥ spot, Puts: strike ≤ spot). Falls back to closest available strike if no OTM/ATM liquidity exists.
 
 ## Optimistic Settlement (Blitz Mode)
 - “Trade Active” state appears once TX hash exists while polling for confirmation.  
