@@ -302,16 +302,19 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                     speaker: "R.O.B.B.I.E. 9000",
                     text: `TACTICAL RECOMMENDATION:\n${pages[1]}`,
                     expression: "scan",
-                    options: [
-                        { label: "LAUNCH MISSION", value: "LAUNCH", desc: "Start trading." }
-                    ]
                 });
-            } else {
-                // Attach launch option to first node if no split
-                resultNodes[0].options = [
-                    { label: "LAUNCH MISSION", value: "LAUNCH", desc: "Start trading." }
-                ];
             }
+
+            // WELCOME NODE
+            resultNodes.push({
+                id: 'result-welcome',
+                speaker: "R.O.B.B.I.E. 9000",
+                text: "Diagnostics clear. Profile authorized. Welcome to <b>Alphabit Squad</b>, Pilot.",
+                expression: "neutral",
+                options: [
+                    { label: "LAUNCH MISSION", value: "LAUNCH", desc: "Start trading." }
+                ]
+            });
 
              setScenario(prev => [...prev, ...resultNodes]);
              // Auto-advance to result after processing
