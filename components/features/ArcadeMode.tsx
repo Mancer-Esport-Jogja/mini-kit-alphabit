@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, CheckCircle2, ChevronLeft } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronLeft, BrainCircuit } from 'lucide-react';
 import Image from 'next/image';
 
 import { useThetanutsOrders } from '@/hooks/useThetanutsOrders';
@@ -19,11 +19,21 @@ import { ArcadeButton } from './arcade/ArcadeButton';
 import { StoryScroll } from './arcade/StoryScroll';
 import { PlanetCard } from './arcade/PlanetCard';
 import { ArcadeBattleArena } from './arcade/ArcadeBattleArena';
+import { PredictionCard } from './arcade/PredictionCard';
 
 // --- GAME TYPES ---
-type GameState = 'INTRO' | 'STORY' | 'SELECT_SHIP' | 'SELECT_PLANET' | 'SELECT_WEAPON' | 'ARM_WEAPON' | 'LAUNCH' | 'RESULT';
+type GameState = 'INTRO' | 'STORY' | 'MODE_SELECT' | 'PREDICT_MODE' | 'SELECT_SHIP' | 'SELECT_PLANET' | 'SELECT_WEAPON' | 'ARM_WEAPON' | 'LAUNCH' | 'RESULT';
 type ShipType = 'FIGHTER' | 'BOMBER'; // ETH vs BTC
 type WeaponType = 'LASER' | 'MISSILE'; // Call vs Put
+
+// AI Prediction Type
+type AIPrediction = {
+    direction: 'MOON' | 'DOOM';
+    duration: 'BLITZ' | 'RUSH' | 'CORE' | 'ORBIT';
+    recommendedStrike: number;
+    confidence: number;
+    reasoning: string;
+};
 
 const PLANETS = [
     { type: 'MAGMA', name: 'BLITZ', timeframe: '2H-9H', minHours: 2, maxHours: 9 },
@@ -70,6 +80,11 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
     const [selectedWeapon, setSelectedWeapon] = useState<WeaponType | null>(null);
 
     const [inputAmount, setInputAmount] = useState<string>('50');
+
+    // Prediction Mode State
+    const [predictionAsset, setPredictionAsset] = useState<'ETH' | 'BTC' | null>(null);
+    const [aiPrediction, setAiPrediction] = useState<AIPrediction | null>(null);
+    const [isLoadingPrediction, setIsLoadingPrediction] = useState(false);
 
     // Data Hooks
     const { data: orderData, refetch: refetchOrders } = useThetanutsOrders();
@@ -129,6 +144,11 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
             setSelectedShip(null);
             setSelectedPlanetIndex(null);
             setSelectedWeapon(null);
+        }
+        if (gameState === 'MODE_SELECT') {
+             // Reset prediction state if going back to mode select
+             setPredictionAsset(null);
+             setAiPrediction(null);
         }
     }, [gameState]);
 
@@ -228,7 +248,84 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
         setSelectedShip(null);
         setSelectedPlanetIndex(null);
         setSelectedWeapon(null);
+        setPredictionAsset(null);
+        setAiPrediction(null);
         resetTx();
+    };
+
+    // --- PREDICTION LOGIC ---
+
+    const fetchPrediction = async (asset: 'ETH' | 'BTC') => {
+        setPredictionAsset(asset);
+        setIsLoadingPrediction(true);
+        setAiPrediction(null);
+
+        try {
+            // Construct market data for the AI
+            const price = asset === 'ETH' ? ethSpot : btcSpot;
+            const marketData = {
+                asset,
+                currentPrice: price,
+                // Add simple trend mock or real data if available in context
+            };
+
+            const res = await fetch('/api/ai/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ asset, marketData })
+            });
+            
+            const data = await res.json();
+            if (data.prediction) {
+                setAiPrediction(data.prediction);
+            } else {
+                setSystemMessage("NEURAL LINK FAILED: NO SIGNAL");
+                setTimeout(() => setSystemMessage(null), 3000);
+            }
+        } catch (e) {
+            console.error("Prediction error", e);
+            setSystemMessage("NEURAL LINK ERROR");
+            setTimeout(() => setSystemMessage(null), 3000);
+        } finally {
+            setIsLoadingPrediction(false);
+        }
+    };
+
+    const handlePredictionSelect = (choice: 'YES' | 'NO') => {
+        if (!aiPrediction || !predictionAsset) return;
+
+        // 1. Map Asset -> Ship
+        const ship: ShipType = predictionAsset === 'ETH' ? 'FIGHTER' : 'BOMBER';
+        setSelectedShip(ship);
+
+        // 2. Map Duration -> Planet
+        // Find matching planet index
+        const planetIdx = PLANETS.findIndex(p => p.name === aiPrediction.duration);
+        if (planetIdx !== -1) {
+            setSelectedPlanetIndex(planetIdx);
+        } else {
+            // Fallback if AI hallucinates a duration
+            setSelectedPlanetIndex(2); // Core
+        }
+
+        // 3. Map YES/NO + Prediction -> Weapon (Call/Put)
+        // YES (Agree) + MOON = CALL
+        // YES (Agree) + DOOM = PUT
+        // NO (Disagree) + MOON = PUT
+        // NO (Disagree) + DOOM = CALL
+        
+        let weapon: WeaponType;
+        const isMoon = aiPrediction.direction === 'MOON';
+        const isYes = choice === 'YES';
+
+        if (isYes) {
+            weapon = isMoon ? 'LASER' : 'MISSILE';
+        } else {
+            weapon = isMoon ? 'MISSILE' : 'LASER';
+        }
+        setSelectedWeapon(weapon);
+
+        setGameState('ARM_WEAPON');
     };
 
     // --- RENDER CONTENT ---
@@ -287,14 +384,13 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                 )}
             </div>
 
+            {/* Button Container - Hides if there are active battles, can restore via reset or just show anyway */}
             <div className="space-y-4 w-full max-w-xs z-10">
-                <ArcadeButton size="lg" onClick={() => setGameState('STORY')} className="animate-pulse">
+                <ArcadeButton size="lg" onClick={() => setGameState('MODE_SELECT')} className="animate-pulse">
                     START MISSION
                 </ArcadeButton>
-                <div className="flex justify-between px-2">
-                    <span className="text-[8px] font-pixel text-slate-500">v2.2.0-ARCADE</span>
-                    <span className="text-[8px] font-pixel text-slate-500">BETA_PILOT_ACCESS</span>
-                </div>
+                
+                {/* Always show analytics */}
                 <div className="flex justify-center">
                     <ArcadeButton
                         size="sm"
@@ -306,6 +402,162 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                         VIEW ANALYTICS & HISTORY
                     </ArcadeButton>
                 </div>
+                
+                <div className="flex justify-between px-2">
+                    <span className="text-[8px] font-pixel text-slate-500">v2.3.0-PREDICT</span>
+                    <span className="text-[8px] font-pixel text-slate-500">BETA_PILOT_ACCESS</span>
+                </div>
+            </div>
+        </div>
+    );
+
+    // MODE SELECTION SCREEN
+    const renderModeSelect = () => (
+        <div className="min-h-[600px] md:h-full flex flex-col items-center justify-center space-y-12 p-8 relative overflow-hidden">
+            <div className="text-center space-y-2 z-10">
+                <h2 className="text-2xl font-pixel text-white">SELECT PROTOCOL</h2>
+                <p className="text-[10px] font-mono text-slate-400">Choose your engagement strategy</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl z-10">
+                {/* PREDICT MODE CARD */}
+                <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setGameState('PREDICT_MODE')}
+                    className="group relative bg-slate-900/60 border border-purple-500/30 hover:border-purple-500 rounded-2xl p-8 flex flex-col items-center gap-6 transition-all"
+                >
+                    <div className="absolute inset-0 bg-purple-500/5 group-hover:bg-purple-500/10 transition-colors rounded-2xl" />
+                    <div className="p-4 bg-purple-900/20 rounded-full border border-purple-500/30 group-hover:scale-110 transition-transform">
+                        <BrainCircuit size={48} className="text-purple-400" />
+                    </div>
+                    <div className="text-center space-y-2">
+                        <h3 className="text-xl font-bold font-pixel text-purple-400">PREDICT MODE</h3>
+                        <p className="text-xs font-mono text-slate-400 max-w-[200px]">
+                            Leverage AI analysis to predict market moves. Simple Yes/No decisions.
+                        </p>
+                    </div>
+                </motion.button>
+
+                {/* MISSION MODE CARD */}
+                <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setGameState('STORY')}
+                    className="group relative bg-slate-900/60 border border-emerald-500/30 hover:border-emerald-500 rounded-2xl p-8 flex flex-col items-center gap-6 transition-all"
+                >
+                    <div className="absolute inset-0 bg-emerald-500/5 group-hover:bg-emerald-500/10 transition-colors rounded-2xl" />
+                    <div className="p-4 bg-emerald-900/20 rounded-full border border-emerald-500/30 group-hover:scale-110 transition-transform">
+                        <div className="relative w-12 h-12">
+                             <Image src="/assets/fighter-moon.svg" alt="Classic" fill className="object-contain" />
+                        </div>
+                    </div>
+                    <div className="text-center space-y-2">
+                        <h3 className="text-xl font-bold font-pixel text-emerald-400">MISSION MODE</h3>
+                        <p className="text-xs font-mono text-slate-400 max-w-[200px]">
+                            Manual control. Choose your ship, target sector, and weapon systems.
+                        </p>
+                    </div>
+                </motion.button>
+            </div>
+            
+            <button 
+                onClick={() => setGameState('INTRO')}
+                className="text-[10px] font-pixel text-slate-500 hover:text-white transition-colors z-10"
+            >
+                &lt; ABORT SEQUENCE
+            </button>
+        </div>
+    );
+
+    // PREDICT MODE SCREEN
+    const renderPredictMode = () => (
+        <div className="min-h-[600px] md:h-full flex flex-col relative overflow-hidden">
+            {/* Header */}
+            <div className="flex justify-between items-center p-4 bg-black/40 border-b border-white/10 z-20">
+                <button 
+                    onClick={() => setGameState('MODE_SELECT')}
+                    className="flex items-center gap-1 text-slate-500 hover:text-white transition-colors"
+                >
+                    <ChevronLeft size={16} />
+                    <span className="text-[10px] font-pixel">BACK</span>
+                </button>
+                <div className="text-[10px] font-pixel text-purple-400">ALPHA DROID LINKED</div>
+            </div>
+
+            <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-8">
+                
+                {/* 1. Asset Selection (Only if not selected yet) */}
+                {!predictionAsset && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                        className="w-full max-w-lg space-y-8"
+                    >
+                         <div className="text-center space-y-2">
+                            <h2 className="text-xl font-pixel text-white">SELECT ASSET TO SCAN</h2>
+                            <p className="text-[10px] font-mono text-slate-400">Analyze sector for opportunities</p>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                             <button
+                                onClick={() => fetchPrediction('ETH')}
+                                className="group bg-slate-800/50 border border-slate-700 hover:border-emerald-500 hover:bg-slate-800 p-6 rounded-xl flex flex-col items-center gap-4 transition-all"
+                             >
+                                <div className="p-3 bg-emerald-500/10 rounded-full group-hover:scale-110 transition-transform">
+                                    <Image src="/assets/fighter-moon.svg" width={48} height={48} alt="ETH" />
+                                </div>
+                                <span className="font-pixel text-lg text-emerald-400">ETH</span>
+                             </button>
+
+                             <button
+                                onClick={() => fetchPrediction('BTC')}
+                                className="group bg-slate-800/50 border border-slate-700 hover:border-orange-500 hover:bg-slate-800 p-6 rounded-xl flex flex-col items-center gap-4 transition-all"
+                             >
+                                <div className="p-3 bg-orange-500/10 rounded-full group-hover:scale-110 transition-transform">
+                                    <Image src="/assets/bomber-doom.svg" width={48} height={48} alt="BTC" />
+                                </div>
+                                <span className="font-pixel text-lg text-orange-400">BTC</span>
+                             </button>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* 2. Loading State */}
+                {isLoadingPrediction && (
+                    <PredictionCard 
+                        asset={predictionAsset!}
+                        direction="MOON" // Dummy
+                        targetStrike={0}
+                        currentPrice={0}
+                        expiry=""
+                        reasoning=""
+                        confidence={0}
+                        onSelectYes={() => {}}
+                        onSelectNo={() => {}}
+                        isLoading={true}
+                    />
+                )}
+
+                {/* 3. Prediction Card */}
+                {!isLoadingPrediction && aiPrediction && predictionAsset && (
+                    <PredictionCard 
+                        asset={predictionAsset}
+                        direction={aiPrediction.direction}
+                        targetStrike={aiPrediction.recommendedStrike}
+                        currentPrice={predictionAsset === 'ETH' ? ethSpot || 0 : btcSpot || 0}
+                        expiry={aiPrediction.duration} // Could format this better
+                        reasoning={aiPrediction.reasoning}
+                        confidence={aiPrediction.confidence}
+                        onSelectYes={() => handlePredictionSelect('YES')}
+                        onSelectNo={() => handlePredictionSelect('NO')}
+                    />
+                )}
+
+                {/* System Messages */}
+                <AnimatePresence>
+                    {systemMessage && <SystemMessage message={systemMessage} onClear={() => setSystemMessage(null)} />}
+                </AnimatePresence>
+
             </div>
         </div>
     );
@@ -712,7 +964,9 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
             <div className="flex-grow min-h-0">
                 {gameState === 'INTRO' && renderIntro()}
                 {gameState === 'STORY' && <StoryScroll onComplete={() => setGameState('SELECT_SHIP')} />}
-                {!['INTRO', 'STORY'].includes(gameState) && renderGame()}
+                {gameState === 'MODE_SELECT' && renderModeSelect()}
+                {gameState === 'PREDICT_MODE' && renderPredictMode()}
+                {!['INTRO', 'STORY', 'MODE_SELECT', 'PREDICT_MODE'].includes(gameState) && renderGame()}
             </div>
         </div>
     );
