@@ -63,6 +63,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
     const crawlRef = useRef<HTMLDivElement>(null);
     const lastTapRef = useRef(0);
     const [isFastForward, setIsFastForward] = useState(false);
+    const [canInteract, setCanInteract] = useState(false);
 
     // --- CRAWL LOGIC ---
     useEffect(() => {
@@ -93,6 +94,16 @@ export function Onboarding({ onComplete }: OnboardingProps) {
     };
 
     // --- VISUAL NOVEL LOGIC ---
+    useEffect(() => {
+        if (!isTyping) {
+            // Delay interaction to prevent ghost clicks from double-tap skipping
+            const timer = setTimeout(() => setCanInteract(true), 500); 
+            return () => clearTimeout(timer);
+        } else {
+            setCanInteract(false);
+        }
+    }, [isTyping]);
+
     useEffect(() => {
         if (scene === 'NOVEL') {
             renderDialog();
@@ -550,7 +561,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                         Double-Click to auto-complete
                     </div>
 
-                    <div className={`max-w-4xl mx-auto w-full mt-6 md:mt-8 flex flex-col items-end ${isTyping ? 'opacity-0 pointer-events-none transition-none' : 'opacity-100 transition-opacity duration-300'}`}>
+                    <div className={`max-w-4xl mx-auto w-full mt-6 md:mt-8 flex flex-col items-end ${isTyping ? 'opacity-0 transition-none' : 'opacity-100 transition-opacity duration-300'} ${canInteract ? 'pointer-events-auto' : 'pointer-events-none'}`}>
                         {data.options ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
                                 {data.options.map((opt, idx) => (
@@ -564,7 +575,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                                     </button>
                                 ))}
                             </div>
-                        ) : (
+                        ) : data.id !== 'result-proc' && (
                             <button 
                                 onClick={(e) => { e.stopPropagation(); nextDialog(true); }}
                                 className="flex items-center gap-3 text-black bg-green-500 px-6 py-3 md:px-10 md:py-4 font-black text-sm md:text-xl hover:bg-white transition-all italic uppercase group"
