@@ -196,28 +196,106 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
     const renderCrawl = () => (
         <div 
-            className="perspective-[400px] h-screen w-full flex justify-center overflow-hidden bg-black cursor-pointer relative select-none"
+            className="h-screen w-full bg-gradient-to-b from-black via-slate-950 to-black overflow-hidden relative cursor-pointer select-none font-sans"
             onMouseDown={startFastForward}
             onMouseUp={endFastForward}
             onMouseLeave={endFastForward}
             onTouchStart={startFastForward}
             onTouchEnd={endFastForward}
         >
-            <div ref={crawlRef} className="relative origin-[50%_100%] animate-[crawl_40s_linear_forwards] text-center w-[90%] max-w-4xl space-y-12 rotate-x-[25deg] translate-y-full will-change-transform">
-                <h2 className="text-4xl md:text-7xl font-black text-yellow-500 italic mb-16 uppercase">EPISODE I: THE ALPHA AWAKENING</h2>
-                <div className="text-2xl md:text-5xl leading-relaxed text-yellow-400 font-bold uppercase space-y-12 md:space-y-16">
-                    <p>In a galaxy ruled by <span className="text-white">EXTREME VOLATILITY</span>...</p>
-                    <p>DeFi chaos has shattered the hopes of veteran traders.</p>
-                    <p>Yet, in a dark corner of the Base Network, a new hope rises.</p>
-                    <p>Tactical Droid Unit 9000 has been reactivated.</p>
-                    <p>Now, a new Pilot arrives at the hangar.</p>
-                    <p>The fate of the market is in your hands.</p>
-                    <p>Prepare yourself, Pilot... calibration begins now.</p>
+             {/* Animated Starfield Background (Matched to StoryScroll) */}
+             <div className="absolute inset-0 pointer-events-none">
+                {[...Array(50)].map((_, i) => (
+                    <motion.div
+                        key={i}
+                        className="absolute w-1 h-1 bg-white rounded-full"
+                        style={{
+                            top: `${Math.random() * 100}%`,
+                            left: `${Math.random() * 100}%`,
+                        }}
+                        animate={{
+                            opacity: [0.2, 1, 0.2],
+                            scale: [0.5, 1.5, 0.5],
+                        }}
+                        transition={{
+                            duration: 2 + Math.random() * 3,
+                            repeat: Infinity,
+                            delay: Math.random() * 2,
+                        }}
+                    />
+                ))}
+            </div>
+
+            {/* Scanline Effect */}
+            <div className="absolute inset-0 pointer-events-none opacity-10 z-10">
+                <div className="absolute w-full h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent animate-[scan_4s_linear_infinite]" />
+            </div>
+
+            {/* Grid Overlay */}
+            <div className="absolute inset-0 opacity-5 pointer-events-none z-10" style={{
+                backgroundImage: 'linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px)',
+                backgroundSize: '50px 50px'
+            }} />
+
+            {/* Vignette */}
+            <div className="absolute inset-0 bg-gradient-radial from-transparent via-transparent to-black opacity-60 pointer-events-none z-10" />
+
+            {/* Fade Overlay (Top) - Retained for smooth exit */}
+            <div className="absolute top-0 left-0 w-full h-48 bg-gradient-to-b from-black via-black/80 to-transparent z-20 pointer-events-none" />
+
+            {/* 3D Stage */}
+            <div 
+                className="flex justify-center h-full overflow-hidden origin-[50%_100%] absolute inset-0 pb-0"
+                style={{ 
+                    perspective: '500px',
+                    perspectiveOrigin: 'center top'
+                }}
+            >
+                 <div 
+                    ref={crawlRef} 
+                    className="relative origin-[50%_100%] animate-[crawl_80s_linear_forwards] text-center w-[90%] md:w-[70%] max-w-3xl will-change-transform pb-[200vh] px-4"
+                    style={{ 
+                        transform: 'rotateX(25deg)',
+                        transformStyle: 'preserve-3d',
+                        // transformOrigin handled by class but explicit style is safer for consistency
+                    }}
+                 >
+                    {/* Header */}
+                    <div className="text-center mb-16 space-y-6">
+                        <motion.div
+                            animate={{ 
+                                textShadow: [
+                                '0 0 10px rgba(234, 179, 8, 0.5)',
+                                '0 0 25px rgba(234, 179, 8, 0.8)',
+                                '0 0 10px rgba(234, 179, 8, 0.5)',
+                                ]
+                            }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                            className="text-4xl md:text-6xl font-black font-pixel text-yellow-400 tracking-widest drop-shadow-[0_0_30px_rgba(234,179,8,0.7)]"
+                        >
+                            EPISODE I
+                        </motion.div>
+                        <h2 className="text-3xl md:text-5xl font-pixel text-cyan-300 tracking-wider drop-shadow-[0_0_20px_rgba(34,211,238,0.6)] uppercase">
+                            THE ALPHA AWAKENING
+                        </h2>
+                        <div className="h-1 w-32 mx-auto bg-gradient-to-r from-transparent via-yellow-400 to-transparent" />
+                    </div>
+
+                    {/* Body Text */}
+                    <div className="text-lg md:text-2xl leading-loose text-yellow-400 font-pixel drop-shadow-[2px_2px_0px_rgba(0,0,0,1)] text-center uppercase tracking-[0.2em] space-y-16">
+                        <p>In a galaxy ruled by <span className="text-rose-500 font-bold underline decoration-2 underline-offset-4">EXTREME VOLATILITY</span>...</p>
+                        <p>DeFi chaos has shattered the hopes of veteran traders.</p>
+                        <p>Yet, in a dark corner of the Base Network, a <span className="text-cyan-400 font-bold">new hope rises</span>.</p>
+                        <p>Tactical Droid Unit 9000 has been reactivated.</p>
+                        <p>Now, a new Pilot arrives at the hangar.</p>
+                        <p>The fate of the market is in your hands.</p>
+                        <p>Prepare yourself, Pilot... <span className="text-emerald-400 font-bold">calibration begins now</span>.</p>
+                    </div>
                 </div>
             </div>
             
             {/* FF HINT */}
-            <div className={`absolute bottom-24 left-1/2 -translate-x-1/2 px-4 py-1 rounded text-[10px] tracking-[0.2em] font-bold border transition-all duration-300 pointer-events-none ${
+            <div className={`absolute bottom-24 left-1/2 -translate-x-1/2 px-4 py-1 rounded text-[10px] tracking-[0.2em] font-pixel border transition-all duration-300 pointer-events-none z-50 ${
                 isFastForward 
                     ? "bg-white text-black border-white opacity-100 scale-110" 
                     : "bg-yellow-900/10 text-yellow-500 border-yellow-500/30 opacity-40"
@@ -227,7 +305,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
             <button 
                 onClick={(e) => { e.stopPropagation(); setScene('NOVEL'); }}
-                className="absolute bottom-10 right-10 z-50 text-[10px] text-green-900 border-b border-green-900 uppercase hover:text-green-500 tracking-widest font-bold"
+                className="absolute bottom-10 right-10 z-50 text-[10px] font-pixel text-cyan-400 border-b border-cyan-400 uppercase hover:text-white hover:border-white tracking-widest"
             >
                 Skip Prologue
             </button>
