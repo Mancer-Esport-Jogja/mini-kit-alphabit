@@ -152,10 +152,6 @@ body {
   box-shadow: 0 0 5px var(--bit-coral), 0 0 10px var(--bit-coral), 0 0 20px var(--bit-coral);
 }
 
-.glow-coral {
-  box-shadow: 0 0 5px var(--bit-coral), 0 0 10px var(--bit-coral), 0 0 20px var(--bit-coral);
-}
-
 /* Marquee animation */
 @keyframes marquee {
   0% {
@@ -221,4 +217,26 @@ body {
     background-color: #0f172a; /* dark slate */
     color: #ffffff; /* white text */
   }
+}
+
+/* Star Wars Crawl Effect */
+@keyframes crawl {
+  0% { transform: rotateX(25deg) translateY(100%); }
+  100% { transform: rotateX(25deg) translateY(-280%); }
+}
+
+@keyframes floating {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+/* Star Wars Crawl Effect */
+@keyframes crawl {
+  0% { transform: rotateX(25deg) translateY(100%); }
+  100% { transform: rotateX(25deg) translateY(-280%); }
+}
+
+@keyframes floating {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
 }
