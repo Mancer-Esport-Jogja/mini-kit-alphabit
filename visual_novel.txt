@@ -1,0 +1,57 @@
+EPISODE I
+THE ALPHA AWAKENING
+
+In a galaxy ruled by EXTREME VOLATILITY...
+DeFi chaos has shattered the hopes of veteran traders.
+Yet, in a dark corner of the Base Network, a new hope rises.
+Tactical Droid Unit 9000 has been reactivated.
+Now, a new Pilot arrives at the hangar.
+The fate of the market is in your hands.
+Prepare yourself, Pilot... calibration begins now.
+
+-------------------------------------------------------------------------------
+
+SYSTEM: Detecting organic life signs... Neural sync starting in 3... 2... 1...
+
+R.O.B.B.I.E. 9000: Ah, finally. A new <b>'organic'</b> in the pilot seat. How many cycles have I waited in this silent hangar? <span class='text-yellow-400'>Dusty and boring.</span>
+
+R.O.B.B.I.E. 9000: My name is <b>R.O.B.B.I.E. 9000</b>. I am the tactical brain of this ship. And you... you are the Pilot. Don't be so tense, I can feel your irregular heartbeat through the biometric seat sensors.
+
+R.O.B.B.I.E. 9000: Emergency scenario initiated: Your ship was just hit by a <b>DeFi meteor storm</b>. The main reactor is leaking energy! Ship power is <b class='text-rose-500'>dropping by 20%</b> in seconds. If you stay still, we'll go dark. What's your protocol, Pilot?
+[Option] Eject Protocol - "Secure what remains."
+[Option] Stabilize Reactor - "Measured risk."
+[Option] Overload Engine! - "Double Down!"
+
+R.O.B.B.I.E. 9000: Where does your adrenaline trigger? Hunting small meteors flashing by in hours <b class='text-cyan-400'>(Blitz)</b>, or waiting for a massive supernova that takes days to ripen <b class='text-rose-500'>(Orbit)</b>?
+[Option] Blitz Hunt - "Instant results."
+[Option] Await Supernova - "Explorer's patience."
+
+R.O.B.B.I.E. 9000: One last thing, Pilot. In the Alphabit armory, we have two types of warheads. Which one do you feel is more 'powerful'?
+[Option] 'Moon' Missile (Call) - "Fly to the stars."
+[Option] 'Doom' Nuke (Put) - "Watch the market burn."
+
+SYSTEM: ESTABLISHING NEURAL LINK... ANALYZING BIOMETRICS... DECRYPTING PSYCH PROFILE...
+
+R.O.B.B.I.E. 9000: CALCULATION COMPLETE. Pilot Analysis:
+[Dynamic AI Content: Diagnosis]
+
+R.O.B.B.I.E. 9000: TACTICAL RECOMMENDATION:
+[Dynamic AI Content: Strategy]
+
+R.O.B.B.I.E. 9000: Diagnostics clear. Profile authorized. Welcome to <b>Alphabit Squad</b>, Pilot.
+R.O.B.B.I.E. 9000: My name is <b>R.O.B.B.I.E. 9000</b>. I am the tactical brain of this ship. And you... you are the Pilot.
+
+R.O.B.B.I.E. 9000: Before we warp into the chaos of the Base Network, let me explain what I can do to ensure you don’t end up as space debris. Listen closely, organic:
+
+R.O.B.B.I.E. 9000: I’ll be running continuous <span class='text-cyan-400'>Market Analysis</span>, scanning the entire DeFi galaxy for price anomalies. If your human brain feels overwhelmed, I’ll provide <span class='text-cyan-400'>AI Trade Recommendations</span> so you know exactly when to fire your 'Moon' missiles or 'Doom' nukes.
+
+R.O.B.B.I.E. 9000: I also keep a constant eye on your <span class='text-cyan-400'>Risk Score Check</span>—calculating your odds of going bankrupt before you can even blink. And if you’re lost, my <span class='text-cyan-400'>Tutorial Guide & Chat</span> is always online. You can ask me anything, though I can't promise I won't hurt your feelings with my answers.
+
+R.O.B.B.I.E. 9000: The diagnostics are green and the armory is loaded. It’s time to find out if you’re a natural or just another statistic. The mission is waiting, Pilot. Proceed
+[Option] LAUNCH MISSION - "Start trading."
+
+-------------------------------------------------------------------------------
+(Fallback Scenario if AI fails)
+
+R.O.B.B.I.E. 9000: CALCULATION COMPLETE. Designation: <b class='${profileColor}'>${profileName}</b>.${fallbackDesc}
+[Option] LAUNCH MISSION - "Start trading."

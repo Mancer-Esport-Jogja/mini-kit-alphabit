@@ -182,12 +182,13 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         // Check if this was the last question of the INITIAL scenario
         if (data.id === 'goal') {
              finishNovel(newAnswers);
-        } else if (data.id === 'launch') {
+        } else if (data.id === 'launch' || value === 'LAUNCH') {
             handleLaunch();
         } else {
              nextDialog(true);
         }
     };
+
 
     const finishNovel = async (finalAnswers: Record<string, RiskAnswer>) => {
         // 1. Calculate Initial Profile (Static Fallback)
@@ -311,6 +312,42 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                 speaker: "R.O.B.B.I.E. 9000",
                 text: "Diagnostics clear. Profile authorized. Welcome to <b>Alphabit Squad</b>, Pilot.",
                 expression: "neutral",
+            });
+
+            // NEW DIALOGUE SEQUENCE
+            resultNodes.push({
+                id: 'robbie-intro-1',
+                speaker: "R.O.B.B.I.E. 9000",
+                text: "My name is <b>R.O.B.B.I.E. 9000</b>. I am the tactical brain of this ship. And you... you are the Pilot.",
+                expression: "neutral",
+            });
+
+            resultNodes.push({
+                id: 'robbie-intro-2',
+                speaker: "R.O.B.B.I.E. 9000",
+                text: "Before we warp into the chaos of the Base Network, let me explain what I can do to ensure you don’t end up as space debris. Listen closely, organic:",
+                expression: "scan",
+            });
+
+            resultNodes.push({
+                id: 'robbie-intro-3',
+                speaker: "R.O.B.B.I.E. 9000",
+                text: "I’ll be running continuous <span class='text-cyan-400'>Market Analysis</span>, scanning the entire DeFi galaxy for price anomalies. If your human brain feels overwhelmed, I’ll provide <span class='text-cyan-400'>AI Trade Recommendations</span> so you know exactly when to fire your 'Moon' missiles or 'Doom' nukes.",
+                expression: "processing",
+            });
+
+            resultNodes.push({
+                id: 'robbie-intro-4',
+                speaker: "R.O.B.B.I.E. 9000",
+                text: "I also keep a constant eye on your <span class='text-cyan-400'>Risk Score Check</span>—calculating your odds of going bankrupt before you can even blink. And if you’re lost, my <span class='text-cyan-400'>Tutorial Guide & Chat</span> is always online. You can ask me anything, though I can't promise I won't hurt your feelings with my answers.",
+                expression: "neutral",
+            });
+
+            resultNodes.push({
+                id: 'robbie-intro-5',
+                speaker: "R.O.B.B.I.E. 9000",
+                text: "The diagnostics are green and the armory is loaded. It’s time to find out if you’re a natural or just another statistic. The mission is waiting, Pilot. Proceed",
+                expression: "alert",
                 options: [
                     { label: "LAUNCH MISSION", value: "LAUNCH", desc: "Start trading." }
                 ]
