@@ -113,14 +113,17 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         setIsTyping(true);
         setDisplayedText("");
         
-        let i = 0;
         if (typeIntervalRef.current) clearInterval(typeIntervalRef.current);
+        
+        let charIndex = 0;
+        const fullText = data.text;
         
         // Typing speed 30ms normally
         typeIntervalRef.current = setInterval(() => {
-            setDisplayedText(prev => prev + data.text.charAt(i));
-            i++;
-            if (i >= data.text.length) {
+            charIndex++;
+            setDisplayedText(fullText.slice(0, charIndex));
+            
+            if (charIndex >= fullText.length) {
                 completeTyping();
             }
         }, 30);
@@ -373,7 +376,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                         Double-Click to auto-complete
                     </div>
 
-                    <div className={`max-w-4xl mx-auto w-full mt-6 md:mt-8 flex flex-col items-end transition-opacity duration-300 ${isTyping ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+                    <div className={`max-w-4xl mx-auto w-full mt-6 md:mt-8 flex flex-col items-end ${isTyping ? 'opacity-0 pointer-events-none transition-none' : 'opacity-100 transition-opacity duration-300'}`}>
                         {data.options ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
                                 {data.options.map((opt, idx) => (
