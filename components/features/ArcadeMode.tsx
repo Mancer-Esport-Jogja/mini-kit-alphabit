@@ -19,6 +19,8 @@ import { ArcadeButton } from './arcade/ArcadeButton';
 import { StoryScroll } from './arcade/StoryScroll';
 import { PlanetCard } from './arcade/PlanetCard';
 import { ArcadeBattleArena } from './arcade/ArcadeBattleArena';
+import { TacticalDroid } from './TacticalDroid';
+import { useDroid } from '@/context/DroidContext';
 
 // --- GAME TYPES ---
 type GameState = 'INTRO' | 'STORY' | 'SELECT_SHIP' | 'SELECT_PLANET' | 'SELECT_WEAPON' | 'ARM_WEAPON' | 'LAUNCH' | 'RESULT';
@@ -60,6 +62,7 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
     const { address } = useAccount();
     const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
     const { completeMission, addXp } = useGamification();
+    useDroid(); // Connect to Droid context for TacticalDroid component
 
     const [gameState, setGameState] = useState<GameState>('INTRO');
     const [systemMessage, setSystemMessage] = useState<string | null>(null);
@@ -131,6 +134,17 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
             setSelectedWeapon(null);
         }
     }, [gameState]);
+
+    // --- DROID STATS FOR ARCADE MODE ---
+    const droidStats = React.useMemo(() => {
+        const callOrders = orders.filter(o => o.direction === 'CALL');
+        const putOrders = orders.filter(o => o.direction === 'PUT');
+        return {
+            callVolume: callOrders.length,
+            putVolume: putOrders.length,
+            spreadSize: Math.abs(callOrders.length - putOrders.length),
+        };
+    }, [orders]);
 
     // --- HELPER LOGIC ---
     
@@ -307,6 +321,9 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                     </ArcadeButton>
                 </div>
             </div>
+            
+            {/* AI TACTICAL DROID - Arcade Mode Intro Only */}
+            <TacticalDroid marketStats={droidStats} />
         </div>
     );
 
