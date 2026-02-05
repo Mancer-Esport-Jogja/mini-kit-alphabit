@@ -326,10 +326,14 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         }
 
         return (
-            <div className="h-screen flex flex-col relative z-20 bg-black/80">
-                <div className="flex-1 flex items-center justify-center p-4">
+            <div className="h-screen flex flex-col relative z-20 overflow-hidden">
+                {/* Background Image with Blur */}
+                <div className="absolute inset-0 bg-[url('/assets/cockpit-bg.jpg')] bg-cover bg-center bg-no-repeat blur-[3px] scale-105" />
+                <div className="absolute inset-0 bg-black/40 pointer-events-none" /> {/* Mild overlay for contrast */}
+                
+                <div className="flex-1 flex items-center justify-center p-4 relative z-10">
                     {/* ROBBIE DROID */}
-                    <div className="animate-[floating_4s_ease-in-out_infinite] relative flex items-center justify-center scale-100 md:scale-150">
+                    <div className="animate-[floating_4s_ease-in-out_infinite] relative flex items-center justify-center scale-150 md:scale-[2.5]">
                         <div className="relative w-24 h-24">
                             <div className={`absolute top-2 left-2 w-20 h-16 bg-slate-700 border-4 ${bodyBorder} rounded-lg overflow-hidden transition-colors duration-500`}>
                                 <div className="absolute top-3 left-2 w-14 h-6 bg-black rounded-sm flex items-center justify-center gap-2 overflow-hidden">
@@ -350,7 +354,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                 </div>
 
                 <div 
-                    className="bg-[rgba(0,15,0,0.95)] border-t-4 border-green-800 shadow-[0_-10px_50px_rgba(0,0,0,0.8)] w-full p-6 md:p-12 min-h-[250px] md:min-h-[300px] flex flex-col justify-between relative cursor-default select-none"
+                    className="bg-[rgba(0,15,0,0.95)] border-t-4 border-green-800 shadow-[0_-10px_50px_rgba(0,0,0,0.8)] w-full p-6 md:p-12 min-h-[250px] md:min-h-[300px] flex flex-col justify-between relative cursor-default select-none z-10"
                     // Changed: Remove click-to-next. Only double-click skips typing.
                     onDoubleClick={skipTyping} 
                     onTouchEnd={handleDoubleTap} 
