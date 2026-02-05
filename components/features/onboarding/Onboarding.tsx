@@ -13,7 +13,7 @@ const INITIAL_SCENARIO = [
     { 
         id: 'lossAversion', // Formerly 'void-sim'
         speaker: "R.O.B.B.I.E. 9000", 
-        text: "Emergency scenario initiated: Your ship was just hit by a <b>DeFi meteor storm</b>. The main reactor is leaking energy! Ship power is dropping by 20% in seconds. If you stay still, we'll go dark. What's your protocol, Pilot?", 
+        text: "Emergency scenario initiated: Your ship was just hit by a <b>DeFi meteor storm</b>. The main reactor is leaking energy! Ship power is <b class='text-rose-500'>dropping by 20%</b> in seconds. If you stay still, we'll go dark. What's your protocol, Pilot?", 
         expression: "alert",
         options: [
             { label: "Eject Protocol", value: "A", desc: "Secure what remains." }, // Safe
@@ -178,8 +178,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         }
     };
 
-    const finishNovel = (finalAnswers: Record<string, RiskAnswer>) => {
-        // Calculate Profile
+    const finishNovel = async (finalAnswers: Record<string, RiskAnswer>) => {
+        // 1. Calculate Initial Profile (Static Fallback)
         const profile: PsychologyProfile = {
             lossAversion: finalAnswers['lossAversion'] || 'A',
             timePreference: finalAnswers['timePreference'] || 'A',
@@ -188,49 +188,162 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         
         setCalculatedProfile(profile);
         const score = calculateRiskScore(profile);
-        const isDegen = score >= 2;
         
-        const profileName = isDegen ? "DEGEN PILOT" : "TACTICAL PILOT";
-        const profileColor = isDegen ? "text-red-500" : "text-green-400";
-        const desc = isDegen 
-            ? `"You possess steel nerves (or perhaps a short circuit). I have prepared <b>aggressive strategies</b> for your courage. Let's conquer the market!"`
-            : `"You are measured and methodical. I have prepared <b>solid defensive radars</b> for your mission. Safety is our priority."`;
-
-        // Create Result Scenario Nodes
-        const resultNodes = [
-            { 
-                id: 'result-proc', 
-                speaker: "SYSTEM", 
-                text: "ANALYZING BIOMETRIC FEEDBACK... CALCULATING RISK TOLERANCE... GENERATING PILOT PROFILE...", 
-                expression: "processing" 
-            },
-            { 
-                id: 'result-reveal', 
-                speaker: "R.O.B.B.I.E. 9000", 
-                text: `CALCULATION COMPLETE. Pilot, your designation is: <b class='${profileColor} text-xl'>${profileName}</b>.`, 
-                expression: isDegen ? "alert" : "neutral"
-            },
-            { 
-                id: 'result-desc', 
-                speaker: "R.O.B.B.I.E. 9000", 
-                text: desc,
-                expression: "neutral" 
-            },
-            { 
-                id: 'launch', 
-                speaker: "R.O.B.B.I.E. 9000", 
-                text: "All systems are green. The Arcade requires your skill. Are you ready to engage?", 
-                expression: "scan",
-                options: [
-                    { label: "LAUNCH MISSION", value: "LAUNCH", desc: "Start trading." }
-                ]
-            }
-        ];
-
-        setScenario(prev => [...prev, ...resultNodes]);
+        // Show Processing State
+        const processingNode = { 
+            id: 'result-proc', 
+            speaker: "SYSTEM", 
+            text: "ESTABLISHING NEURAL LINK... ANALYZING BIOMETRICS... DECRYPTING PSYCH PROFILE...", 
+            expression: "processing" 
+        };
+        setScenario(prev => [...prev, processingNode]);
         setIsTyping(true);
         setDisplayedText("");
         setCurrentDialogIndex(prev => prev + 1);
+
+        try {
+            // 2. Prepare AI Context
+            const contextMsg = {
+                role: 'system',
+                content: `You are R.O.B.B.I.E. 9000. Analyze this user's risk profile based on their answers:
+                - Reaction to -50% Loss: ${profile.lossAversion === 'A' ? 'Panic Sell' : 'Buy More'}
+                - Time Preference: ${profile.timePreference === 'A' ? 'Days (Patient)' : 'Minutes (Impatient)'}
+                - Goal: ${profile.goal === 'A' ? 'Passive Income' : 'Moonshot'}
+                
+                CRITICAL INSTRUCTION:
+                Provide a 2-part analysis using **PLAIN, CLEAR ENGLISH**. 
+                - Do NOT use gamified terms like "Pilot", "Mission", "Shields", or "Moon".
+                - Do NOT use sci-fi persona speech.
+                - Explain it simply so a beginner investor can understand their psychology.
+                - Separate the parts with the exact string "<!--PAGE_BREAK-->".
+                
+                PART 1: DIAGNOSIS
+                Format as HTML:
+                <div class="mt-2 text-left space-y-2">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-green-500 font-bold">> STATUS:</span>
+                        <span class="text-white font-bold text-lg">[Conservative | Moderate | Aggressive]</span>
+                    </div>
+                    <ul class="list-disc pl-4 space-y-1 text-sm text-slate-300">
+                        <li>[Observation 1: Simple explanation of their reaction to loss]</li>
+                        <li>[Observation 2: Simple explanation of their time horizon]</li>
+                    </ul>
+                </div>
+
+                <!--PAGE_BREAK-->
+
+                PART 2: TACTICAL PROTOCOLS
+                Format as HTML:
+                <div class="mt-2 text-left space-y-2">
+                    <div class="text-green-500 font-bold mb-1">> RECOMMENDED STRATEGY:</div>
+                    <ul class="list-disc pl-4 space-y-1 text-sm text-slate-300">
+                        <li>[Strategy 1: Example: "Focus on stable assets..."]</li>
+                        <li>[Strategy 2: Example: "Avoid high leverage..."]</li>
+                    </ul>
+                </div>`
+            };
+
+            const userMsg = {
+                role: 'user', 
+                content: "Analyze my risk profile. constant output."
+            };
+
+            // 3. Call AI API
+            const res = await fetch('/api/ai/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                   messages: [contextMsg, userMsg],
+                   marketData: null 
+                })
+            });
+
+            const data = await res.json();
+            let aiContent = data.content || "Neural Link Unstable. Using local backup...";
+            
+            // Remove hidden JSON block if present
+            aiContent = aiContent.replace(/\{"REC_DATA":.*\}/s, '').trim();
+
+            // Sanitize: Remove any chatty intro text before the first HTML div
+            const firstDivIndex = aiContent.indexOf('<div');
+            if (firstDivIndex > 0) {
+                aiContent = aiContent.substring(firstDivIndex);
+            }
+
+            // Split content into pages
+            const pages = aiContent.split("<!--PAGE_BREAK-->");
+            
+            // 4. Create Result Nodes
+            const resultNodes: any[] = [];
+            
+            // Page 1: Diagnosis
+            resultNodes.push({ 
+                id: 'result-diagnosis', 
+                speaker: "R.O.B.B.I.E. 9000", 
+                text: `CALCULATION COMPLETE. Pilot Analysis:\n${pages[0] || aiContent}`, 
+                expression: score >= 2 ? "alert" : "neutral",
+            });
+
+            // Page 2: Strategy (if available)
+            if (pages.length > 1) {
+                resultNodes.push({
+                    id: 'result-strategy',
+                    speaker: "R.O.B.B.I.E. 9000",
+                    text: `TACTICAL RECOMMENDATION:\n${pages[1]}`,
+                    expression: "scan",
+                    options: [
+                        { label: "LAUNCH MISSION", value: "LAUNCH", desc: "Start trading." }
+                    ]
+                });
+            } else {
+                // Attach launch option to first node if no split
+                resultNodes[0].options = [
+                    { label: "LAUNCH MISSION", value: "LAUNCH", desc: "Start trading." }
+                ];
+            }
+
+             setScenario(prev => [...prev, ...resultNodes]);
+             // Auto-advance to result after processing
+             setTimeout(() => {
+                 setIsTyping(true);
+                 setDisplayedText("");
+                 setCurrentDialogIndex(prev => prev + 1);
+             }, 3000);
+
+        } catch (error) {
+            console.error("AI Analysis Failed", error);
+            // Fallback to static if AI fails
+             const isDegen = score >= 2;
+             const profileName = isDegen ? "DEGEN PILOT" : "TACTICAL PILOT";
+             const profileColor = isDegen ? "text-red-500" : "text-green-400";
+             
+             const fallbackDesc = `
+                <div class="mt-4 text-left font-sans space-y-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-green-500 font-bold">> RISK_PROFILE:</span>
+                        <span class="${profileColor} font-bold">${isDegen ? 'DEGEN' : 'SAFE'}</span>
+                    </div>
+                    <div class="mt-4 border-l-2 border-green-500 pl-4 italic text-green-300 opacity-80">
+                         "Neural link interrupted. Defaulting to local profiles. You seem ready for action."
+                    </div>
+                </div>
+            `;
+            
+            const fallbackNode = {
+                 id: 'result-fallback',
+                 speaker: "R.O.B.B.I.E. 9000",
+                 text: `CALCULATION COMPLETE. Designation: <b class='${profileColor}'>${profileName}</b>.${fallbackDesc}`,
+                 expression: "neutral",
+                 options: [{ label: "LAUNCH MISSION", value: "LAUNCH", desc: "Start trading." }]
+            };
+            
+            setScenario(prev => [...prev, fallbackNode]);
+             setTimeout(() => {
+                 setIsTyping(true);
+                 setDisplayedText("");
+                 setCurrentDialogIndex(prev => prev + 1);
+             }, 2000);
+        }
     };
 
     const handleLaunch = () => {
@@ -418,8 +531,19 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                     <div className="max-w-4xl mx-auto w-full">
                         <p 
                             className="text-lg md:text-3xl font-mono leading-relaxed text-green-500 relative"
-                            dangerouslySetInnerHTML={{ __html: displayedText + (isTyping ? '<span class="animate-pulse ml-1 opacity-80">|</span>' : '') }}
                         >
+                            {expression === 'processing' && data.id === 'result-proc' && !isTyping ? (
+                                <span className="flex items-center gap-2 mt-2">
+                                    {displayedText} 
+                                    <span className="inline-flex gap-1 ml-2">
+                                        <span className="w-2 h-2 md:w-3 md:h-3 bg-green-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                        <span className="w-2 h-2 md:w-3 md:h-3 bg-green-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                        <span className="w-2 h-2 md:w-3 md:h-3 bg-green-400 rounded-full animate-bounce"></span>
+                                    </span>
+                                </span>
+                            ) : (
+                                <span dangerouslySetInnerHTML={{ __html: displayedText + (isTyping ? '<span class="animate-pulse ml-1 opacity-80">|</span>' : '') }} />
+                            )}
                         </p>
                     </div>
                     <div className="absolute bottom-4 right-6 text-[9px] text-green-900 uppercase opacity-40 select-none">
@@ -436,7 +560,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                                         className="bg-[rgba(22,101,52,0.1)] border-2 border-green-800 hover:bg-green-500 hover:text-black hover:-translate-y-1 transition-all duration-200 p-3 md:p-4 text-left flex flex-col gap-1 group"
                                     >
                                         <span className="font-black uppercase italic text-xs md:text-sm">{opt.label}</span>
-                                        <span className="text-[8px] md:text-[10px] opacity-60 uppercase group-hover:opacity-80">{opt.desc}</span>
+                                        <span className="text-xs md:text-sm opacity-80 uppercase group-hover:opacity-100 font-semibold">{opt.desc}</span>
                                     </button>
                                 ))}
                             </div>
