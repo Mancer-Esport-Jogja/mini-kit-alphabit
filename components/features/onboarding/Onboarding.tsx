@@ -3,28 +3,28 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { calculateRiskScore, getRecommendation, PsychologyProfile, RiskAnswer } from '@/utils/riskEngine';
+import { typewriterSafeSlice, getVisibleTextLength } from './typewriterHelper';
 
 // --- DATA ---
-const SCENARIO = [
+const INITIAL_SCENARIO = [
     { id: 'init-1', speaker: "SYSTEM", text: "Detecting organic life signs... Neural sync starting in 3... 2... 1...", expression: "processing" },
-    { id: 'init-2', speaker: "R.O.B.B.I.E. 9000", text: "Ah, finally. A new 'organic' in the pilot seat. How many cycles have I waited in this silent hangar? Dusty and boring.", expression: "neutral" },
-    { id: 'init-3', speaker: "R.O.B.B.I.E. 9000", text: "My name is R.O.B.B.I.E. 9000. I am the tactical brain of this ship. And you... you are the Pilot. Don't be so tense, I can feel your irregular heartbeat through the biometric seat sensors.", expression: "scan" },
+    { id: 'init-2', speaker: "R.O.B.B.I.E. 9000", text: "Ah, finally. A new <b>'organic'</b> in the pilot seat. How many cycles have I waited in this silent hangar? <span class='text-yellow-400'>Dusty and boring.</span>", expression: "neutral" },
+    { id: 'init-3', speaker: "R.O.B.B.I.E. 9000", text: "My name is <b>R.O.B.B.I.E. 9000</b>. I am the tactical brain of this ship. And you... you are the Pilot. Don't be so tense, I can feel your irregular heartbeat through the biometric seat sensors.", expression: "scan" },
     { 
         id: 'lossAversion', // Formerly 'void-sim'
         speaker: "R.O.B.B.I.E. 9000", 
-        text: "Emergency scenario initiated: Your ship was just hit by a DeFi meteor storm. The main reactor is leaking energy! Ship power is dropping by 20% in seconds. If you stay still, we'll go dark. What's your protocol, Pilot?", 
+        text: "Emergency scenario initiated: Your ship was just hit by a <b>DeFi meteor storm</b>. The main reactor is leaking energy! Ship power is dropping by 20% in seconds. If you stay still, we'll go dark. What's your protocol, Pilot?", 
         expression: "alert",
         options: [
             { label: "Eject Protocol", value: "A", desc: "Secure what remains." }, // Safe
-            { label: "Stabilize Reactor", value: "A", desc: "Measured risk." }, // Safe (Balanced) - treating as A for binary simplification or maybe need 3 options mapping?
-             // User's code mapped 'safe' and 'balanced' to A (implied non-degen), 'degen' to B
+            { label: "Stabilize Reactor", value: "A", desc: "Measured risk." }, // Safe (Balanced)
             { label: "Overload Engine!", value: "B", desc: "Double Down!" } // Degen
         ]
     },
     { 
         id: 'timePreference', // Formerly 'time-nav'
         speaker: "R.O.B.B.I.E. 9000", 
-        text: "Where does your adrenaline trigger? Hunting small meteors flashing by in hours (Blitz), or waiting for a massive supernova that takes days to ripen (Orbit)?", 
+        text: "Where does your adrenaline trigger? Hunting small meteors flashing by in hours <b class='text-cyan-400'>(Blitz)</b>, or waiting for a massive supernova that takes days to ripen <b class='text-rose-500'>(Orbit)</b>?", 
         expression: "scan",
         options: [
             { label: "Blitz Hunt", value: "B", desc: "Instant results." }, // Short/Impatience
@@ -38,13 +38,7 @@ const SCENARIO = [
         expression: "neutral",
         options: [
             { label: "'Moon' Missile (Call)", value: "B", desc: "Fly to the stars." }, // Aggressive/Moon
-            { label: "'Doom' Nuke (Put)", value: "A", desc: "Watch the market burn." } // Defensive/Income (Maybe A isn't perfect mapping but fits logic)
-             // Actually user code mapped 'call' vs 'put' - let's stick to the prompt's implied logic for A/B (Risk Profile). 
-             // Logic in riskEngine: A=Safe, B=Degen
-             // Call usually assoc with Degen Moon boys, Put with Hedging? Or maybe both are degen.
-             // Let's assume for this Q3: Moon = B (Degen), Put = A (Safe/Hedge) for simplicity or keep it just as preference.
-             // Wait, user's HTML didn't use this for the result calculation directly, it just collected answers.
-             // But my riskEngine uses it.
+            { label: "'Doom' Nuke (Put)", value: "A", desc: "Watch the market burn." } // Defensive/Income
         ]
     }
 ];
@@ -54,7 +48,8 @@ interface OnboardingProps {
 }
 
 export function Onboarding({ onComplete }: OnboardingProps) {
-    const [scene, setScene] = useState<'CRAWL' | 'NOVEL' | 'RESULT'>('CRAWL');
+    const [scene, setScene] = useState<'CRAWL' | 'NOVEL'>('CRAWL');
+    const [scenario, setScenario] = useState(INITIAL_SCENARIO); // Dynamic Scenario
     const [currentDialogIndex, setCurrentDialogIndex] = useState(0);
     const [displayedText, setDisplayedText] = useState("");
     const [isTyping, setIsTyping] = useState(false);
@@ -62,7 +57,6 @@ export function Onboarding({ onComplete }: OnboardingProps) {
     
     // Result State
     const [calculatedProfile, setCalculatedProfile] = useState<PsychologyProfile | null>(null);
-    const [showResultContent, setShowResultContent] = useState(false);
 
     // Audio / Effects Refs (if needed)
     const typeIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -109,21 +103,23 @@ export function Onboarding({ onComplete }: OnboardingProps) {
     }, [scene, currentDialogIndex]);
 
     const renderDialog = () => {
-        const data = SCENARIO[currentDialogIndex];
+        const data = scenario[currentDialogIndex];
         setIsTyping(true);
         setDisplayedText("");
         
         if (typeIntervalRef.current) clearInterval(typeIntervalRef.current);
         
         let charIndex = 0;
-        const fullText = data.text;
+        const fullHtml = data.text;
+        const totalChars = getVisibleTextLength(fullHtml);
         
         // Typing speed 30ms normally
         typeIntervalRef.current = setInterval(() => {
             charIndex++;
-            setDisplayedText(fullText.slice(0, charIndex));
+            const partialHtml = typewriterSafeSlice(fullHtml, charIndex);
+            setDisplayedText(partialHtml);
             
-            if (charIndex >= fullText.length) {
+            if (getVisibleTextLength(partialHtml) >= totalChars) {
                 completeTyping();
             }
         }, 30);
@@ -131,7 +127,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
     const completeTyping = () => {
         if (typeIntervalRef.current) clearInterval(typeIntervalRef.current);
-        const data = SCENARIO[currentDialogIndex];
+        const data = scenario[currentDialogIndex];
         setDisplayedText(data.text);
         setIsTyping(false);
     };
@@ -152,41 +148,89 @@ export function Onboarding({ onComplete }: OnboardingProps) {
     const nextDialog = (force = false) => {
         if (isTyping) return;
         
-        // Safety: If current slide has options, we can ONLY proceed if driven by user selection (force=true)
-        // This prevents accidental clicks or "Continue" logic from bypassing questions.
-        const currentData = SCENARIO[currentDialogIndex];
+        const currentData = scenario[currentDialogIndex];
         if (currentData.options && !force) {
             return;
         }
 
-        if (currentDialogIndex < SCENARIO.length - 1) {
+        if (currentDialogIndex < scenario.length - 1) {
             setIsTyping(true); // Immediate state update to hide buttons
             setDisplayedText(""); // Clear text immediately
             setCurrentDialogIndex(prev => prev + 1);
         } else {
-            finishNovel();
+            console.log("End of scenario reached unexpectedly");
         }
     };
 
     const handleOption = (value: string) => {
-        const data = SCENARIO[currentDialogIndex];
-        setAnswers(prev => ({ ...prev, [data.id]: value as RiskAnswer }));
-        // Force advance since we made a choice
-        nextDialog(true);
+        const data = scenario[currentDialogIndex];
+        
+        const newAnswers = { ...answers, [data.id]: value as RiskAnswer };
+        setAnswers(newAnswers);
+        
+        // Check if this was the last question of the INITIAL scenario
+        if (data.id === 'goal') {
+             finishNovel(newAnswers);
+        } else if (data.id === 'launch') {
+            handleLaunch();
+        } else {
+             nextDialog(true);
+        }
     };
 
-    const finishNovel = () => {
+    const finishNovel = (finalAnswers: Record<string, RiskAnswer>) => {
         // Calculate Profile
         const profile: PsychologyProfile = {
-            lossAversion: answers['lossAversion'] || 'A',
-            timePreference: answers['timePreference'] || 'A',
-            goal: answers['goal'] || 'A',
+            lossAversion: finalAnswers['lossAversion'] || 'A',
+            timePreference: finalAnswers['timePreference'] || 'A',
+            goal: finalAnswers['goal'] || 'A',
         };
-        setCalculatedProfile(profile);
-        setScene('RESULT');
         
-        // Slight delay for animations
-        setTimeout(() => setShowResultContent(true), 1000);
+        setCalculatedProfile(profile);
+        const score = calculateRiskScore(profile);
+        const isDegen = score >= 2;
+        
+        const profileName = isDegen ? "DEGEN PILOT" : "TACTICAL PILOT";
+        const profileColor = isDegen ? "text-red-500" : "text-green-400";
+        const desc = isDegen 
+            ? `"You possess steel nerves (or perhaps a short circuit). I have prepared <b>aggressive strategies</b> for your courage. Let's conquer the market!"`
+            : `"You are measured and methodical. I have prepared <b>solid defensive radars</b> for your mission. Safety is our priority."`;
+
+        // Create Result Scenario Nodes
+        const resultNodes = [
+            { 
+                id: 'result-proc', 
+                speaker: "SYSTEM", 
+                text: "ANALYZING BIOMETRIC FEEDBACK... CALCULATING RISK TOLERANCE... GENERATING PILOT PROFILE...", 
+                expression: "processing" 
+            },
+            { 
+                id: 'result-reveal', 
+                speaker: "R.O.B.B.I.E. 9000", 
+                text: `CALCULATION COMPLETE. Pilot, your designation is: <b class='${profileColor} text-xl'>${profileName}</b>.`, 
+                expression: isDegen ? "alert" : "neutral"
+            },
+            { 
+                id: 'result-desc', 
+                speaker: "R.O.B.B.I.E. 9000", 
+                text: desc,
+                expression: "neutral" 
+            },
+            { 
+                id: 'launch', 
+                speaker: "R.O.B.B.I.E. 9000", 
+                text: "All systems are green. The Arcade requires your skill. Are you ready to engage?", 
+                expression: "scan",
+                options: [
+                    { label: "LAUNCH MISSION", value: "LAUNCH", desc: "Start trading." }
+                ]
+            }
+        ];
+
+        setScenario(prev => [...prev, ...resultNodes]);
+        setIsTyping(true);
+        setDisplayedText("");
+        setCurrentDialogIndex(prev => prev + 1);
     };
 
     const handleLaunch = () => {
@@ -316,9 +360,11 @@ export function Onboarding({ onComplete }: OnboardingProps) {
     );
 
     const renderNovel = () => {
-        const data = SCENARIO[currentDialogIndex];
+        const data = scenario[currentDialogIndex];
+        if (!data) return null;
+
         const isRobbie = data.speaker.includes("R.O.B.B.I.E.");
-        const expression = data.expression; // 'alert', 'processing', 'neutral', 'scan'
+        const expression = data.expression; 
 
         // Determine Eye/Body Color based on expression
         let colorClass = "bg-green-500 shadow-[0_0_15px_#22c55e]";
@@ -326,6 +372,9 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         if (expression === 'alert') {
             colorClass = "bg-red-500 shadow-[0_0_15px_#ef4444]";
             bodyBorder = "border-red-500";
+        }
+        if (expression === 'processing') {
+            colorClass = "bg-yellow-400 shadow-[0_0_15px_#facc15] animate-pulse";
         }
 
         return (
@@ -367,9 +416,10 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                     </div>
                     
                     <div className="max-w-4xl mx-auto w-full">
-                        <p className="text-lg md:text-3xl font-mono leading-relaxed text-green-500 relative">
-                            {displayedText}
-                            {isTyping && <span className="animate-pulse ml-1 opacity-80">|</span>}
+                        <p 
+                            className="text-lg md:text-3xl font-mono leading-relaxed text-green-500 relative"
+                            dangerouslySetInnerHTML={{ __html: displayedText + (isTyping ? '<span class="animate-pulse ml-1 opacity-80">|</span>' : '') }}
+                        >
                         </p>
                     </div>
                     <div className="absolute bottom-4 right-6 text-[9px] text-green-900 uppercase opacity-40 select-none">
@@ -405,70 +455,10 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         );
     };
 
-    const renderResult = () => {
-        if (!calculatedProfile) return null;
-        const score = calculateRiskScore(calculatedProfile);
-        const isDegen = score >= 2;
-
-        return (
-            <div className="h-screen flex flex-col items-center justify-center p-6 text-center z-30 relative overflow-hidden bg-black">
-               {/* Result Content */}
-               <motion.div 
-                   initial={{ opacity: 0 }}
-                   animate={{ opacity: 1 }}
-                   transition={{ duration: 1 }}
-                   className="relative z-10 w-full max-w-4xl"
-               >
-                   <div className="mb-6 md:mb-8 p-6 md:p-8 bg-green-500/20 border-4 border-green-500 text-green-500 rounded-full w-24 h-24 mx-auto relative animate-pulse">
-                        <div className="absolute top-0 left-0 w-full h-full animate-ping opacity-20 bg-green-500 rounded-full"></div>
-                        <svg className="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                        </svg>
-                   </div>
-
-                   <h2 className="text-3xl md:text-5xl font-black mb-2 italic uppercase text-white tracking-widest">SYNC COMPLETE</h2>
-                   
-                   <motion.div 
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: 0.5, duration: 0.8 }}
-                        className="bg-black border-2 border-green-500 py-8 md:py-12 px-6 md:px-24 relative mt-12 shadow-[0_0_80px_rgba(34,197,94,0.1)]"
-                   >
-                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#050505] px-4 md:px-6 text-[10px] md:text-sm font-bold text-green-700 uppercase tracking-widest border border-green-900">
-                            Pilot Profile Identified
-                        </div>
-
-                        <h3 className={`text-5xl md:text-8xl font-black italic tracking-tighter mb-6 ${isDegen ? 'text-red-500 glitch-text' : 'text-green-400'}`} data-text={isDegen ? "DEGEN PILOT" : "TACTICAL PILOT"}>
-                            {isDegen ? "DEGEN PILOT" : "TACTICAL PILOT"}
-                        </h3>
-
-                        <p className="text-green-300 italic max-w-xl mx-auto leading-relaxed text-sm md:text-xl border-t border-green-950 pt-4 md:pt-6">
-                            {isDegen 
-                                ? '"You possess steel nerves (or perhaps a short circuit). I have prepared aggressive strategies for your courage. Let\'s conquer the market!"'
-                                : '"You are measured and methodical. I have prepared solid defensive radars for your mission. Safety is our priority."'}
-                        </p>
-
-                        <motion.button 
-                            initial={{ y: 20, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            transition={{ delay: 1.5 }}
-                            onClick={handleLaunch}
-                            className="mt-8 md:mt-12 px-10 py-4 md:px-16 md:py-6 bg-white text-black font-black text-xl md:text-2xl hover:bg-green-500 transition-all hover:scale-105 italic flex items-center gap-4 md:gap-6 uppercase mx-auto group"
-                        >
-                            LAUNCH MISSION
-                            <svg className="w-6 h-6 md:w-8 md:h-8 group-hover:-translate-y-2 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-                        </motion.button>
-                   </motion.div>
-               </motion.div>
-            </div>
-        );
-    };
-
     return (
         <div className="relative w-full h-full font-mono">
             {scene === 'CRAWL' && renderCrawl()}
             {scene === 'NOVEL' && renderNovel()}
-            {scene === 'RESULT' && renderResult()}
         </div>
     );
 }
