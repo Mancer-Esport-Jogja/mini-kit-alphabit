@@ -793,10 +793,20 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                 {gameState === 'SELECT_SHIP' && (
                     <motion.div 
                         initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-                        className="flex-1 p-6 flex flex-col items-center justify-center space-y-8"
+                        className="relative flex-1 p-6 flex flex-col items-center justify-center space-y-8"
                         key="ship"
                     >
-                        <h2 className="text-xl font-pixel text-white text-center">CHOOSE YOUR SHIP</h2>
+                        <div className="absolute top-0 left-0 p-4 z-50">
+                            <button 
+                                onClick={() => setGameState('MODE_SELECT')}
+                                className="flex items-center gap-1 text-slate-500 hover:text-white transition-colors"
+                            >
+                                <ChevronLeft size={16} />
+                                <span className="text-[10px] font-pixel">ABORT</span>
+                            </button>
+                        </div>
+
+                        <h2 className="text-xl font-pixel text-white text-center mt-8">CHOOSE YOUR SHIP</h2>
                         
                         <div className="grid grid-cols-2 gap-4 w-full">
                             <motion.button
@@ -851,7 +861,7 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                                     if (entryMode === 'PREDICT') {
                                         setGameState('PREDICT_MODE');
                                     } else {
-                                        setGameState('SELECT_WEAPON');
+                                        setGameState('SELECT_SHIP');
                                     }
                                 }}
                                 className="flex items-center gap-1 text-slate-500 hover:text-white transition-colors"
@@ -983,7 +993,7 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                                         setSelectedShip(null);
                                         setSelectedPlanetIndex(null);
                                         setSelectedWeapon(null);
-                                        setActivePrediction(null);
+                                        // Keep activePrediction and predictionAsset so HUD renders
                                         setGameState('PREDICT_MODE');
                                     } else {
                                         // Normal arcade flow - go back to weapon selection
