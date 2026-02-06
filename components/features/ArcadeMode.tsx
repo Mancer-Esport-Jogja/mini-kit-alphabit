@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, CheckCircle2, ChevronLeft } from 'lucide-react';
 import Image from 'next/image';
+import sdk from "@farcaster/miniapp-sdk";
 
 import { useThetanutsOrders } from '@/hooks/useThetanutsOrders';
 import { useUserPositions } from '@/hooks/useUserPositions';
@@ -694,10 +695,21 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                                         <ArcadeButton 
                                             onClick={() => {
                                                 const order = lastSuccessOrder;
-                                                if (!order) return;
-
+                                                const ROOT_URL = process.env.NEXT_PUBLIC_URL || 'https://mini-kit-alphabit.vercel.app';
+                                                
+                                                const shareUrl = `${ROOT_URL}/share/arcade?asset=${order.asset}&direction=${order.direction}&strike=${order.strikeFormatted}&username=${encodeURIComponent(user?.username || 'Trader')}`;
                                                 const text = `Just secured a ${order.direction} mission on ${order.asset} via @alphabit! 🚀\n\nTarget: $${order.strikeFormatted}\nMode: Arcade 🕹️`;
-                                                window.open(`https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`, '_blank');
+                                                
+                                                // Native Farcaster Share
+                                                try {
+                                                    sdk.actions.composeCast({
+                                                        text: text,
+                                                        embeds: [shareUrl],
+                                                    });
+                                                } catch (e) {
+                                                    // Fallback to Warpcast URL
+                                                    window.open(`https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(shareUrl)}`, '_blank');
+                                                }
                                             }}
                                             variant="outline"
                                             className="text-[10px]"
