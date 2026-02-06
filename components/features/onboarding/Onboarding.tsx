@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { calculateRiskScore, PsychologyProfile, RiskAnswer } from '@/utils/riskEngine';
 import { typewriterSafeSlice, getVisibleTextLength } from './typewriterHelper';
+import { ChatInterface } from '@/components/droid/ChatInterface';
+import { Bot } from 'lucide-react';
 
 interface ScenarioNode {
     id: string;
@@ -69,8 +71,13 @@ export function Onboarding({ onComplete }: OnboardingProps) {
     const typeIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const crawlRef = useRef<HTMLDivElement>(null);
     const lastTapRef = useRef(0);
+    const audioContextRef = useRef<AudioContext | null>(null);
     const [isFastForward, setIsFastForward] = useState(false);
     const [canInteract, setCanInteract] = useState(false);
+
+    // --- GUIDED CHAT STATE ---
+    const [showGuideOverlay, setShowGuideOverlay] = useState(false);
+    const [showGuidedChat, setShowGuidedChat] = useState(false);
 
     // --- CRAWL LOGIC ---
     useEffect(() => {
@@ -111,6 +118,73 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         }
     }, [isTyping]);
 
+    const playTypingSound = useCallback(() => {
+        if (!audioContextRef.current) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        }
+        const ctx = audioContextRef.current;
+        if (ctx.state === 'suspended') {
+            ctx.resume().catch(() => {});
+        }
+
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const now = ctx.currentTime;
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(800 + Math.random() * 400, now);
+        osc.frequency.exponentialRampToValueAtTime(100, now + 0.05);
+        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+        osc.start();
+        osc.stop(now + 0.05);
+        
+        // Clean up nodes after they are done to prevent memory leaks in long sessions
+        setTimeout(() => {
+            osc.disconnect();
+            gain.disconnect();
+        }, 100);
+    }, []);
+
+    const playClickSound = useCallback(() => {
+        if (!audioContextRef.current) {
+             // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        }
+        const ctx = audioContextRef.current;
+        if (ctx.state === 'suspended') {
+            ctx.resume().catch(() => {});
+        }
+
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const now = ctx.currentTime;
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        // User Custom Config: Square wave
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(1200, now);
+        osc.frequency.exponentialRampToValueAtTime(600, now + 0.08);
+        
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+        osc.start();
+        osc.stop(now + 0.08);
+
+        setTimeout(() => {
+            osc.disconnect();
+            gain.disconnect();
+        }, 100);
+    }, []);
+
     const completeTyping = useCallback(() => {
         if (typeIntervalRef.current) clearInterval(typeIntervalRef.current);
         const data = scenario[currentDialogIndex];
@@ -133,13 +207,19 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         typeIntervalRef.current = setInterval(() => {
             charIndex++;
             const partialHtml = typewriterSafeSlice(fullHtml, charIndex);
+            
+            // Only play sound if visible text length increased (ignoring HTML tags)
+            if (getVisibleTextLength(partialHtml) > getVisibleTextLength(typewriterSafeSlice(fullHtml, charIndex - 1))) {
+                playTypingSound();
+            }
+
             setDisplayedText(partialHtml);
             
             if (getVisibleTextLength(partialHtml) >= totalChars) {
                 completeTyping();
             }
         }, 30);
-    }, [scenario, currentDialogIndex, completeTyping]); // Added completeTyping dependency
+    }, [scenario, currentDialogIndex, completeTyping, playTypingSound]); // Added playTypingSound dependency
 
     useEffect(() => {
         if (scene === 'NOVEL') {
@@ -191,6 +271,9 @@ export function Onboarding({ onComplete }: OnboardingProps) {
              finishNovel(newAnswers);
         } else if (data.id === 'launch' || value === 'LAUNCH') {
             handleLaunch();
+        } else if (data.id === 'guide-trigger' || value === 'TRY_DROID') {
+            setShowGuideOverlay(true);
+            // Don't auto-advance. Overlay interaction handles next steps.
         } else {
              nextDialog(true);
         }
@@ -350,10 +433,22 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                 expression: "neutral",
             });
 
+            // GUIDE TRIGGER NODE
             resultNodes.push({
-                id: 'robbie-intro-5',
+                id: 'guide-trigger',
                 speaker: "R.O.B.B.I.E. 9000",
-                text: "The diagnostics are green and the armory is loaded. It’s time to find out if you’re a natural or just another statistic. The mission is waiting, Pilot. Proceed",
+                text: "Listen, Pilot. Our systems are complex. Before we launch, I recommend you perform a synchronization with my tactical core. It will only take a moment to ensure our neural connection is stable.",
+                expression: "scan",
+                options: [
+                    { label: "INITIALIZE LINK", value: "TRY_DROID", desc: "Test the AI Droid." }
+                ]
+            });
+
+            // FINAL NODE (After Guide)
+            resultNodes.push({
+                id: 'robbie-final',
+                speaker: "R.O.B.B.I.E. 9000",
+                text: "The diagnostics are green and the armory is loaded. It’s time to find out if you’re a natural or just another statistic. The mission is waiting, Pilot. Proceed.",
                 expression: "alert",
                 options: [
                     { label: "LAUNCH MISSION", value: "LAUNCH", desc: "Start trading." }
@@ -554,8 +649,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                 <div className="absolute inset-0 bg-black/40 pointer-events-none" /> {/* Mild overlay for contrast */}
                 
                 <div className="flex-1 flex items-center justify-center p-4 relative z-10">
-                    {/* ROBBIE DROID */}
-                    <div className="animate-[floating_4s_ease-in-out_infinite] relative flex items-center justify-center scale-150 md:scale-[2.5]">
+                    {/* ROBBIE DROID - UPSCALED */}
+                    <div className="animate-[floating_4s_ease-in-out_infinite] relative flex items-center justify-center scale-[2.0] md:scale-[3.5]">
                         <div className="relative w-24 h-24">
                             <div className={`absolute top-2 left-2 w-20 h-16 bg-slate-700 border-4 ${bodyBorder} rounded-lg overflow-hidden transition-colors duration-500`}>
                                 <div className="absolute top-3 left-2 w-14 h-6 bg-black rounded-sm flex items-center justify-center gap-2 overflow-hidden">
@@ -611,24 +706,38 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                         {data.options ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
                                 {data.options.map((opt, idx) => (
-                                    <button 
+                                    <motion.button 
                                         key={idx}
-                                        onClick={(e) => { e.stopPropagation(); handleOption(opt.value); }}
-                                        className="bg-[rgba(22,101,52,0.1)] border-2 border-green-800 hover:bg-green-500 hover:text-black hover:-translate-y-1 transition-all duration-200 p-3 md:p-4 text-left flex flex-col gap-1 group"
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        whileHover={{ scale: 1.02, backgroundColor: "rgba(34,197,94,0.2)" }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            playClickSound(); // Audio feedback
+                                            handleOption(opt.value); 
+                                        }}
+                                        className="bg-[rgba(22,101,52,0.1)] border-2 border-green-800 text-left flex flex-col gap-1 group p-3 md:p-4 hover:border-green-500 transition-colors duration-200"
                                     >
-                                        <span className="font-black uppercase italic text-xs md:text-sm">{opt.label}</span>
-                                        <span className="text-xs md:text-sm opacity-80 uppercase group-hover:opacity-100 font-semibold">{opt.desc}</span>
-                                    </button>
+                                        <span className="font-black uppercase italic text-xs md:text-sm group-hover:text-white transition-colors">{opt.label}</span>
+                                        <span className="text-xs md:text-sm opacity-80 uppercase group-hover:opacity-100 font-semibold group-hover:text-green-300 transition-colors">{opt.desc}</span>
+                                    </motion.button>
                                 ))}
                             </div>
                         ) : data.id !== 'result-proc' && (
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); nextDialog(true); }}
-                                className="flex items-center gap-3 text-black bg-green-500 px-6 py-3 md:px-10 md:py-4 font-black text-sm md:text-xl hover:bg-white transition-all italic uppercase group"
+                            <motion.button 
+                                whileHover={{ scale: 1.05, x: 10 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    playClickSound(); // Audio feedback
+                                    nextDialog(true); 
+                                }}
+                                className="flex items-center gap-3 text-black bg-green-500 px-6 py-3 md:px-10 md:py-4 font-black text-sm md:text-xl hover:bg-white transition-colors italic uppercase group"
                             >
                                 CONTINUE 
                                 <span className="group-hover:translate-x-2 transition-transform">&gt;</span>
-                            </button>
+                            </motion.button>
                         )}
                     </div>
                 </div>
@@ -636,10 +745,66 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         );
     };
 
+    const handleGuideComplete = () => {
+        setShowGuidedChat(false);
+        setShowGuideOverlay(false);
+        nextDialog(true); // Advance past the trigger node
+    };
+
+    const renderChatOverlay = () => (
+        <AnimatePresence>
+            {showGuideOverlay && (
+                <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+                >
+                    {!showGuidedChat ? (
+                        // GUIDE POPUP
+                        <motion.button
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => {
+                                playClickSound();
+                                setShowGuidedChat(true);
+                            }}
+                            className="bg-slate-900 border-2 border-green-500 p-8 rounded-xl shadow-[0_0_50px_rgba(34,197,94,0.3)] flex flex-col items-center gap-4 group cursor-pointer relative overflow-hidden"
+                        >
+                             <div className="absolute inset-0 bg-green-500/10 animate-pulse pointer-events-none" />
+                             <div className="w-20 h-20 bg-green-900/50 rounded-full flex items-center justify-center border border-green-500/50 group-hover:border-green-400">
+                                 <Bot size={40} className="text-green-400" />
+                             </div>
+                             <div className="text-center">
+                                 <h3 className="font-pixel text-xl text-green-400 mb-2">NEURAL LINK REQUIRED</h3>
+                                 <p className="font-mono text-sm text-slate-400">Tap to synchronize with R.O.B.B.I.E.</p>
+                             </div>
+                             <div className="mt-2 text-[10px] font-pixel text-green-500/70 border border-green-500/30 px-2 py-1 rounded bg-black/40">
+                                 [ CLICK TO CONNECT ]
+                             </div>
+                        </motion.button>
+                    ) : (
+                        // CHAT INTERFACE WINDOW
+                        <motion.div 
+                             initial={{ y: 50, opacity: 0 }}
+                             animate={{ y: 0, opacity: 1 }}
+                             className="w-full max-w-sm h-[60vh] bg-slate-950 rounded-lg overflow-hidden border border-slate-700 shadow-2xl"
+                        >
+                            <ChatInterface guidedMode={true} onComplete={handleGuideComplete} />
+                        </motion.div>
+                    )}
+                </motion.div>
+            )}
+        </AnimatePresence>
+    );
+
     return (
         <div className="relative w-full h-full font-mono">
             {scene === 'CRAWL' && renderCrawl()}
             {scene === 'NOVEL' && renderNovel()}
+            {renderChatOverlay()}
         </div>
     );
 }
