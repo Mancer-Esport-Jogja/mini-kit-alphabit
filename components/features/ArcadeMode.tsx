@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, CheckCircle2, ChevronLeft } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronLeft, BrainCircuit } from 'lucide-react';
 import Image from 'next/image';
 import sdk from "@farcaster/miniapp-sdk";
 
@@ -22,9 +22,32 @@ import { PlanetCard } from './arcade/PlanetCard';
 import { ArcadeBattleArena } from './arcade/ArcadeBattleArena';
 import { TacticalDroid } from './TacticalDroid';
 import { useDroid } from '@/context/DroidContext';
+import { TargetingSystem } from './arcade/TargetingSystem';
+import { TacticalHUD } from './arcade/TacticalHUD';
+import { PREDICTION_API } from '@/config/api';
+
+// --- GLOBAL PREDICTION TYPES ---
+interface GlobalPrediction {
+    id: string;
+    asset: 'ETH' | 'BTC';
+    direction: 'MOON' | 'DOOM';
+    duration: string;
+    confidence: number;
+    reasoning: string;
+    expiryTime: string;
+    recommendedStrike: number;
+    startPrice: number;
+}
+
+interface PredictionStats {
+    syncCount: number;
+    overrideCount: number;
+    totalVotes: number;
+    consensus: number;
+}
 
 // --- GAME TYPES ---
-type GameState = 'INTRO' | 'STORY' | 'SELECT_SHIP' | 'SELECT_PLANET' | 'SELECT_WEAPON' | 'ARM_WEAPON' | 'LAUNCH' | 'RESULT';
+type GameState = 'INTRO' | 'STORY' | 'MODE_SELECT' | 'PREDICT_MODE' | 'SELECT_SHIP' | 'SELECT_PLANET' | 'SELECT_WEAPON' | 'ARM_WEAPON' | 'LAUNCH' | 'RESULT';
 type ShipType = 'FIGHTER' | 'BOMBER'; // ETH vs BTC
 type WeaponType = 'LASER' | 'MISSILE'; // Call vs Put
 
@@ -75,6 +98,16 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
 
     const [inputAmount, setInputAmount] = useState<string>('50');
 
+    // Prediction Mode State
+    const [predictionAsset, setPredictionAsset] = useState<'ETH' | 'BTC' | null>(null);
+    const [activePrediction, setActivePrediction] = useState<GlobalPrediction | null>(null);
+    const [predictionStats, setPredictionStats] = useState<PredictionStats | null>(null);
+    const [userVote, setUserVote] = useState<'SYNC' | 'OVERRIDE' | null>(null);
+    const [isLoadingPrediction, setIsLoadingPrediction] = useState(false);
+    
+    // Entry Mode Tracking (for dynamic back navigation)
+    const [entryMode, setEntryMode] = useState<'PREDICT' | 'MISSION' | null>(null);
+    
     // Data Hooks
     const { data: orderData, refetch: refetchOrders } = useThetanutsOrders();
     // const { data: history } = useUserTransactions(); // Deprecated for active check
@@ -133,6 +166,12 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
             setSelectedShip(null);
             setSelectedPlanetIndex(null);
             setSelectedWeapon(null);
+        }
+        if (gameState === 'MODE_SELECT') {
+             // Reset prediction state if going back to mode select
+             setPredictionAsset(null);
+             setActivePrediction(null);
+             setPredictionStats(null);
         }
     }, [gameState]);
 
@@ -243,7 +282,195 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
         setSelectedShip(null);
         setSelectedPlanetIndex(null);
         setSelectedWeapon(null);
+        setPredictionAsset(null);
+        setActivePrediction(null);
+        setPredictionStats(null);
+        setEntryMode(null);
         resetTx();
+    };
+
+    // --- PREDICTION LOGIC ---
+
+    // --- GLOBAL AI LOGIC ---
+
+    const checkActivePrediction = async (asset: 'ETH' | 'BTC') => {
+        setIsLoadingPrediction(true);
+        setUserVote(null); // Reset on new check
+        try {
+            // 1. Check Backend for Global Signal (filtered by asset, with userId for vote check)
+            const userIdParam = user?.id ? `&userId=${user.id}` : '';
+            const res = await fetch(`${PREDICTION_API.ACTIVE}?asset=${asset}${userIdParam}`);
+            const data = await res.json();
+
+            // If active prediction exists for this asset
+            if (data.prediction && new Date(data.prediction.expiryTime) > new Date()) {
+                setActivePrediction(data.prediction);
+                setPredictionStats(data.stats);
+                setUserVote(data.userVote || null);
+                setIsLoadingPrediction(false);
+                return;
+            }
+
+            // 2. If no active prediction (or expired), TRIGGER NEW GENERATION (Lazy Load)
+            await generateGlobalPrediction(asset);
+
+        } catch (error) {
+            console.error("Link Failure:", error);
+            setIsLoadingPrediction(false);
+        }
+    };
+
+    const generateGlobalPrediction = async (asset: 'ETH' | 'BTC') => {
+        // Trigger AI Agent (Client Side)
+        try {
+            const marketData = {
+                spotPrice: asset === 'ETH' ? ethSpot : btcSpot,
+                // Add more context if available
+            };
+
+            const aiRes = await fetch('/api/ai/predict', {
+                method: 'POST',
+                body: JSON.stringify({ asset, marketData })
+            });
+            const { prediction } = await aiRes.json();
+
+            if (!prediction) throw new Error("AI Signal Lost");
+
+            // --- PRE-PROCESS & VALIDATE STRIKE ---
+            // 1. Map Prediction to Orders
+            // Note: prediction.duration is likely mapped to a PLANET (e.g. 'BLITZ')
+            // but for safety we can rely on order filtering logic.
+            // Let's first map Duration -> Planet to get time bounds? 
+            // Better: Just filter all orders for this Asset + Direction
+            const isCall = prediction.direction === 'MOON';
+            const assetOrders = orders.filter(o => o.asset === asset && (o.direction === 'CALL') === isCall);
+
+            // Filter for the right duration bucket if possible, otherwise just closest overall for now?
+            // Let's assume prediction.duration is 'BLITZ' etc.
+            const validOrders = filterOrdersByDuration(
+                assetOrders.map(o => o.rawOrder),
+                prediction.duration as 'BLITZ' | 'RUSH' | 'CORE' | 'ORBIT'
+            );
+
+            // Map back to parsed
+            const candidateOrders = assetOrders.filter(o => 
+                validOrders.some(v => v.order.ticker === o.rawOrder.order.ticker)
+            );
+
+            // 2. Find closest strike to AI's rough idea (or Spot if AI just says direction)
+            // If AI provides a specific number in 'recommendedStrike', use that. 
+            // If it's 0 or missing, use OTM logic based on Spot.
+            const targetStrike = prediction.recommendedStrike || marketData.spotPrice;
+            
+            // Fallback: If no orders found for that duration, try ALL durations? No, stick to duration.
+            if (candidateOrders.length === 0) {
+                 throw new Error("No orders available for predicted strategy");
+            }
+
+            // Find closest available strike in the candidate set
+            const bestOrder = candidateOrders.reduce((prev, curr) => {
+                const prevDist = Math.abs(prev.strikes[0] - targetStrike);
+                const currDist = Math.abs(curr.strikes[0] - targetStrike);
+                return currDist < prevDist ? curr : prev;
+            });
+
+            // THIS is the real executable strike we want everyone to use
+            const realExecutionStrike = bestOrder.strikes[0];
+
+            // Save to Global Backend
+            const saveRes = await fetch(PREDICTION_API.CREATE, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    asset,
+                    direction: prediction.direction,
+                    duration: prediction.duration,
+                    recommendedStrike: realExecutionStrike, // MUST BE REAL
+                    confidence: prediction.confidence,
+                    reasoning: prediction.reasoning,
+                    expiryTime: new Date(Date.now() + 1000 * 60 * 60 * 2), // Default 2h Blitz
+                    startPrice: marketData.spotPrice
+                })
+            });
+            
+            const responseData = await saveRes.json();
+            // Handle both new prediction and existing prediction response
+            const predictionToUse = responseData.prediction || responseData;
+            setActivePrediction(predictionToUse);
+            setPredictionStats({ syncCount: 0, overrideCount: 0, totalVotes: 0, consensus: 0 });
+
+        } catch (error) {
+            console.error("Generation Failed:", error);
+        } finally {
+            setIsLoadingPrediction(false);
+        }
+    };
+
+    const enterWarZone = (asset: 'ETH' | 'BTC') => {
+        setPredictionAsset(asset);
+        checkActivePrediction(asset);
+    };
+
+    const handlePredictionSelect = async (choice: 'YES' | 'NO') => {
+        if (!activePrediction || !predictionAsset) return;
+
+        // Record Vote in Backend
+        try {
+            // Use authenticated user's ID from backend
+            if (!user?.id) {
+                console.warn("User not authenticated, skipping vote");
+            } else {
+                await fetch(PREDICTION_API.VOTE, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        predictionId: activePrediction.id,
+                        vote: choice === 'YES' ? 'SYNC' : 'OVERRIDE',
+                        userId: user.id
+                    })
+                });
+            }
+        } catch (e) {
+            console.warn("Vote link unstable", e);
+        }
+
+        // 1. Map Asset -> Ship
+        const ship: ShipType = predictionAsset === 'ETH' ? 'FIGHTER' : 'BOMBER';
+        setSelectedShip(ship);
+
+        // 2. Map Duration -> Planet
+        // Find matching planet index
+        const planetIdx = PLANETS.findIndex(p => p.name === activePrediction.duration);
+        if (planetIdx !== -1) {
+            setSelectedPlanetIndex(planetIdx);
+        } else {
+            // Fallback if AI hallucinates a duration
+            setSelectedPlanetIndex(2); // Core
+        }
+
+        // 3. Map YES/NO + Prediction -> Weapon (Call/Put)
+        const isMoon = activePrediction.direction === 'MOON';
+        const isYes = choice === 'YES';
+        
+        let weapon: WeaponType;
+        if (isYes) {
+            weapon = isMoon ? 'LASER' : 'MISSILE';
+        } else {
+            // LOGIC: DISAGREE (Smart Opposite)
+            // If AI says MOON (Call), we want DOOM (Put).
+            // But we need to find the correct Planet/Duration and Strike that matches the "inverse" logic.
+            weapon = isMoon ? 'MISSILE' : 'LASER';
+        }
+        setSelectedWeapon(weapon);
+
+        // For "DISAGREE", we rely on the normal "getTargetOrder" logic (closest OTM).
+        // Since we switched the Weapon (Call<>Put), the getTargetOrder loop will now look for 
+        // the closest OTM Put (if AI was Call) or Call (if AI was Put).
+        // This effectively implements the "closest equivalent opposite bet".
+
+        setEntryMode('PREDICT');
+        setEntryMode('PREDICT');
+        setGameState('ARM_WEAPON');
     };
 
     // --- RENDER CONTENT ---
@@ -302,14 +529,13 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                 )}
             </div>
 
+            {/* Button Container - Hides if there are active battles, can restore via reset or just show anyway */}
             <div className="space-y-4 w-full max-w-xs z-10">
-                <ArcadeButton size="lg" onClick={() => setGameState('STORY')} className="animate-pulse">
+                <ArcadeButton size="lg" onClick={() => setGameState('MODE_SELECT')} className="animate-pulse">
                     START MISSION
                 </ArcadeButton>
-                <div className="flex justify-between px-2">
-                    <span className="text-[8px] font-pixel text-slate-500">v2.2.0-ARCADE</span>
-                    <span className="text-[8px] font-pixel text-slate-500">BETA_PILOT_ACCESS</span>
-                </div>
+                
+                {/* Always show analytics */}
                 <div className="flex justify-center">
                     <ArcadeButton
                         size="sm"
@@ -321,6 +547,187 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                         VIEW ANALYTICS & HISTORY
                     </ArcadeButton>
                 </div>
+                
+                <div className="flex justify-between px-2">
+                    <span className="text-[8px] font-pixel text-slate-500">v2.3.0-PREDICT</span>
+                    <span className="text-[8px] font-pixel text-slate-500">BETA_PILOT_ACCESS</span>
+                </div>
+            </div>
+        </div>
+    );
+
+    // MODE SELECTION SCREEN
+    const renderModeSelect = () => (
+        <div className="min-h-[600px] md:h-full flex flex-col items-center justify-center space-y-12 p-8 relative overflow-hidden">
+            <div className="text-center space-y-2 z-10">
+                <h2 className="text-2xl font-pixel text-white">SELECT PROTOCOL</h2>
+                <p className="text-[10px] font-mono text-slate-400">Choose your engagement strategy</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl z-10">
+                {/* PREDICT MODE CARD */}
+                <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setGameState('PREDICT_MODE')}
+                    className="group relative bg-slate-900/60 border border-purple-500/30 hover:border-purple-500 rounded-2xl p-8 flex flex-col items-center gap-6 transition-all"
+                >
+                    <div className="absolute inset-0 bg-purple-500/5 group-hover:bg-purple-500/10 transition-colors rounded-2xl" />
+                    <div className="p-4 bg-purple-900/20 rounded-full border border-purple-500/30 group-hover:scale-110 transition-transform">
+                        <BrainCircuit size={48} className="text-purple-400" />
+                    </div>
+                    <div className="text-center space-y-2">
+                        <h3 className="text-xl font-bold font-pixel text-purple-400">PREDICT MODE</h3>
+                        <p className="text-xs font-mono text-slate-400 max-w-[200px]">
+                            Leverage AI analysis to predict market moves. Simple Yes/No decisions.
+                        </p>
+                    </div>
+                </motion.button>
+
+                {/* MISSION MODE CARD */}
+                <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => { setEntryMode('MISSION'); setGameState('STORY'); }}
+                    className="group relative bg-slate-900/60 border border-emerald-500/30 hover:border-emerald-500 rounded-2xl p-8 flex flex-col items-center gap-6 transition-all"
+                >
+                    <div className="absolute inset-0 bg-emerald-500/5 group-hover:bg-emerald-500/10 transition-colors rounded-2xl" />
+                    <div className="p-4 bg-emerald-900/20 rounded-full border border-emerald-500/30 group-hover:scale-110 transition-transform">
+                        <div className="relative w-12 h-12">
+                             <Image src="/assets/fighter-moon.svg" alt="Classic" fill className="object-contain" />
+                        </div>
+                    </div>
+                    <div className="text-center space-y-2">
+                        <h3 className="text-xl font-bold font-pixel text-emerald-400">MISSION MODE</h3>
+                        <p className="text-xs font-mono text-slate-400 max-w-[200px]">
+                            Manual control. Choose your ship, target sector, and weapon systems.
+                        </p>
+                    </div>
+                </motion.button>
+            </div>
+            
+            <button 
+                onClick={() => setGameState('INTRO')}
+                className="text-[10px] font-pixel text-slate-500 hover:text-white transition-colors z-10"
+            >
+                &lt; ABORT SEQUENCE
+            </button>
+        </div>
+    );
+
+    // PREDICT MODE SCREEN
+    const renderPredictMode = () => (
+        <div className="min-h-[600px] md:h-full flex flex-col relative overflow-hidden">
+            {/* Header */}
+            <div className="flex justify-between items-center p-4 bg-black/40 border-b border-white/10 z-20">
+                <button 
+                    onClick={() => setGameState('MODE_SELECT')}
+                    className="flex items-center gap-1 text-slate-500 hover:text-white transition-colors"
+                >
+                    <ChevronLeft size={16} />
+                    <span className="text-[10px] font-pixel">ABORT</span>
+                </button>
+                <div className="flex items-center gap-2">
+                    <div className="text-[10px] font-pixel text-emerald-400">CONSENSUS</div>
+                    <div className="w-24 h-3 bg-slate-800 rounded-full overflow-hidden border border-slate-600 flex">
+                        <motion.div 
+                            className="h-full bg-emerald-500"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${predictionStats?.consensus ?? 50}%` }}
+                        />
+                        <motion.div 
+                            className="h-full bg-rose-500"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${100 - (predictionStats?.consensus ?? 50)}%` }}
+                        />
+                    </div>
+                    <span className="text-[10px] font-mono text-emerald-400">
+                        {predictionStats?.totalVotes ? `${predictionStats.consensus.toFixed(0)}%` : '--'}
+                    </span>
+                </div>
+            </div>
+
+            <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-8">
+                
+                {/* 1. Asset Selection (Only if not selected yet) */}
+                {!predictionAsset && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                        className="w-full max-w-lg space-y-8"
+                    >
+                         <div className="text-center space-y-2">
+                            <h2 className="text-xl font-pixel text-white">SELECT WAR ZONE</h2>
+                            <p className="text-[10px] font-mono text-slate-400">Establish neural link with sector surveillance</p>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                             <button
+                                onClick={() => enterWarZone('ETH')}
+                                className="group relative bg-slate-900/60 border border-slate-700/50 hover:border-emerald-500 hover:bg-slate-900/80 p-8 rounded-xl flex flex-col items-center gap-6 transition-all overflow-hidden"
+                             >
+                                <div className="absolute inset-0 bg-[url('/assets/grid-bg.png')] opacity-10" />
+                                <div className="relative z-10 p-4 bg-emerald-500/10 rounded-full border border-emerald-500/30 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all duration-300">
+                                    <Image src="/assets/fighter-moon.svg" width={64} height={64} alt="ETH" className="drop-shadow-lg" />
+                                </div>
+                                <div className="relative z-10 text-center">
+                                    <span className="font-pixel text-2xl text-emerald-400 tracking-widest block">ETH</span>
+                                    <span className="text-[8px] font-mono text-emerald-600/80 uppercase tracking-widest">Sector Alpha</span>
+                                </div>
+                                <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                             </button>
+
+                             <button
+                                onClick={() => enterWarZone('BTC')}
+                                className="group relative bg-slate-900/60 border border-slate-700/50 hover:border-orange-500 hover:bg-slate-900/80 p-8 rounded-xl flex flex-col items-center gap-6 transition-all overflow-hidden"
+                             >
+                                <div className="absolute inset-0 bg-[url('/assets/grid-bg.png')] opacity-10" />
+                                <div className="relative z-10 p-4 bg-orange-500/10 rounded-full border border-orange-500/30 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(249,115,22,0.3)] transition-all duration-300">
+                                    <Image src="/assets/bomber-doom.svg" width={64} height={64} alt="BTC" className="drop-shadow-lg" />
+                                </div>
+                                <div className="relative z-10 text-center">
+                                    <span className="font-pixel text-2xl text-orange-400 tracking-widest block">BTC</span>
+                                    <span className="text-[8px] font-mono text-orange-600/80 uppercase tracking-widest">Sector Omega</span>
+                                </div>
+                                <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-orange-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                             </button>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* 2. Loading State (Targeting Computer) */}
+                {isLoadingPrediction && (
+                    <div className="w-full flex flex-col items-center">
+                        <TargetingSystem />
+                        <div className="mt-8 text-center space-y-2">
+                            <div className="text-xl font-pixel text-white animate-pulse">CALCULATING ORBIT</div>
+                            <div className="text-[10px] font-mono text-emerald-500/60 uppercase">
+                                Intercepting market signals...
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* 3. Result HUD */}
+                {!isLoadingPrediction && activePrediction && predictionAsset && (
+                    <TacticalHUD 
+                        asset={predictionAsset}
+                        direction={activePrediction.direction}
+                        confidence={activePrediction.confidence}
+                        reasoning={activePrediction.reasoning}
+                        stats={predictionStats}
+                        recommendedStrike={activePrediction.recommendedStrike}
+                        userVote={userVote}
+                        expiryTime={activePrediction.expiryTime}
+                        onSync={() => handlePredictionSelect('YES')}
+                        onOverride={() => handlePredictionSelect('NO')}
+                    />
+                )}
+
+                {/* System Messages */}
+                <AnimatePresence>
+                    {systemMessage && <SystemMessage message={systemMessage} onClear={() => setSystemMessage(null)} />}
+                </AnimatePresence>
+
             </div>
             
             {/* AI TACTICAL DROID - Arcade Mode Intro Only */}
@@ -406,7 +813,7 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                                 className="flex items-center gap-1 text-slate-500 hover:text-white transition-colors"
                             >
                                 <ChevronLeft size={16} />
-                                <span className="text-[10px] font-pixel">BACK</span>
+                                <span className="text-[10px] font-pixel">ABORT</span>
                             </button>
                         </div>
 
@@ -466,7 +873,7 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                                 className="flex items-center gap-1 text-slate-500 hover:text-white transition-colors"
                             >
                                 <ChevronLeft size={16} />
-                                <span className="text-[10px] font-pixel">BACK</span>
+                                <span className="text-[10px] font-pixel">ABORT</span>
                             </button>
                         </div>
 
@@ -526,11 +933,23 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                     >
                         <div className="absolute top-0 left-0 p-4 z-50">
                             <button 
-                                onClick={() => setGameState('SELECT_WEAPON')}
+                                onClick={() => {
+                                    if (entryMode === 'PREDICT') {
+                                        // Reset selections and go back to Predict Mode
+                                        setSelectedShip(null);
+                                        setSelectedPlanetIndex(null);
+                                        setSelectedWeapon(null);
+                                        setActivePrediction(null);
+                                        setGameState('PREDICT_MODE');
+                                    } else {
+                                        // Normal arcade flow - go back to weapon selection
+                                        setGameState('SELECT_WEAPON');
+                                    }
+                                }}
                                 className="flex items-center gap-1 text-slate-500 hover:text-white transition-colors"
                             >
                                 <ChevronLeft size={16} />
-                                <span className="text-[10px] font-pixel">BACK</span>
+                                <span className="text-[10px] font-pixel">ABORT</span>
                             </button>
                         </div>
 
@@ -743,7 +1162,9 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
             <div className="flex-grow min-h-0">
                 {gameState === 'INTRO' && renderIntro()}
                 {gameState === 'STORY' && <StoryScroll onComplete={() => setGameState('SELECT_SHIP')} />}
-                {!['INTRO', 'STORY'].includes(gameState) && renderGame()}
+                {gameState === 'MODE_SELECT' && renderModeSelect()}
+                {gameState === 'PREDICT_MODE' && renderPredictMode()}
+                {!['INTRO', 'STORY', 'MODE_SELECT', 'PREDICT_MODE'].includes(gameState) && renderGame()}
             </div>
         </div>
     );
