@@ -64,7 +64,7 @@ export async function POST(req: Request) {
         let prediction: AI_Prediction_Response;
         try {
             prediction = JSON.parse(cleanContent);
-        } catch (_e) {
+        } catch {
             console.error("Failed to parse AI output:", content);
             return NextResponse.json({ error: "Data Corruption" }, { status: 500 });
         }
