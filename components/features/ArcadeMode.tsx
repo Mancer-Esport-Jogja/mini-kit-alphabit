@@ -243,25 +243,57 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
         if (durationParsed.length === 0) return null;
 
         // --- PREDICT MODE LOGIC ---
+        // 1. Agree (Sync): Strict 5% targeting of AI Strike.
+        // 2. Disagree (Counter): Try to target the SAME Strike but Opposite Direction (5% tolerance).
+        //    If that fails (Ghost Product), Fallback to "Mission Mode" (Closest OTM).
+        
         if (entryMode === 'PREDICT' && activePrediction) {
             const targetStrike = activePrediction.recommendedStrike;
-            
-            // Find absolute closest strike, IGNORING OTM/ATM status
-            const best = durationParsed.reduce((closest, curr) => {
-                const closestDist = Math.abs(closest.strikes[0] - targetStrike);
-                const currDist = Math.abs(curr.strikes[0] - targetStrike);
-                return currDist < closestDist ? curr : closest;
-            });
+            const isPredictionCall = activePrediction.direction === 'MOON';
+            const isSelectedCall = selectedWeapon === 'LASER';
+            const isCounterTrade = isPredictionCall !== isSelectedCall;
 
-            // 1% Threshold Check
-            const bestStrike = best.strikes[0];
-            const diffPercent = Math.abs(bestStrike - targetStrike) / targetStrike;
-            if (diffPercent > 0.01) {
-                console.warn(`[Ghost Product] Closest strike ${bestStrike} is >1% away from target ${targetStrike}`);
-                return null; 
+            // Strategy A: Strict Matching (Used for Agree, and First Attempt for Disagree)
+            if (!isCounterTrade) {
+                 // ... existing Agree logic ...
+                 const best = durationParsed.reduce((closest, curr) => {
+                    const closestDist = Math.abs(closest.strikes[0] - targetStrike);
+                    const currDist = Math.abs(curr.strikes[0] - targetStrike);
+                    return currDist < closestDist ? curr : closest;
+                });
+                const bestStrike = best.strikes[0];
+                const diffPercent = Math.abs(bestStrike - targetStrike) / targetStrike;
+                
+                if (diffPercent > 0.05) {
+                    console.warn(`[Ghost Product] Closest strike ${bestStrike} is >5% away from target ${targetStrike}`);
+                    return null; 
+                }
+                return best;
+            } else {
+                // Strategy B: Disagree Logic (Mirror Attempt -> Fallback)
+                
+                // Attempt 1: Try to find the same strike (Mirror)
+                let bestMatch = null;
+                let minDiff = Infinity;
+                
+                for (const order of durationParsed) {
+                    const diff = Math.abs(order.strikes[0] - targetStrike);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        bestMatch = order;
+                    }
+                }
+                
+                const diffPercent = bestMatch ? (minDiff / targetStrike) : Infinity;
+                
+                // If we found a mirrored strike within 5%, use it!
+                if (bestMatch && diffPercent <= 0.05) {
+                    return bestMatch;
+                }
+                
+                // Fallback: If no mirror found within 5%, proceed to Mission Mode logic below (Closest OTM)
+                console.log("No mirror strike found within 5%, falling back to Best OTM logic...");
             }
-            
-            return best;
         }
 
         // --- MISSION MODE LOGIC (Existing) ---
@@ -1115,6 +1147,8 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                         ) : (() => {
                                 const order = getTargetOrder();
                                 const max = order ? calculateMaxSpend(order.rawOrder.order) : 0;
+                                const isGhost = !order;
+
                                 return (
                                     <div className="flex flex-col gap-2 w-full">
                                         <ArcadeButton 
@@ -1122,17 +1156,24 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                                             variant="danger" 
                                             onClick={handleLaunch}
                                             disabled={
+                                                isGhost ||
                                                 Number(inputAmount) > max || 
                                                 Number(inputAmount) <= 0
                                             }
                                             className={`text-lg animate-pulse ${
-                                                (Number(inputAmount) > max || Number(inputAmount) <= 0)
+                                                (isGhost || Number(inputAmount) > max || Number(inputAmount) <= 0)
                                                     ? "opacity-50 grayscale cursor-not-allowed" 
                                                     : ""
                                             }`}
                                         >
-                                            LAUNCH MISSION
+                                            {isGhost ? "TARGET LOST" : "LAUNCH MISSION"}
                                         </ArcadeButton>
+                                        
+                                        {isGhost && (
+                                            <div className="text-[10px] font-mono text-center text-red-500 bg-red-950/30 border border-red-500/30 p-2 rounded animate-pulse">
+                                                ⚠ GHOST PRODUCT: ORDER NOT AVAILABLE ⚠
+                                            </div>
+                                        )}
                                     </div>
                                 );
                         })()}
