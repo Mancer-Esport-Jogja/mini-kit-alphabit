@@ -61,7 +61,7 @@ interface ArcadeModeProps {
 
 export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
     const { address } = useAccount();
-    const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+    const { isAuthenticated, isLoading: isAuthLoading, user } = useAuth();
     const { completeMission, addXp } = useGamification();
     useDroid(); // Connect to Droid context for TacticalDroid component
 
@@ -706,7 +706,7 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                                                         text: text,
                                                         embeds: [shareUrl],
                                                     });
-                                                } catch (e) {
+                                                } catch {
                                                     // Fallback to Warpcast URL
                                                     window.open(`https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(shareUrl)}`, '_blank');
                                                 }
