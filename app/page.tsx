@@ -11,6 +11,8 @@ import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { TrendingUp, Gamepad2 } from "lucide-react";
 
 import { Marquee } from "@/components/ui/Marquee";
+import { PsychologyProfile } from "@/utils/riskEngine";
+import { Onboarding } from "@/components/features/onboarding/Onboarding";
 import { PortfolioView } from "@/components/features/PortfolioView";
 
 export default function App() {
@@ -20,7 +22,25 @@ export default function App() {
   const [mode, setMode] = useState<'PRO' | 'ARCADE'>("PRO");
   const [glitch, setGlitch] = useState(false);
 
+  // Check onboarding status on start
+  const handleStart = () => {
+    const hasOnboarded = localStorage.getItem("has_onboarded");
+    if (hasOnboarded) {
+      setMode("ARCADE");
+      setView("home");
+    } else {
+      setView("onboarding");
+    }
+  };
 
+  const handleOnboardingComplete = (profile: PsychologyProfile) => {
+    // Save profile to local storage (and potentially sync to backend later)
+    localStorage.setItem("has_onboarded", "true");
+    localStorage.setItem("risk_profile", JSON.stringify(profile));
+    
+    setMode("ARCADE");
+    setView("home");
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -53,7 +73,17 @@ export default function App() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
           >
-            <LandingPage onStart={() => { setMode("ARCADE"); setView("home"); }} />
+            <LandingPage onStart={handleStart} />
+          </motion.div>
+        ) : view === "onboarding" ? (
+          <motion.div
+            key="onboarding"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+             <Onboarding onComplete={handleOnboardingComplete} />
           </motion.div>
         ) : (
           <motion.div
