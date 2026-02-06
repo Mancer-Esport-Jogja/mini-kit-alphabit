@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Cpu, Zap, Clock, X } from 'lucide-react';
+import { Send, Cpu, Zap, Clock, X, CheckCircle2 } from 'lucide-react';
 import { useDroid } from '@/context/DroidContext';
 import { motion } from 'framer-motion';
 import { TradeRecommendation, PsychologyProfile, RiskAnswer } from '@/utils/riskEngine';
@@ -14,13 +14,42 @@ type TacticalRecommendation = TradeRecommendation & {
     recommendedStrike?: number;
 };
 
-export const ChatInterface = () => {
+// GUIDED MODE SCRIPT
+const GUIDED_SCRIPT = [
+    {
+        id: "g1",
+        role: 'assistant',
+        content: "Welcome to the Neural Link, Pilot. This is your direct line to my tactical core. I can analyze markets, calculate risk, and predict price movements.",
+        actionBtn: "Initialize System Check",
+    },
+    {
+        id: "g2",
+        role: 'user',
+        content: "Initialize System Check",
+    },
+    {
+        id: "g3",
+        role: 'assistant',
+        content: "Scanning biometric data... [COMPLETE]. \nScanning market feeds... [CONNECTED]. \n\nI am ready to assist. You can ask me for 'Risk Analysis' or 'Market Sentiment' at any time during your mission.",
+        actionBtn: "Understood. Systems Syncing.",
+    }
+];
+
+interface ChatInterfaceProps {
+    guidedMode?: boolean;
+    onComplete?: () => void;
+}
+
+export const ChatInterface = ({ guidedMode = false, onComplete }: ChatInterfaceProps) => {
     const { messages, addMessage, isThinking, setIsThinking, riskProfile, timelineProfile, marketStats, closeDrawer } = useDroid();
     const [input, setInput] = useState('');
     const scrollRef = useRef<HTMLDivElement>(null);
     const [calibrationStep, setCalibrationStep] = useState<'IDLE' | 'Q1_LOSS' | 'Q2_TIME' | 'Q3_GOAL'>('IDLE');
     const [psyProfile, setPsyProfile] = useState<PsychologyProfile>({ lossAversion: 'A', timePreference: 'A', goal: 'A' });
     const [recommendation, setRecommendation] = useState<TacticalRecommendation | null>(null);
+
+    // Guided Mode State
+    const [guidedStep, setGuidedStep] = useState(0);
 
     const startCalibration = () => {
         setCalibrationStep('Q1_LOSS');
@@ -60,7 +89,7 @@ export const ChatInterface = () => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
-    }, [messages, isThinking]);
+    }, [messages, isThinking, guidedStep]);
 
     const handleSend = async (overrideInput?: string) => {
         const userMsg = overrideInput || input;
@@ -89,7 +118,7 @@ export const ChatInterface = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     messages: apiMessages,
-                    marketData: marketStats // Pass ALL Market Data
+                    marketData: marketStats 
                 })
             });
 
@@ -105,7 +134,6 @@ export const ChatInterface = () => {
                         const jsonBlock = JSON.parse(jsonMatch[0]);
                         if (jsonBlock.REC_DATA) {
                             setRecommendation(jsonBlock.REC_DATA);
-                            // Remove the JSON from the text message to keep it clean
                             contentToShow = contentToShow.replace(jsonMatch[0], '').trim();
                         }
                     } catch (e) {
@@ -131,15 +159,36 @@ export const ChatInterface = () => {
         }
     };
 
+    // --- GUIDED MODE RENDER HELPERS ---
+    const handleGuideAction = () => {
+        if (guidedStep < 2) {
+             setGuidedStep(2); 
+        } else {
+             if (onComplete) onComplete();
+        }
+    };
+
+    const renderExchangedMessages = () => {
+         // Show messages based on step
+         const visibleMsgs = GUIDED_SCRIPT.filter((_, idx) => {
+             if (guidedStep === 0) return idx === 0;
+             if (guidedStep >= 2) return idx <= 2; 
+             return false;
+         });
+         
+         return visibleMsgs;
+    };
+
     return (
         <div className="flex flex-col h-full bg-slate-950 border-x border-slate-800">
-            {/* Header */}
             {/* Header */}
             <div className="bg-slate-900 border-b border-slate-800 flex flex-col">
                 <div className="p-3 pb-1 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="font-pixel text-[10px] text-green-500">R.O.B.B.I.E. 9000</span>
+                         <div className={`w-2 h-2 ${guidedMode ? 'bg-yellow-400' : 'bg-green-500'} rounded-full animate-pulse`}></div>
+                        <span className={`font-pixel text-[10px] ${guidedMode ? 'text-yellow-400' : 'text-green-500'}`}>
+                            {guidedMode ? 'R.O.B.B.I.E. [TRAINING_MODE]' : 'R.O.B.B.I.E. 9000'}
+                        </span>
                     </div>
                     <div className="text-[10px] text-slate-500 font-mono flex items-center gap-2">
                         <span>{riskProfile} | {timelineProfile}</span>
@@ -148,29 +197,34 @@ export const ChatInterface = () => {
                 
                 {/* Controls */}
                 <div className="px-3 pb-2 flex gap-2">
-                    <button
-                        onClick={closeDrawer}
-                        className="p-1.5 bg-slate-900/50 hover:bg-slate-800 border border-red-500/30 rounded text-red-500/80 hover:text-red-400 shadow-[0_0_10px_rgba(239,68,68,0.3)] hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] transition-all"
-                        title="Close System"
-                    >
-                        <X size={14} />
-                    </button>
+                    {!guidedMode && (
+                        <button
+                            onClick={closeDrawer}
+                            className="p-1.5 bg-slate-900/50 hover:bg-slate-800 border border-red-500/30 rounded text-red-500/80 hover:text-red-400 shadow-[0_0_10px_rgba(239,68,68,0.3)] hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] transition-all"
+                            title="Close System"
+                        >
+                            <X size={14} />
+                        </button>
+                    )}
                     <button 
-                        onClick={startCalibration}
-                        disabled={calibrationStep !== 'IDLE' || isThinking}
-                        className="flex-1 py-1.5 bg-slate-900/50 hover:bg-slate-800 border border-green-500/30 rounded text-[9px] font-pixel text-green-500/80 hover:text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.3)] hover:shadow-[0_0_15px_rgba(34,197,94,0.5)] transition-all disabled:opacity-50 disabled:shadow-none uppercase tracking-wider"
-                        title="Recalibrate Protocol"
+                        onClick={guidedMode ? () => {} : startCalibration}
+                        disabled={calibrationStep !== 'IDLE' || isThinking || guidedMode}
+                        className={`flex-1 py-1.5 bg-slate-900/50 border rounded text-[9px] font-pixel transition-all uppercase tracking-wider
+                            ${guidedMode 
+                                ? 'border-yellow-500/30 text-yellow-500/80 opacity-50 cursor-not-allowed' 
+                                : 'border-green-500/30 text-green-500/80 hover:bg-slate-800 hover:text-green-400 hover:shadow-[0_0_15px_rgba(34,197,94,0.5)]'
+                            }`}
                     >
-                         {isThinking || calibrationStep !== 'IDLE' ? '[ SYSTEM BUSY ]' : '[ CALIBRATE PROTOCOL ]'}
+                         {guidedMode ? '[ TRAINING IN PROGRESS ]' : (isThinking || calibrationStep !== 'IDLE' ? '[ SYSTEM BUSY ]' : '[ CALIBRATE PROTOCOL ]')}
                     </button>
                 </div>
             </div>
 
             {/* Chat Area */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.map((msg) => (
+                {(guidedMode ? renderExchangedMessages() : messages).map((msg, idx) => (
                     <motion.div 
-                        key={msg.id}
+                        key={guidedMode ? `g-${idx}` : msg.id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -187,7 +241,7 @@ export const ChatInterface = () => {
                                     <Cpu size={8} /> TACTICAL DROID
                                 </div>
                             )}
-                            {msg.role === 'assistant' ? (
+                             {(msg.role === 'assistant') ? (
                                 <ReactMarkdown 
                                     components={{
                                         p: ({node: _node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
@@ -211,8 +265,7 @@ export const ChatInterface = () => {
                     </motion.div>
                 ))}
 
-                {/* Q1: Loss Aversion */}
-                {calibrationStep === 'Q1_LOSS' && !isThinking && (
+                {!guidedMode && calibrationStep === 'Q1_LOSS' && !isThinking && (
                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-end gap-2">
                         <button
                             onClick={() => handleAnswer('Q1', 'PANIC')}
@@ -229,8 +282,7 @@ export const ChatInterface = () => {
                     </motion.div>
                 )}
 
-                {/* Q2: Time Preference */}
-                {calibrationStep === 'Q2_TIME' && !isThinking && (
+                {!guidedMode && calibrationStep === 'Q2_TIME' && !isThinking && (
                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-end gap-2">
                         <button
                             onClick={() => handleAnswer('Q2', 'MINUTES')}
@@ -247,8 +299,7 @@ export const ChatInterface = () => {
                     </motion.div>
                 )}
 
-                {/* Q3: Goal */}
-                {calibrationStep === 'Q3_GOAL' && !isThinking && (
+                {!guidedMode && calibrationStep === 'Q3_GOAL' && !isThinking && (
                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-end gap-2">
                         <button
                             onClick={() => handleAnswer('Q3', 'INCOME')}
@@ -265,7 +316,7 @@ export const ChatInterface = () => {
                     </motion.div>
                 )}
 
-                {recommendation && !isThinking && (
+                {!guidedMode && recommendation && !isThinking && (
                     <TradeRecommendationCard 
                         type={recommendation.profileType}
                         target={recommendation.target}
@@ -291,38 +342,63 @@ export const ChatInterface = () => {
 
             {/* Input Area */}
             <div className="p-3 bg-slate-900 border-t border-slate-800">
-                {/* SUGGESTED CHIPS */}
-                {!isThinking && calibrationStep === 'IDLE' && (
-                    <div className="flex gap-2 mb-2 overflow-x-auto pb-1 scrollbar-hide">
-                        {["Scan ETH", "Scan BTC", "Check Risk Score", "Market Sentiment"].map((q, i) => (
+                {guidedMode ? (
+                    <div className="flex flex-col gap-2">
+                        <div className="text-[10px] text-yellow-500/70 text-center font-pixel uppercase tracking-widest mb-1">
+                             -- Training Protocol Active --
+                        </div>
+                         {guidedStep === 0 && (
                             <button
-                                key={i}
-                                onClick={() => handleSend(q)}
-                                className="whitespace-nowrap px-2 py-1 bg-slate-800 border border-slate-700 rounded text-[9px] text-slate-400 hover:text-green-400 hover:border-green-500/50 transition-colors font-pixel"
+                                onClick={handleGuideAction}
+                                className="w-full bg-yellow-500/20 border border-yellow-500 text-yellow-400 p-3 rounded text-xs font-bold uppercase tracking-wider hover:bg-yellow-500/30 transition-all flex items-center justify-center gap-2"
                             >
-                                {q}
+                                <Zap size={14} /> Initialize System Check
                             </button>
-                        ))}
+                         )}
+                         {guidedStep >= 2 && (
+                             <button
+                                onClick={handleGuideAction}
+                                className="w-full bg-green-500 text-black p-3 rounded text-xs font-black uppercase tracking-wider hover:bg-green-400 transition-all flex items-center justify-center gap-2"
+                            >
+                                <CheckCircle2 size={16} /> Systems Clear. Proceed.
+                            </button>
+                         )}
                     </div>
+                ) : (
+                    <>
+                        {!isThinking && calibrationStep === 'IDLE' && (
+                            <div className="flex gap-2 mb-2 overflow-x-auto pb-1 scrollbar-hide">
+                                {["Scan ETH", "Scan BTC", "Check Risk Score", "Market Sentiment"].map((q, i) => (
+                                    <button
+                                        key={i}
+                                        onClick={() => handleSend(q)}
+                                        className="whitespace-nowrap px-2 py-1 bg-slate-800 border border-slate-700 rounded text-[9px] text-slate-400 hover:text-green-400 hover:border-green-500/50 transition-colors font-pixel"
+                                    >
+                                        {q}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                placeholder="Ask for tactical analysis..."
+                                className="flex-1 bg-black border border-slate-700 rounded px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-green-500 transition-colors font-mono"
+                            />
+                            <button
+                                onClick={() => handleSend()}
+                                disabled={isThinking || !input.trim() || calibrationStep !== 'IDLE'}
+                                className="bg-green-600 hover:bg-green-500 disabled:bg-slate-700 text-white p-2 rounded transition-colors"
+                            >
+                                <Send size={16} />
+                            </button>
+                        </div>
+                    </>
                 )}
-                
-                <div className="flex gap-2">
-                    <input
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder="Ask for tactical analysis..."
-                        className="flex-1 bg-black border border-slate-700 rounded px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-green-500 transition-colors font-mono"
-                    />
-                    <button
-                        onClick={() => handleSend()}
-                        disabled={isThinking || !input.trim() || calibrationStep !== 'IDLE'}
-                        className="bg-green-600 hover:bg-green-500 disabled:bg-slate-700 text-white p-2 rounded transition-colors"
-                    >
-                        <Send size={16} />
-                    </button>
-                </div>
             </div>
         </div>
     );
