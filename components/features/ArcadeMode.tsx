@@ -543,13 +543,15 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                             <div className="relative">
                                 <input 
                                     type="number" 
+                                    step="0.01"
+                                    inputMode="decimal"
                                     value={inputAmount}
                                     onChange={(e) => setInputAmount(e.target.value)}
-                                    className={`w-full bg-black border-none text-center text-3xl font-pixel py-2 focus:ring-0 ${
+                                    className={`w-full bg-black border-2 border-slate-700 rounded-lg text-center text-2xl font-pixel py-4 pr-32 pl-12 focus:ring-1 focus:ring-emerald-500 transition-all no-spinner ${
                                         (() => {
                                             const order = getTargetOrder();
                                             const max = order ? calculateMaxSpend(order.rawOrder.order) : 0;
-                                            return Number(inputAmount) > max ? "text-red-500" : "text-white";
+                                            return Number(inputAmount) > max ? "text-red-500 border-red-500" : "text-white";
                                         })()
                                     }`}
                                 />
@@ -559,7 +561,7 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                                     return (
                                         <button 
                                             onClick={() => setInputAmount(max.toFixed(2))}
-                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded"
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-mono bg-slate-800/90 hover:bg-slate-700 text-slate-400 hover:text-white px-3 py-2 rounded border border-slate-600 transition-colors z-10 backdrop-blur-sm"
                                         >
                                             MAX: ${max.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                                         </button>

@@ -731,7 +731,7 @@ export const HuntTerminal = () => {
                                         }}
                                         autoFocus
                                         aria-label="Collateral amount in USDC"
-                                        className="w-24 font-mono tabular-nums text-xl text-white tracking-normal text-right bg-black border-b border-bit-green px-0 py-0 focus:outline-none"
+                                        className="w-32 font-mono tabular-nums text-xl text-white tracking-normal text-right bg-black border-b-2 border-bit-green px-1 py-1 focus:outline-none focus:bg-slate-900 transition-colors no-spinner"
                                     />
                                     <span className="text-xs text-slate-500 font-mono">USDC</span>
                                 </div>

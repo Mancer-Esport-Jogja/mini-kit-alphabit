@@ -240,3 +240,16 @@ body {
   0%, 100% { transform: translateY(0px); }
   50% { transform: translateY(-20px); }
 }
+
+/* Hide number input spinners */
+.no-spinner::-webkit-outer-spin-button,
+.no-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+
+.no-spinner {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
