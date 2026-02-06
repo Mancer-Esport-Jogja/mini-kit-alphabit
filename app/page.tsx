@@ -11,6 +11,7 @@ import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { TrendingUp, Gamepad2 } from "lucide-react";
 
 import { Marquee } from "@/components/ui/Marquee";
+import { PsychologyProfile } from "@/utils/riskEngine";
 import { Onboarding } from "@/components/features/onboarding/Onboarding";
 import { PortfolioView } from "@/components/features/PortfolioView";
 
@@ -32,7 +33,7 @@ export default function App() {
     }
   };
 
-  const handleOnboardingComplete = (profile: any) => {
+  const handleOnboardingComplete = (profile: PsychologyProfile) => {
     // Save profile to local storage (and potentially sync to backend later)
     localStorage.setItem("has_onboarded", "true");
     localStorage.setItem("risk_profile", JSON.stringify(profile));

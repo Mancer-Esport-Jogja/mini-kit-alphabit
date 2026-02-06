@@ -1,12 +1,19 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { calculateRiskScore, getRecommendation, PsychologyProfile, RiskAnswer } from '@/utils/riskEngine';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import { calculateRiskScore, PsychologyProfile, RiskAnswer } from '@/utils/riskEngine';
 import { typewriterSafeSlice, getVisibleTextLength } from './typewriterHelper';
 
-// --- DATA ---
-const INITIAL_SCENARIO = [
+interface ScenarioNode {
+    id: string;
+    speaker: string;
+    text: string;
+    expression: string;
+    options?: { label: string; value: string; desc: string; }[];
+}
+
+const INITIAL_SCENARIO: ScenarioNode[] = [
     { id: 'init-1', speaker: "SYSTEM", text: "Detecting organic life signs... Neural sync starting in 3... 2... 1...", expression: "processing" },
     { id: 'init-2', speaker: "R.O.B.B.I.E. 9000", text: "Ah, finally. A new <b>'organic'</b> in the pilot seat. How many cycles have I waited in this silent hangar? <span class='text-yellow-400'>Dusty and boring.</span>", expression: "neutral" },
     { id: 'init-3', speaker: "R.O.B.B.I.E. 9000", text: "My name is <b>R.O.B.B.I.E. 9000</b>. I am the tactical brain of this ship. And you... you are the Pilot. Don't be so tense, I can feel your irregular heartbeat through the biometric seat sensors.", expression: "scan" },
@@ -104,16 +111,14 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         }
     }, [isTyping]);
 
-    useEffect(() => {
-        if (scene === 'NOVEL') {
-            renderDialog();
-        }
-        return () => {
-            if (typeIntervalRef.current) clearInterval(typeIntervalRef.current);
-        };
-    }, [scene, currentDialogIndex]);
+    const completeTyping = useCallback(() => {
+        if (typeIntervalRef.current) clearInterval(typeIntervalRef.current);
+        const data = scenario[currentDialogIndex];
+        setDisplayedText(data.text);
+        setIsTyping(false);
+    }, [scenario, currentDialogIndex]);
 
-    const renderDialog = () => {
+    const renderDialog = useCallback(() => {
         const data = scenario[currentDialogIndex];
         setIsTyping(true);
         setDisplayedText("");
@@ -134,20 +139,22 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                 completeTyping();
             }
         }, 30);
-    };
+    }, [scenario, currentDialogIndex, completeTyping]); // Added completeTyping dependency
 
-    const completeTyping = () => {
-        if (typeIntervalRef.current) clearInterval(typeIntervalRef.current);
-        const data = scenario[currentDialogIndex];
-        setDisplayedText(data.text);
-        setIsTyping(false);
-    };
+    useEffect(() => {
+        if (scene === 'NOVEL') {
+            renderDialog();
+        }
+        return () => {
+            if (typeIntervalRef.current) clearInterval(typeIntervalRef.current);
+        };
+    }, [scene, renderDialog]);
 
     const skipTyping = () => {
         if (isTyping) completeTyping();
     };
 
-    const handleDoubleTap = (e: React.TouchEvent | React.MouseEvent) => {
+    const handleDoubleTap = () => {
         const now = Date.now();
         const timesince = now - lastTapRef.current;
         if (timesince < 300 && timesince > 0) {
@@ -286,7 +293,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             const pages = aiContent.split("<!--PAGE_BREAK-->");
             
             // 4. Create Result Nodes
-            const resultNodes: any[] = [];
+            const resultNodes: ScenarioNode[] = [];
             
             // Page 1: Diagnosis
             resultNodes.push({ 
@@ -527,7 +534,6 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         const data = scenario[currentDialogIndex];
         if (!data) return null;
 
-        const isRobbie = data.speaker.includes("R.O.B.B.I.E.");
         const expression = data.expression; 
 
         // Determine Eye/Body Color based on expression
