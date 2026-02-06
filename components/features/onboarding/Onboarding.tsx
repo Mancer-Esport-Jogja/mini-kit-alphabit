@@ -16,9 +16,9 @@ interface ScenarioNode {
 }
 
 const INITIAL_SCENARIO: ScenarioNode[] = [
-    { id: 'init-1', speaker: "SYSTEM", text: "Detecting organic life signs... Neural sync starting in 3... 2... 1...", expression: "processing" },
-    { id: 'init-2', speaker: "R.O.B.B.I.E. 9000", text: "Ah, finally. A new <b>'organic'</b> in the pilot seat. How many cycles have I waited in this silent hangar? <span class='text-yellow-400'>Dusty and boring.</span>", expression: "neutral" },
-    { id: 'init-3', speaker: "R.O.B.B.I.E. 9000", text: "My name is <b>R.O.B.B.I.E. 9000</b>. I am the tactical brain of this ship. And you... you are the Pilot. Don't be so tense, I can feel your irregular heartbeat through the biometric seat sensors.", expression: "scan" },
+    // { id: 'init-1', speaker: "SYSTEM", text: "Detecting organic life signs... Neural sync starting in 3... 2... 1...", expression: "processing" },
+    // { id: 'init-2', speaker: "R.O.B.B.I.E. 9000", text: "Ah, finally. A new <b>'organic'</b> in the pilot seat. How many cycles have I waited in this silent hangar? <span class='text-yellow-400'>Dusty and boring.</span>", expression: "neutral" },
+    // { id: 'init-3', speaker: "R.O.B.B.I.E. 9000", text: "My name is <b>R.O.B.B.I.E. 9000</b>. I am the tactical brain of this ship. And you... you are the Pilot. Don't be so tense, I can feel your irregular heartbeat through the biometric seat sensors.", expression: "scan" },
     { 
         id: 'lossAversion', // Formerly 'void-sim'
         speaker: "R.O.B.B.I.E. 9000", 
@@ -397,12 +397,12 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             }
 
             // WELCOME NODE
-            resultNodes.push({
-                id: 'result-welcome',
-                speaker: "R.O.B.B.I.E. 9000",
-                text: "Diagnostics clear. Profile authorized. Welcome to <b>Alphabit Squad</b>, Pilot.",
-                expression: "neutral",
-            });
+            // resultNodes.push({
+            //     id: 'result-welcome',
+            //     speaker: "R.O.B.B.I.E. 9000",
+            //     text: "Diagnostics clear. Profile authorized. Welcome to <b>Alphabit Squad</b>, Pilot.",
+            //     expression: "neutral",
+            // });
 
             // NEW DIALOGUE SEQUENCE
             resultNodes.push({
@@ -412,12 +412,12 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                 expression: "neutral",
             });
 
-            resultNodes.push({
-                id: 'robbie-intro-2',
-                speaker: "R.O.B.B.I.E. 9000",
-                text: "Before we warp into the chaos of the Base Network, let me explain what I can do to ensure you don’t end up as space debris. Listen closely, organic:",
-                expression: "scan",
-            });
+            // resultNodes.push({
+            //     id: 'robbie-intro-2',
+            //     speaker: "R.O.B.B.I.E. 9000",
+            //     text: "Before we warp into the chaos of the Base Network, let me explain what I can do to ensure you don’t end up as space debris. Listen closely, organic:",
+            //     expression: "scan",
+            // });
 
             resultNodes.push({
                 id: 'robbie-intro-3',
