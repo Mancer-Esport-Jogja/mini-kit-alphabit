@@ -28,6 +28,12 @@ export const TacticalHUD = ({ asset, direction, confidence, reasoning, stats, on
     const borderColor = isMoon ? 'border-emerald-500/50' : 'border-rose-500/50';
     const glowColor = isMoon ? 'shadow-[0_0_20px_rgba(52,211,153,0.3)]' : 'shadow-[0_0_20px_rgba(244,63,94,0.3)]';
 
+    const MIN_EXPIRY_BUFFER_MS = 3600 * 1000;
+    const now = new Date().getTime();
+    const expiry = expiryTime ? new Date(expiryTime).getTime() : 0;
+    const ttl = expiry - now;
+    const isWindowClosed = ttl < MIN_EXPIRY_BUFFER_MS;
+    
     // Countdown logic
     const [countdown, setCountdown] = useState<string>('');
     
@@ -163,32 +169,42 @@ export const TacticalHUD = ({ asset, direction, confidence, reasoning, stats, on
                         </div>
                     </>
                 ) : (
-                    // NORMAL STATE - Clickable buttons
+                    // NORMAL STATE - Clickable buttons (or Disabled if Window Closed)
                     <>
                         <button
                             onClick={onSync}
-                            className="group relative overflow-hidden bg-emerald-900/40 border border-emerald-500/50 hover:bg-emerald-800/60 p-4 rounded-xl hover:scale-[1.02] transition-all"
+                            disabled={isWindowClosed}
+                            className={`group relative overflow-hidden p-4 rounded-xl transition-all ${
+                                isWindowClosed 
+                                    ? 'bg-slate-800/40 border border-slate-700/50 opacity-50 cursor-not-allowed' 
+                                    : 'bg-emerald-900/40 border border-emerald-500/50 hover:bg-emerald-800/60 hover:scale-[1.02]'
+                            }`}
                         >
                             <div className="flex flex-col items-center gap-2">
-                                <Rocket className="text-emerald-400 w-8 h-8 group-hover:animate-bounce" />
+                                <Rocket className={`w-8 h-8 ${isWindowClosed ? 'text-slate-500' : 'text-emerald-400 group-hover:animate-bounce'}`} />
                                 <div className="text-center">
-                                    <div className="text-sm font-black font-pixel text-emerald-400">AGREE</div>
+                                    <div className={`text-sm font-black font-pixel ${isWindowClosed ? 'text-slate-500' : 'text-emerald-400'}`}>AGREE</div>
                                     <div className="text-[9px] font-mono text-emerald-200/60 mb-2">FOLLOW PREDICTION</div>
-                                    {stats && <div className="text-xs font-mono bg-emerald-500/20 px-2 py-1 rounded text-emerald-300">{stats.syncCount} PILOTS</div>}
+                                    {stats && <div className={`text-xs font-mono px-2 py-1 rounded ${isWindowClosed ? 'bg-slate-700/50 text-slate-400' : 'bg-emerald-500/20 text-emerald-300'}`}>{stats.syncCount} PILOTS</div>}
                                 </div>
                             </div>
                         </button>
 
                         <button
                             onClick={onOverride}
-                            className="group relative overflow-hidden bg-rose-900/40 border border-rose-500/50 hover:bg-rose-800/60 p-4 rounded-xl hover:scale-[1.02] transition-all"
+                            disabled={isWindowClosed}
+                            className={`group relative overflow-hidden p-4 rounded-xl transition-all ${
+                                isWindowClosed 
+                                    ? 'bg-slate-800/40 border border-slate-700/50 opacity-50 cursor-not-allowed' 
+                                    : 'bg-rose-900/40 border border-rose-500/50 hover:bg-rose-800/60 hover:scale-[1.02]'
+                            }`}
                         >
                             <div className="flex flex-col items-center gap-2">
-                                <ShieldAlert className="text-rose-400 w-8 h-8 group-hover:animate-pulse" />
+                                <ShieldAlert className={`w-8 h-8 ${isWindowClosed ? 'text-slate-500' : 'text-rose-400 group-hover:animate-pulse'}`} />
                                 <div className="text-center">
-                                    <div className="text-sm font-black font-pixel text-rose-400">DISAGREE</div>
+                                    <div className={`text-sm font-black font-pixel ${isWindowClosed ? 'text-slate-500' : 'text-rose-400'}`}>DISAGREE</div>
                                     <div className="text-[9px] font-mono text-rose-200/60 mb-2">BET AGAINST AI</div>
-                                    {stats && <div className="text-xs font-mono bg-rose-500/20 px-2 py-1 rounded text-rose-300">{stats.overrideCount} PILOTS</div>}
+                                    {stats && <div className={`text-xs font-mono px-2 py-1 rounded ${isWindowClosed ? 'bg-slate-700/50 text-slate-400' : 'bg-rose-500/20 text-rose-300'}`}>{stats.overrideCount} PILOTS</div>}
                                 </div>
                             </div>
                         </button>
@@ -196,14 +212,31 @@ export const TacticalHUD = ({ asset, direction, confidence, reasoning, stats, on
                 )}
             </div>
             
-            {/* Countdown Timer (if voted) */}
-            {hasVoted && countdown && (
+            {/* Warning if Window Closed */}
+            {!hasVoted && isWindowClosed && (
+                 <div className="mt-4 p-3 bg-red-900/20 border border-red-500/30 rounded-lg text-center animate-pulse">
+                    <div className="flex items-center justify-center gap-2 text-red-400">
+                        <Clock size={14} />
+                        <span className="text-[10px] font-mono font-bold">WINDOW CLOSED</span>
+                    </div>
+                    <div className="text-[10px] text-red-400/80 mt-1">
+                        Prediction expires in {Math.max(0, Math.floor(ttl / 60000))} mins. Too risky to engage.
+                    </div>
+                 </div>
+            )}
+            
+            {/* Countdown Timer (Always Visible) */}
+            {countdown && (
                 <div className="mt-4 p-3 bg-slate-800/60 border border-slate-600/50 rounded-lg text-center">
                     <div className="flex items-center justify-center gap-2">
-                        <Clock size={14} className="text-yellow-400" />
-                        <span className="text-[10px] font-mono text-slate-400">PREDICTION EXPIRES IN</span>
+                        <Clock size={14} className={isWindowClosed ? "text-red-400" : "text-yellow-400"} />
+                        <span className={`text-[10px] font-mono ${isWindowClosed ? "text-red-400" : "text-slate-400"}`}>
+                            {isWindowClosed ? "PREDICTION EXPIRED / WINDOW CLOSED" : "PREDICTION EXPIRES IN"}
+                        </span>
                     </div>
-                    <div className="text-lg font-mono font-bold text-yellow-400 mt-1">{countdown}</div>
+                    <div className={`text-lg font-mono font-bold mt-1 ${isWindowClosed ? "text-red-500" : "text-yellow-400"}`}>
+                        {countdown}
+                    </div>
                 </div>
             )}
         </motion.div>

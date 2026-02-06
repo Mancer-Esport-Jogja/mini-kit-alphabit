@@ -205,6 +205,7 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                 shipOrders.map(o => o.rawOrder), 
                 p.name as 'BLITZ' | 'RUSH' | 'CORE' | 'ORBIT'
             );
+            
             return { 
                 ...p, 
                 index: idx, 
@@ -215,7 +216,10 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
     };
 
     // Filter orders for the selected configuration
-    // Simplified: pick the closest OTM strike to spot price
+    // Filter orders for the selected configuration
+    // Dual Logic: 
+    // - Mission Mode: Closest OTM strike to Spot Price
+    // - Predict Mode: Strict adherence to activePrediction.recommendedStrike
     const getTargetOrder = (): ParsedOrder | null => {
         if (!selectedShip || selectedPlanetIndex === null || !selectedWeapon) return null;
 
@@ -238,6 +242,29 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
         );
         if (durationParsed.length === 0) return null;
 
+        // --- PREDICT MODE LOGIC ---
+        if (entryMode === 'PREDICT' && activePrediction) {
+            const targetStrike = activePrediction.recommendedStrike;
+            
+            // Find absolute closest strike, IGNORING OTM/ATM status
+            const best = durationParsed.reduce((closest, curr) => {
+                const closestDist = Math.abs(closest.strikes[0] - targetStrike);
+                const currDist = Math.abs(curr.strikes[0] - targetStrike);
+                return currDist < closestDist ? curr : closest;
+            });
+
+            // 1% Threshold Check
+            const bestStrike = best.strikes[0];
+            const diffPercent = Math.abs(bestStrike - targetStrike) / targetStrike;
+            if (diffPercent > 0.01) {
+                console.warn(`[Ghost Product] Closest strike ${bestStrike} is >1% away from target ${targetStrike}`);
+                return null; 
+            }
+            
+            return best;
+        }
+
+        // --- MISSION MODE LOGIC (Existing) ---
         const spot = asset === 'ETH' ? ethSpot : asset === 'BTC' ? btcSpot : null;
         // If spot is unavailable, fall back to first available order
         if (!spot) {
@@ -283,10 +310,34 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
     };
 
     const handleLaunch = async () => {
+        // 0. Initial valid check
         const order = getTargetOrder();
-        if (!order) return;
-        
+        if (!order) {
+             setSystemMessage("TARGET LOST: No valid firing solution for these coordinates.");
+             return;
+        }
+
         try {
+            // 1. Pre-flight Safety Check (Ghost Product)
+            // Force a quick refresh to ensure order is still valid in backend
+            const { data: freshData } = await refetchOrders();
+            const freshRawOrders = freshData?.orders || [];
+            
+            const stillExists = freshRawOrders.some(o => o.order.ticker === order?.rawOrder.order.ticker);
+
+            if (!stillExists) {
+                setSystemMessage("GHOST SIGNAL: Liquidity evaporated. Refreshing radar...");
+                return; // Abort
+            }
+            
+            // 2. Expiry Safety Guard (1 Hour)
+            const MIN_EXPIRY_BUFFER_MS = 3600 * 1000;
+            const ttl = new Date(order.expiry).getTime() - Date.now();
+            if (ttl < MIN_EXPIRY_BUFFER_MS) {
+                 setSystemMessage("WINDOW CLOSED: Expiry too close for safe engagement.");
+                 return;
+            }
+
             await executeFillOrder(order.rawOrder, inputAmount);
             
             // Success! 
@@ -304,6 +355,7 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
             addXp(100); // Bonus for arcade mission
         } catch (e) {
             console.error(e);
+            setSystemMessage("LAUNCH FAILURE: Transaction reverted.");
         }
     };
 
@@ -1064,19 +1116,24 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                                 const order = getTargetOrder();
                                 const max = order ? calculateMaxSpend(order.rawOrder.order) : 0;
                                 return (
-                                    <ArcadeButton 
-                                        size="lg" 
-                                        variant="danger" 
-                                        onClick={handleLaunch}
-                                        disabled={Number(inputAmount) > max || Number(inputAmount) <= 0}
-                                        className={`text-lg animate-pulse ${
-                                            (Number(inputAmount) > max || Number(inputAmount) <= 0)
-                                                ? "opacity-50 grayscale cursor-not-allowed" 
-                                                : ""
-                                        }`}
-                                    >
-                                        LAUNCH MISSION
-                                    </ArcadeButton>
+                                    <div className="flex flex-col gap-2 w-full">
+                                        <ArcadeButton 
+                                            size="lg" 
+                                            variant="danger" 
+                                            onClick={handleLaunch}
+                                            disabled={
+                                                Number(inputAmount) > max || 
+                                                Number(inputAmount) <= 0
+                                            }
+                                            className={`text-lg animate-pulse ${
+                                                (Number(inputAmount) > max || Number(inputAmount) <= 0)
+                                                    ? "opacity-50 grayscale cursor-not-allowed" 
+                                                    : ""
+                                            }`}
+                                        >
+                                            LAUNCH MISSION
+                                        </ArcadeButton>
+                                    </div>
                                 );
                         })()}
                     </motion.div>
