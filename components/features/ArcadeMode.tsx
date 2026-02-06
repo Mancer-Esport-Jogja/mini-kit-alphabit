@@ -370,7 +370,7 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                  return;
             }
 
-            await executeFillOrder(order.rawOrder, inputAmount);
+            await executeFillOrder(order.rawOrder, inputAmount.replace(/,/g, '.'));
             
             // Success! 
             setLastSuccessOrder(order);
@@ -1100,16 +1100,27 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                             <label className="text-[10px] font-mono text-slate-400 mb-2 block uppercase">Payload Size (USDC)</label>
                             <div className="relative">
                                 <input 
-                                    type="number" 
-                                    step="0.01"
+                                    type="text" 
                                     inputMode="decimal"
                                     value={inputAmount}
-                                    onChange={(e) => setInputAmount(e.target.value)}
+                                    placeholder="0.00"
+                                    onChange={(e) => {
+                                        // Allow only numbers, dots, and commas
+                                        const val = e.target.value.replace(/[^0-9.,]/g, '');
+                                        setInputAmount(val);
+                                    }}
                                     className={`w-full bg-black border-2 border-slate-700 rounded-lg text-center text-2xl font-pixel py-4 pr-32 pl-12 focus:ring-1 focus:ring-emerald-500 transition-all no-spinner ${
                                         (() => {
                                             const order = getTargetOrder();
                                             const max = order ? calculateMaxSpend(order.rawOrder.order) : 0;
-                                            return Number(inputAmount) > max ? "text-red-500 border-red-500" : "text-white";
+                                            
+                                            // Handle Comma & Dot
+                                            const normalized = inputAmount.replace(/,/g, '.');
+                                            const parsed = parseFloat(normalized);
+                                            
+                                            // Invalid cases
+                                            if (normalized && !isNaN(parsed) && parsed > max) return "text-red-500 border-red-500";
+                                            return "text-white";
                                         })()
                                     }`}
                                 />
@@ -1130,7 +1141,11 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                         {(() => {
                             const order = getTargetOrder();
                             const max = order ? calculateMaxSpend(order.rawOrder.order) : 0;
-                            return Number(inputAmount) > max && (
+                            
+                            const normalized = inputAmount.replace(/,/g, '.');
+                            const parsed = parseFloat(normalized);
+
+                            return !isNaN(parsed) && parsed > max && (
                                 <div className="text-[10px] font-pixel text-red-500 animate-pulse">
                                     ! EXCEEDS MAX PAYLOAD CAPACITY !
                                 </div>
@@ -1149,19 +1164,24 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                                 const max = order ? calculateMaxSpend(order.rawOrder.order) : 0;
                                 const isGhost = !order;
 
+                                // --- VALIDATION LOGIC ---
+                                const normalized = inputAmount.replace(/,/g, '.');
+                                const parsed = parseFloat(normalized);
+                                const isEmpty = inputAmount.trim() === '';
+                                const isInvalid = isNaN(parsed) || parsed <= 0;
+                                const isExceeded = parsed > max;
+
+                                const isDisabled = isGhost || isEmpty || isInvalid || isExceeded;
+
                                 return (
                                     <div className="flex flex-col gap-2 w-full">
                                         <ArcadeButton 
                                             size="lg" 
                                             variant="danger" 
                                             onClick={handleLaunch}
-                                            disabled={
-                                                isGhost ||
-                                                Number(inputAmount) > max || 
-                                                Number(inputAmount) <= 0
-                                            }
+                                            disabled={isDisabled}
                                             className={`text-lg animate-pulse ${
-                                                (isGhost || Number(inputAmount) > max || Number(inputAmount) <= 0)
+                                                isDisabled
                                                     ? "opacity-50 grayscale cursor-not-allowed" 
                                                     : ""
                                             }`}
