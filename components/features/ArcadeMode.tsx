@@ -422,7 +422,7 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                     recommendedStrike: realExecutionStrike, // MUST BE REAL
                     confidence: prediction.confidence,
                     reasoning: prediction.reasoning,
-                    expiryTime: new Date(Date.now() + 1000 * 60 * 60 * 2), // Default 2h Blitz
+                    expiryTime: bestOrder.expiry, // Align with actual order expiry
                     startPrice: marketData.spotPrice
                 })
             });
