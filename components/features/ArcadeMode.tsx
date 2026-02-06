@@ -103,6 +103,8 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
     const [activePrediction, setActivePrediction] = useState<GlobalPrediction | null>(null);
     const [predictionStats, setPredictionStats] = useState<PredictionStats | null>(null);
     const [userVote, setUserVote] = useState<'SYNC' | 'OVERRIDE' | null>(null);
+    const [pendingVote, setPendingVote] = useState<'SYNC' | 'OVERRIDE' | null>(null);
+    const [predictionError, setPredictionError] = useState<string | null>(null);
     const [isLoadingPrediction, setIsLoadingPrediction] = useState(false);
     
     // Entry Mode Tracking (for dynamic back navigation)
@@ -172,6 +174,9 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
              setPredictionAsset(null);
              setActivePrediction(null);
              setPredictionStats(null);
+             setPredictionStats(null);
+             setPredictionError(null); // Reset error
+             setPendingVote(null);
         }
     }, [gameState]);
 
@@ -258,6 +263,25 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
         return best;
     };
 
+    const submitVote = async () => {
+        if (!activePrediction || !pendingVote || !user?.id) return;
+        
+        try {
+             await fetch(PREDICTION_API.VOTE, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    predictionId: activePrediction.id,
+                    vote: pendingVote,
+                    userId: user.id
+                })
+            });
+            setUserVote(pendingVote); // Optimistic update
+        } catch (e) {
+            console.error("Failed to submit vote:", e);
+        }
+    };
+
     const handleLaunch = async () => {
         const order = getTargetOrder();
         if (!order) return;
@@ -267,6 +291,12 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
             
             // Success! 
             setLastSuccessOrder(order);
+            
+            // Only submit vote IF transaction succeeded
+            if (pendingVote) {
+                await submitVote();
+            }
+
             setGameState('RESULT');
 
             // Gamification: Reward the pilot
@@ -286,6 +316,7 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
         setActivePrediction(null);
         setPredictionStats(null);
         setEntryMode(null);
+        setPredictionError(null); // Reset error
         resetTx();
     };
 
@@ -296,6 +327,7 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
     const checkActivePrediction = async (asset: 'ETH' | 'BTC') => {
         setIsLoadingPrediction(true);
         setUserVote(null); // Reset on new check
+        setPredictionError(null); // Reset error
         try {
             // 1. Check Backend for Global Signal (filtered by asset, with userId for vote check)
             const userIdParam = user?.id ? `&userId=${user.id}` : '';
@@ -314,8 +346,9 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
             // 2. If no active prediction (or expired), TRIGGER NEW GENERATION (Lazy Load)
             await generateGlobalPrediction(asset);
 
-        } catch (error) {
+        } catch (error: unknown) {
             console.error("Link Failure:", error);
+            setPredictionError("Connection invalid. Cannot sync with Tactical Droid.");
             setIsLoadingPrediction(false);
         }
     };
@@ -399,8 +432,9 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
             setActivePrediction(predictionToUse);
             setPredictionStats({ syncCount: 0, overrideCount: 0, totalVotes: 0, consensus: 0 });
 
-        } catch (error) {
+        } catch (error: unknown) {
             console.error("Generation Failed:", error);
+            setPredictionError(error.message || "Signal interference. Unable to compute strategy.");
         } finally {
             setIsLoadingPrediction(false);
         }
@@ -414,25 +448,8 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
     const handlePredictionSelect = async (choice: 'YES' | 'NO') => {
         if (!activePrediction || !predictionAsset) return;
 
-        // Record Vote in Backend
-        try {
-            // Use authenticated user's ID from backend
-            if (!user?.id) {
-                console.warn("User not authenticated, skipping vote");
-            } else {
-                await fetch(PREDICTION_API.VOTE, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        predictionId: activePrediction.id,
-                        vote: choice === 'YES' ? 'SYNC' : 'OVERRIDE',
-                        userId: user.id
-                    })
-                });
-            }
-        } catch (e) {
-            console.warn("Vote link unstable", e);
-        }
+        // Store intent to vote, but don't commit until Launch
+        setPendingVote(choice === 'YES' ? 'SYNC' : 'OVERRIDE');
 
         // 1. Map Asset -> Ship
         const ship: ShipType = predictionAsset === 'ETH' ? 'FIGHTER' : 'BOMBER';
@@ -553,6 +570,10 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                     <span className="text-[8px] font-pixel text-slate-500">BETA_PILOT_ACCESS</span>
                 </div>
             </div>
+
+            
+            {/* AI TACTICAL DROID - Intro State */}
+            <TacticalDroid marketStats={droidStats} />
         </div>
     );
 
@@ -632,25 +653,41 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                     <div className="w-24 h-3 bg-slate-800 rounded-full overflow-hidden border border-slate-600 flex">
                         <motion.div 
                             className="h-full bg-emerald-500"
-                            initial={{ width: 0 }}
-                            animate={{ width: `${predictionStats?.consensus ?? 50}%` }}
+                            initial={{ width: '50%' }}
+                            animate={{ width: `${predictionStats?.consensus || 50}%` }}
                         />
                         <motion.div 
                             className="h-full bg-rose-500"
-                            initial={{ width: 0 }}
-                            animate={{ width: `${100 - (predictionStats?.consensus ?? 50)}%` }}
+                            initial={{ width: '50%' }}
+                            animate={{ width: `${100 - (predictionStats?.consensus || 50)}%` }}
                         />
                     </div>
-                    <span className="text-[10px] font-mono text-emerald-400">
-                        {predictionStats?.totalVotes ? `${predictionStats.consensus.toFixed(0)}%` : '--'}
-                    </span>
+                    <span className="text-[10px] font-mono font-bold text-white">{predictionStats?.consensus || 0}%</span>
                 </div>
             </div>
+
+            {/* Error Fallback */}
+            {predictionError && (
+                 <div className="flex-1 flex flex-col items-center justify-center space-y-4 p-8">
+                    <div className="w-20 h-20 rounded-2xl bg-slate-900/80 border-2 border-slate-700 flex items-center justify-center animate-pulse">
+                        <AlertTriangle className="w-10 h-10 text-yellow-500" />
+                    </div>
+                    <div className="text-center space-y-2">
+                        <h3 className="text-lg font-pixel text-yellow-500">SYSTEM OFFLINE</h3>
+                        <p className="text-xs font-mono text-slate-400 max-w-[250px]">
+                            {predictionError}
+                        </p>
+                    </div>
+                    <ArcadeButton variant="outline" onClick={() => setGameState('INTRO')}>
+                        RETURN TO BASE
+                    </ArcadeButton>
+                 </div>
+            )}
 
             <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-8">
                 
                 {/* 1. Asset Selection (Only if not selected yet) */}
-                {!predictionAsset && (
+                {!predictionAsset && !predictionError && (
                     <motion.div 
                         initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                         className="w-full max-w-lg space-y-8"
@@ -730,8 +767,7 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
 
             </div>
             
-            {/* AI TACTICAL DROID - Arcade Mode Intro Only */}
-            <TacticalDroid marketStats={droidStats} />
+
         </div>
     );
 
@@ -809,7 +845,13 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
                     >
                         <div className="absolute top-0 left-0 p-4 z-50">
                             <button 
-                                onClick={() => setGameState('SELECT_SHIP')}
+                                onClick={() => {
+                                    if (entryMode === 'PREDICT') {
+                                        setGameState('PREDICT_MODE');
+                                    } else {
+                                        setGameState('SELECT_WEAPON');
+                                    }
+                                }}
                                 className="flex items-center gap-1 text-slate-500 hover:text-white transition-colors"
                             >
                                 <ChevronLeft size={16} />
