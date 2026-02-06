@@ -348,7 +348,8 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
 
         } catch (error: unknown) {
             console.error("Link Failure:", error);
-            setPredictionError("Connection invalid. Cannot sync with Tactical Droid.");
+            const errorMessage = error instanceof Error ? error.message : "Connection invalid. Cannot sync with Tactical Droid.";
+            setPredictionError(errorMessage);
             setIsLoadingPrediction(false);
         }
     };
@@ -434,7 +435,8 @@ export function ArcadeMode({ onViewAnalytics }: ArcadeModeProps) {
 
         } catch (error: unknown) {
             console.error("Generation Failed:", error);
-            setPredictionError(error.message || "Signal interference. Unable to compute strategy.");
+            const errorMessage = error instanceof Error ? error.message : "Signal interference. Unable to compute strategy.";
+            setPredictionError(errorMessage);
         } finally {
             setIsLoadingPrediction(false);
         }
