@@ -50,3 +50,9 @@ export const ANALYTICS_API = {
 export const LEADERBOARD_API = {
   GLOBAL: `${ALPHABIT_BACKEND_URL}/leaderboard`,
 } as const;
+
+export const PREDICTION_API = {
+  ACTIVE: `${ALPHABIT_BACKEND_URL}/prediction/active`,
+  CREATE: `${ALPHABIT_BACKEND_URL}/prediction`,
+  VOTE: `${ALPHABIT_BACKEND_URL}/prediction/vote`,
+} as const;
